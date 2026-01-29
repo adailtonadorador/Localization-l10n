@@ -3,7 +3,10 @@
     "allow": [
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Plataforma SAMA\n\n- Vite + React + TypeScript setup\n- Tailwind CSS configured\n- Project structure initialized\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Plataforma SAMA\n\n- Vite + React + TypeScript setup\n- Tailwind CSS configured\n- Project structure initialized\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Supabase client configuration\n\n- Install @supabase/supabase-js\n- Create Supabase client setup in src/lib/supabase.ts\n- Add .env.example for reference\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Supabase database schema\n\n- Create SQL schema with all tables \\(users, workers, clients, jobs, etc.\\)\n- Add Row Level Security \\(RLS\\) policies\n- Add TypeScript types for database\n- Configure auto-create user profile on signup\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
