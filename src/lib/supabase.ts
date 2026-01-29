@@ -8,8 +8,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+// Single client instance to avoid multiple connections
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+})
 
-// Untyped client for operations that need to bypass RLS type inference
+// Use the same client for untyped operations
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const supabaseUntyped = createClient(supabaseUrl, supabaseAnonKey) as any
+export const supabaseUntyped = supabase as any

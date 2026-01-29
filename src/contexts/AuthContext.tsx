@@ -65,12 +65,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isProfileComplete, setIsProfileComplete] = useState(false)
 
   useEffect(() => {
+    let isMounted = true
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        fetchProfile(session.user.id, isMounted)
       } else {
         setLoading(false)
       }
@@ -79,27 +82,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!isMounted) return
         setSession(session)
         setUser(session?.user ?? null)
         if (session?.user) {
-          await fetchProfile(session.user.id)
+          await fetchProfile(session.user.id, isMounted)
         } else {
           setProfile(null)
+          setWorkerProfile(null)
+          setClientProfile(null)
+          setIsProfileComplete(false)
           setLoading(false)
         }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
-  async function fetchProfile(userId: string) {
+  async function fetchProfile(userId: string, isMounted: boolean = true) {
     try {
       const { data, error } = await supabaseUntyped
         .from('users')
         .select('*')
         .eq('id', userId)
         .single()
+
+      if (!isMounted) return
 
       if (error) throw error
       const userProfile = data as UserProfile
@@ -112,6 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .select('*')
           .eq('id', userId)
           .single()
+
+        if (!isMounted) return
 
         if (workerData) {
           setWorkerProfile(workerData as WorkerProfile)
@@ -128,6 +142,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('id', userId)
           .single()
 
+        if (!isMounted) return
+
         if (clientData) {
           setClientProfile(clientData as ClientProfile)
           setIsProfileComplete(true)
@@ -143,10 +159,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
-      setProfile(null)
-      setIsProfileComplete(false)
+      if (isMounted) {
+        setProfile(null)
+        setIsProfileComplete(false)
+      }
     } finally {
-      setLoading(false)
+      if (isMounted) {
+        setLoading(false)
+      }
     }
   }
 
@@ -183,9 +203,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       if (error) return { error }
-
-      // Additional profile data (worker/client) will be created after email confirmation
-      // when the user completes their profile setup
 
       return { error: null }
     } catch (error) {

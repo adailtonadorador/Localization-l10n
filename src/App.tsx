@@ -22,6 +22,7 @@ import { ClientHistoryPage } from "@/pages/client/ClientHistoryPage";
 
 // Admin pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
+import { AdminNewJobPage } from "@/pages/admin/AdminNewJobPage";
 
 function AuthRedirect({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, isProfileComplete } = useAuth();
@@ -168,10 +169,18 @@ function AppRoutes() {
 
       {/* Admin routes */}
       <Route
-        path="/admin/*"
+        path="/admin"
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/jobs/new"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminNewJobPage />
           </ProtectedRoute>
         }
       />

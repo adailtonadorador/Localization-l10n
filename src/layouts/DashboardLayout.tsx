@@ -18,10 +18,7 @@ const menuItems = {
   ],
   admin: [
     { label: 'Dashboard', href: '/admin' },
-    { label: 'Vagas', href: '/admin/jobs' },
-    { label: 'Trabalhadores', href: '/admin/workers' },
-    { label: 'Empresas', href: '/admin/clients' },
-    { label: 'Relatórios', href: '/admin/reports' },
+    { label: 'Nova Vaga', href: '/admin/jobs/new' },
   ],
   client: [
     { label: 'Dashboard', href: '/client' },
