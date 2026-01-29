@@ -15,6 +15,10 @@ import { WorkerHistoryPage } from "@/pages/worker/WorkerHistoryPage";
 
 // Client pages
 import { ClientDashboard } from "@/pages/client/ClientDashboard";
+import { ClientJobsPage } from "@/pages/client/ClientJobsPage";
+import { ClientNewJobPage } from "@/pages/client/ClientNewJobPage";
+import { ClientCandidatesPage } from "@/pages/client/ClientCandidatesPage";
+import { ClientHistoryPage } from "@/pages/client/ClientHistoryPage";
 
 // Admin pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
@@ -31,7 +35,6 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
   }
 
   if (user && profile) {
-    // If profile is not complete, redirect to complete profile page
     if (!isProfileComplete && profile.role !== 'admin') {
       return <Navigate to="/complete-profile" replace />;
     }
@@ -123,10 +126,42 @@ function AppRoutes() {
 
       {/* Client routes */}
       <Route
-        path="/client/*"
+        path="/client"
         element={
           <ProtectedRoute allowedRoles={['client']}>
             <ClientDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/client/jobs"
+        element={
+          <ProtectedRoute allowedRoles={['client']}>
+            <ClientJobsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/client/jobs/new"
+        element={
+          <ProtectedRoute allowedRoles={['client']}>
+            <ClientNewJobPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/client/candidates"
+        element={
+          <ProtectedRoute allowedRoles={['client']}>
+            <ClientCandidatesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/client/history"
+        element={
+          <ProtectedRoute allowedRoles={['client']}>
+            <ClientHistoryPage />
           </ProtectedRoute>
         }
       />
