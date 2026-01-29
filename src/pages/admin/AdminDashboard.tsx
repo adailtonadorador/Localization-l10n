@@ -26,7 +26,7 @@ const recentClients = [
 
 export function AdminDashboard() {
   return (
-    <DashboardLayout userRole="admin" userName="Admin">
+    <DashboardLayout>
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-5 mb-8">
         <Card>

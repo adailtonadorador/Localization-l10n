@@ -5,8 +5,18 @@ import { LandingPage } from "@/pages/LandingPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
 import { CompleteProfilePage } from "@/pages/auth/CompleteProfilePage";
+
+// Worker pages
 import { WorkerDashboard } from "@/pages/worker/WorkerDashboard";
+import { WorkerJobsPage } from "@/pages/worker/WorkerJobsPage";
+import { WorkerApplicationsPage } from "@/pages/worker/WorkerApplicationsPage";
+import { WorkerProfilePage } from "@/pages/worker/WorkerProfilePage";
+import { WorkerHistoryPage } from "@/pages/worker/WorkerHistoryPage";
+
+// Client pages
 import { ClientDashboard } from "@/pages/client/ClientDashboard";
+
+// Admin pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 
 function AuthRedirect({ children }: { children: React.ReactNode }) {
@@ -71,10 +81,42 @@ function AppRoutes() {
 
       {/* Worker routes */}
       <Route
-        path="/worker/*"
+        path="/worker"
         element={
           <ProtectedRoute allowedRoles={['worker']}>
             <WorkerDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/worker/jobs"
+        element={
+          <ProtectedRoute allowedRoles={['worker']}>
+            <WorkerJobsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/worker/applications"
+        element={
+          <ProtectedRoute allowedRoles={['worker']}>
+            <WorkerApplicationsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/worker/history"
+        element={
+          <ProtectedRoute allowedRoles={['worker']}>
+            <WorkerHistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/worker/profile"
+        element={
+          <ProtectedRoute allowedRoles={['worker']}>
+            <WorkerProfilePage />
           </ProtectedRoute>
         }
       />

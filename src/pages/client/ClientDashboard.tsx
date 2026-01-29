@@ -41,7 +41,7 @@ const pendingApplications = [
 
 export function ClientDashboard() {
   return (
-    <DashboardLayout userRole="client" userName="Empresa ABC">
+    <DashboardLayout>
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4 mb-8">
         <Card>

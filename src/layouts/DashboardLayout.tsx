@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  userRole: 'worker' | 'admin' | 'client';
-  userName: string;
 }
 
 const menuItems = {
@@ -14,7 +14,7 @@ const menuItems = {
     { label: 'Vagas Disponíveis', href: '/worker/jobs' },
     { label: 'Minhas Candidaturas', href: '/worker/applications' },
     { label: 'Histórico', href: '/worker/history' },
-    { label: 'Perfil', href: '/worker/profile' },
+    { label: 'Meu Perfil', href: '/worker/profile' },
   ],
   admin: [
     { label: 'Dashboard', href: '/admin' },
@@ -27,34 +27,59 @@ const menuItems = {
     { label: 'Dashboard', href: '/client' },
     { label: 'Minhas Vagas', href: '/client/jobs' },
     { label: 'Nova Vaga', href: '/client/jobs/new' },
-    { label: 'Trabalhadores', href: '/client/workers' },
+    { label: 'Candidatos', href: '/client/candidates' },
     { label: 'Histórico', href: '/client/history' },
   ],
 };
 
-export function DashboardLayout({ children, userRole, userName }: DashboardLayoutProps) {
-  const items = menuItems[userRole];
+export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { profile, signOut } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  if (!profile) return null;
+
+  const items = menuItems[profile.role];
+  const userName = profile.name;
   const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+  async function handleLogout() {
+    await signOut();
+    navigate('/');
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-background border-r hidden md:block">
+      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-background border-r hidden md:flex md:flex-col">
         <div className="flex h-16 items-center border-b px-6">
-          <span className="text-xl font-bold text-primary">SAMA</span>
+          <Link to="/" className="text-xl font-bold text-primary">SAMA</Link>
         </div>
 
-        <nav className="p-4 space-y-2">
-          {items.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              {item.label}
-            </a>
-          ))}
+        <nav className="flex-1 p-4 space-y-1">
+          {items.map((item) => {
+            const isActive = location.pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
+
+        <div className="p-4 border-t">
+          <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={handleLogout}>
+            Sair
+          </Button>
+        </div>
       </aside>
 
       {/* Main content */}
@@ -62,9 +87,9 @@ export function DashboardLayout({ children, userRole, userName }: DashboardLayou
         {/* Top header */}
         <header className="sticky top-0 z-40 h-16 border-b bg-background flex items-center justify-between px-6">
           <h1 className="text-lg font-semibold">
-            {userRole === 'worker' && 'Painel do Trabalhador'}
-            {userRole === 'admin' && 'Painel Administrativo'}
-            {userRole === 'client' && 'Painel da Empresa'}
+            {profile.role === 'worker' && 'Painel do Trabalhador'}
+            {profile.role === 'admin' && 'Painel Administrativo'}
+            {profile.role === 'client' && 'Painel da Empresa'}
           </h1>
 
           <div className="flex items-center gap-4">
@@ -77,10 +102,10 @@ export function DashboardLayout({ children, userRole, userName }: DashboardLayou
 
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="" />
+                <AvatarImage src={profile.avatar_url || ''} />
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium">{userName}</span>
+              <span className="text-sm font-medium hidden sm:inline">{userName}</span>
             </div>
           </div>
         </header>
