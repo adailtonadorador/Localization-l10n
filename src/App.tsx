@@ -4,12 +4,13 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LandingPage } from "@/pages/LandingPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
+import { CompleteProfilePage } from "@/pages/auth/CompleteProfilePage";
 import { WorkerDashboard } from "@/pages/worker/WorkerDashboard";
 import { ClientDashboard } from "@/pages/client/ClientDashboard";
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 
 function AuthRedirect({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, isProfileComplete } = useAuth();
 
   if (loading) {
     return (
@@ -20,6 +21,11 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
   }
 
   if (user && profile) {
+    // If profile is not complete, redirect to complete profile page
+    if (!isProfileComplete && profile.role !== 'admin') {
+      return <Navigate to="/complete-profile" replace />;
+    }
+
     const redirectPath = profile.role === 'worker'
       ? '/worker'
       : profile.role === 'client'
@@ -50,6 +56,16 @@ function AppRoutes() {
           <AuthRedirect>
             <RegisterPage />
           </AuthRedirect>
+        }
+      />
+
+      {/* Complete Profile route */}
+      <Route
+        path="/complete-profile"
+        element={
+          <ProtectedRoute requireCompleteProfile={false}>
+            <CompleteProfilePage />
+          </ProtectedRoute>
         }
       />
 

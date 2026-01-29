@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseUntyped } from '@/lib/supabase'
 import type { Database } from '@/types/database'
 
 type UserRole = Database['public']['Enums']['user_role']
@@ -14,14 +14,34 @@ interface UserProfile {
   avatar_url: string | null
 }
 
+interface WorkerProfile {
+  id: string
+  cpf: string
+  skills: string[]
+  rating: number
+  total_jobs: number
+  documents_verified: boolean
+}
+
+interface ClientProfile {
+  id: string
+  cnpj: string
+  company_name: string
+  address: string | null
+}
+
 interface AuthContextType {
   user: User | null
   profile: UserProfile | null
+  workerProfile: WorkerProfile | null
+  clientProfile: ClientProfile | null
   session: Session | null
   loading: boolean
+  isProfileComplete: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, metadata: SignUpMetadata) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 interface SignUpMetadata {
@@ -38,8 +58,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [workerProfile, setWorkerProfile] = useState<WorkerProfile | null>(null)
+  const [clientProfile, setClientProfile] = useState<ClientProfile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isProfileComplete, setIsProfileComplete] = useState(false)
 
   useEffect(() => {
     // Get initial session
@@ -72,19 +95,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function fetchProfile(userId: string) {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseUntyped
         .from('users')
         .select('*')
         .eq('id', userId)
         .single()
 
       if (error) throw error
-      setProfile(data)
+      const userProfile = data as UserProfile
+      setProfile(userProfile)
+
+      // Fetch role-specific profile
+      if (userProfile.role === 'worker') {
+        const { data: workerData } = await supabaseUntyped
+          .from('workers')
+          .select('*')
+          .eq('id', userId)
+          .single()
+
+        if (workerData) {
+          setWorkerProfile(workerData as WorkerProfile)
+          setIsProfileComplete(true)
+        } else {
+          setWorkerProfile(null)
+          setIsProfileComplete(false)
+        }
+        setClientProfile(null)
+      } else if (userProfile.role === 'client') {
+        const { data: clientData } = await supabaseUntyped
+          .from('clients')
+          .select('*')
+          .eq('id', userId)
+          .single()
+
+        if (clientData) {
+          setClientProfile(clientData as ClientProfile)
+          setIsProfileComplete(true)
+        } else {
+          setClientProfile(null)
+          setIsProfileComplete(false)
+        }
+        setWorkerProfile(null)
+      } else if (userProfile.role === 'admin') {
+        setIsProfileComplete(true)
+        setWorkerProfile(null)
+        setClientProfile(null)
+      }
     } catch (error) {
       console.error('Error fetching profile:', error)
       setProfile(null)
+      setIsProfileComplete(false)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function refreshProfile() {
+    if (user) {
+      await fetchProfile(user.id)
     }
   }
 
@@ -129,17 +197,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
+    setWorkerProfile(null)
+    setClientProfile(null)
     setSession(null)
+    setIsProfileComplete(false)
   }
 
   const value = {
     user,
     profile,
+    workerProfile,
+    clientProfile,
     session,
     loading,
+    isProfileComplete,
     signIn,
     signUp,
     signOut,
+    refreshProfile,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

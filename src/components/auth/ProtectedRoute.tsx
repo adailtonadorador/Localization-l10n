@@ -7,10 +7,15 @@ type UserRole = Database['public']['Enums']['user_role']
 interface ProtectedRouteProps {
   children: React.ReactNode
   allowedRoles?: UserRole[]
+  requireCompleteProfile?: boolean
 }
 
-export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, profile, loading } = useAuth()
+export function ProtectedRoute({
+  children,
+  allowedRoles,
+  requireCompleteProfile = true
+}: ProtectedRouteProps) {
+  const { user, profile, loading, isProfileComplete } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -25,7 +30,20 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  // Check if profile needs to be completed
+  if (requireCompleteProfile && !isProfileComplete && profile.role !== 'admin') {
+    return <Navigate to="/complete-profile" replace />
+  }
+
+  if (allowedRoles && !allowedRoles.includes(profile.role)) {
     // Redirect to appropriate dashboard based on role
     const redirectPath = profile.role === 'worker'
       ? '/worker'

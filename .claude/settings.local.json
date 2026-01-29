@@ -8,7 +8,8 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Supabase client configuration\n\n- Install @supabase/supabase-js\n- Create Supabase client setup in src/lib/supabase.ts\n- Add .env.example for reference\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Supabase database schema\n\n- Create SQL schema with all tables \\(users, workers, clients, jobs, etc.\\)\n- Add Row Level Security \\(RLS\\) policies\n- Add TypeScript types for database\n- Configure auto-create user profile on signup\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(npm run build)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nImplement authentication system\n\n- Add AuthContext with signIn, signUp, signOut functions\n- Add ProtectedRoute component for role-based access\n- Update LoginPage with working authentication\n- Update RegisterPage with worker/client registration\n- Add AuthRedirect to prevent logged users from accessing auth pages\n- Configure route protection based on user roles\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nImplement authentication system\n\n- Add AuthContext with signIn, signUp, signOut functions\n- Add ProtectedRoute component for role-based access\n- Update LoginPage with working authentication\n- Update RegisterPage with worker/client registration\n- Add AuthRedirect to prevent logged users from accessing auth pages\n- Configure route protection based on user roles\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)"
     ]
   }
 }
