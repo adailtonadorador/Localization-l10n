@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase, supabaseUntyped } from '@/lib/supabase'
 import type { Database } from '@/types/database'
@@ -21,6 +21,7 @@ interface WorkerProfile {
   rating: number
   total_jobs: number
   documents_verified: boolean
+  is_active: boolean
   pix_key: string | null
   address: string | null
   cep: string | null
@@ -73,15 +74,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [isProfileComplete, setIsProfileComplete] = useState(false)
 
+  // Flag to skip auth state changes during manual sign-in process (using ref for synchronous updates)
+  const isManualSignInRef = useRef(false)
+
   useEffect(() => {
     let isMounted = true
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Get initial session and check if worker is blocked
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!isMounted) return
-      setSession(session)
-      setUser(session?.user ?? null)
+
       if (session?.user) {
+        // Check if user is a blocked worker
+        const { data: userData } = await supabaseUntyped
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+
+        if (userData?.role === 'worker') {
+          const { data: workerData } = await supabaseUntyped
+            .from('workers')
+            .select('is_active')
+            .eq('id', session.user.id)
+            .single()
+
+          if (workerData && workerData.is_active === false) {
+            // Worker is blocked, sign them out
+            await supabase.auth.signOut({ scope: 'local' })
+            if (isMounted) setLoading(false)
+            return
+          }
+        }
+
+        setSession(session)
+        setUser(session.user)
         fetchProfile(session.user.id, isMounted)
       } else {
         setLoading(false)
@@ -94,6 +121,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!isMounted) return
+
+        // Skip processing if we're in manual sign-in mode (will be handled by signIn function)
+        if (isManualSignInRef.current && event === 'SIGNED_IN') {
+          return
+        }
 
         // Reset state on sign out
         if (event === 'SIGNED_OUT') {
@@ -205,12 +237,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signIn(email: string, password: string) {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // Set flag to prevent onAuthStateChange from processing during sign-in
+      isManualSignInRef.current = true
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
-      return { error }
+
+      if (error) {
+        isManualSignInRef.current = false
+        return { error }
+      }
+
+      // Check if user is a worker and if they are active
+      if (data.user) {
+        const { data: userData } = await supabaseUntyped
+          .from('users')
+          .select('role')
+          .eq('id', data.user.id)
+          .single()
+
+        if (userData?.role === 'worker') {
+          const { data: workerData } = await supabaseUntyped
+            .from('workers')
+            .select('is_active')
+            .eq('id', data.user.id)
+            .single()
+
+          // If worker exists and is not active, sign them out
+          if (workerData && workerData.is_active === false) {
+            await supabase.auth.signOut({ scope: 'local' })
+            isManualSignInRef.current = false
+            return {
+              error: new Error('WORKER_BLOCKED')
+            }
+          }
+        }
+
+        // Worker is active or user is not a worker, proceed with setting session
+        setSession(data.session)
+        setUser(data.user)
+        setLoading(true)
+        await fetchProfile(data.user.id)
+      }
+
+      isManualSignInRef.current = false
+      return { error: null }
     } catch (error) {
+      isManualSignInRef.current = false
       return { error: error as Error }
     }
   }

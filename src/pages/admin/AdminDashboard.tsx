@@ -36,7 +36,9 @@ import {
   RotateCcw,
   UserPlus,
   Mail,
-  Phone
+  Phone,
+  Ban,
+  UserCheck
 } from "lucide-react";
 
 interface Stats {
@@ -54,6 +56,9 @@ interface Worker {
   rating: number;
   total_jobs: number;
   documents_verified: boolean;
+  is_active: boolean;
+  deactivation_reason: string | null;
+  deactivated_at: string | null;
   created_at: string;
   users: {
     name: string;
@@ -141,6 +146,11 @@ export function AdminDashboard() {
   // For assigning workers
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [availableWorkers, setAvailableWorkers] = useState<Worker[]>([]);
+
+  // For disabling/enabling workers
+  const [disableWorkerDialogOpen, setDisableWorkerDialogOpen] = useState(false);
+  const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
+  const [disableReason, setDisableReason] = useState("");
 
   useEffect(() => {
     loadData();
@@ -240,6 +250,66 @@ export function AdminDashboard() {
     }
   }
 
+  function openDisableWorkerDialog(worker: Worker) {
+    setSelectedWorker(worker);
+    setDisableReason("");
+    setDisableWorkerDialogOpen(true);
+  }
+
+  async function handleDisableWorker() {
+    if (!selectedWorker || !disableReason.trim()) {
+      alert('Por favor, informe o motivo da desabilitação.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await supabaseUntyped
+        .from('workers')
+        .update({
+          is_active: false,
+          deactivation_reason: disableReason.trim(),
+          deactivated_at: new Date().toISOString()
+        })
+        .eq('id', selectedWorker.id);
+
+      setDisableWorkerDialogOpen(false);
+      loadData();
+      alert('Trabalhador desabilitado com sucesso!');
+    } catch (error) {
+      console.error('Error disabling worker:', error);
+      alert('Erro ao desabilitar trabalhador.');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleEnableWorker(workerId: string) {
+    if (!confirm('Tem certeza que deseja habilitar este trabalhador?')) {
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await supabaseUntyped
+        .from('workers')
+        .update({
+          is_active: true,
+          deactivation_reason: null,
+          deactivated_at: null
+        })
+        .eq('id', workerId);
+
+      loadData();
+      alert('Trabalhador habilitado com sucesso!');
+    } catch (error) {
+      console.error('Error enabling worker:', error);
+      alert('Erro ao habilitar trabalhador.');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   function openJobDetails(job: Job) {
     setSelectedJob(job);
     setDetailsOpen(true);
@@ -259,10 +329,12 @@ export function AdminDashboard() {
 
   async function openAssignDialog(job: Job) {
     setSelectedJob(job);
-    // Get workers not already assigned to this job
+    // Get workers not already assigned to this job (verified, active, and not assigned)
     const assignedWorkerIds = job.job_assignments?.map(a => a.worker_id) || [];
     const available = workers.filter(w =>
-      w.documents_verified && !assignedWorkerIds.includes(w.id)
+      w.documents_verified &&
+      w.is_active !== false &&
+      !assignedWorkerIds.includes(w.id)
     );
     setAvailableWorkers(available);
     setAssignDialogOpen(true);
@@ -682,39 +754,57 @@ export function AdminDashboard() {
                   filteredWorkers.map((worker) => (
                     <div
                       key={worker.id}
-                      className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
+                      className={`flex items-center justify-between p-4 rounded-xl transition-colors ${
+                        worker.is_active === false
+                          ? 'bg-red-50 border-2 border-red-200'
+                          : 'bg-slate-50 hover:bg-slate-100'
+                      }`}
                     >
                       <div className="flex items-center gap-4">
-                        <Avatar className="h-12 w-12 ring-2 ring-white shadow">
-                          <AvatarFallback className="bg-emerald-500 text-white font-medium">
+                        <Avatar className={`h-12 w-12 ring-2 ring-white shadow ${worker.is_active === false ? 'opacity-60' : ''}`}>
+                          <AvatarFallback className={`${worker.is_active === false ? 'bg-slate-400' : 'bg-emerald-500'} text-white font-medium`}>
                             {worker.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold text-slate-900">{worker.users?.name}</h4>
-                            <Badge
-                              variant={worker.documents_verified ? "default" : "outline"}
-                              className={worker.documents_verified ? "bg-emerald-500" : "border-amber-300 text-amber-700 bg-amber-50"}
-                            >
-                              {worker.documents_verified ? (
-                                <>
-                                  <Shield className="h-3 w-3 mr-1" />
-                                  Verificado
-                                </>
-                              ) : (
-                                <>
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  Pendente
-                                </>
-                              )}
-                            </Badge>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h4 className={`font-semibold ${worker.is_active === false ? 'text-slate-500' : 'text-slate-900'}`}>
+                              {worker.users?.name}
+                            </h4>
+                            {worker.is_active === false ? (
+                              <Badge variant="destructive" className="gap-1">
+                                <Ban className="h-3 w-3" />
+                                Bloqueado
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant={worker.documents_verified ? "default" : "outline"}
+                                className={worker.documents_verified ? "bg-emerald-500" : "border-amber-300 text-amber-700 bg-amber-50"}
+                              >
+                                {worker.documents_verified ? (
+                                  <>
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    Verificado
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Pendente
+                                  </>
+                                )}
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">{worker.users?.email}</p>
                           <p className="text-sm text-muted-foreground">CPF: {formatCpf(worker.cpf)}</p>
+                          {worker.is_active === false && worker.deactivation_reason && (
+                            <p className="text-xs text-red-600 mt-1 bg-red-100 px-2 py-1 rounded">
+                              <strong>Motivo:</strong> {worker.deactivation_reason}
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-4">
                         <div className="text-right text-sm">
                           <p className="flex items-center justify-end gap-1 mb-1">
                             <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
@@ -725,16 +815,40 @@ export function AdminDashboard() {
                             {formatDateTime(worker.created_at)}
                           </p>
                         </div>
-                        {!worker.documents_verified && (
-                          <Button
-                            size="sm"
-                            className="bg-emerald-500 hover:bg-emerald-600 gap-1"
-                            onClick={() => handleVerifyWorker(worker.id)}
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                            Verificar
-                          </Button>
-                        )}
+                        <div className="flex flex-col gap-2">
+                          {!worker.documents_verified && worker.is_active !== false && (
+                            <Button
+                              size="sm"
+                              className="bg-emerald-500 hover:bg-emerald-600 gap-1"
+                              onClick={() => handleVerifyWorker(worker.id)}
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              Verificar
+                            </Button>
+                          )}
+                          {worker.is_active === false ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300"
+                              onClick={() => handleEnableWorker(worker.id)}
+                              disabled={actionLoading}
+                            >
+                              <UserCheck className="h-4 w-4" />
+                              Habilitar
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
+                              onClick={() => openDisableWorkerDialog(worker)}
+                            >
+                              <Ban className="h-4 w-4" />
+                              Desabilitar
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))
@@ -1226,6 +1340,48 @@ export function AdminDashboard() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Disable Worker Dialog */}
+      <Dialog open={disableWorkerDialogOpen} onOpenChange={setDisableWorkerDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Ban className="h-5 w-5" />
+              Desabilitar Trabalhador
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-700">
+                Você está prestes a desabilitar o acesso de <strong>{selectedWorker?.users?.name}</strong> à plataforma.
+                O trabalhador não conseguirá fazer login até que seja habilitado novamente.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="disable-reason">Motivo da desabilitação *</Label>
+              <Textarea
+                id="disable-reason"
+                placeholder="Descreva o motivo pelo qual o trabalhador está sendo desabilitado..."
+                value={disableReason}
+                onChange={(e) => setDisableReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDisableWorkerDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDisableWorker}
+              disabled={actionLoading || !disableReason.trim()}
+            >
+              {actionLoading ? 'Desabilitando...' : 'Confirmar Desabilitação'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardLayout>

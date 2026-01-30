@@ -49,6 +49,9 @@ export interface Database {
           rating: number
           total_jobs: number
           documents_verified: boolean
+          is_active: boolean
+          deactivation_reason: string | null
+          deactivated_at: string | null
           created_at: string
           updated_at: string
         }
@@ -59,6 +62,9 @@ export interface Database {
           rating?: number
           total_jobs?: number
           documents_verified?: boolean
+          is_active?: boolean
+          deactivation_reason?: string | null
+          deactivated_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -69,6 +75,9 @@ export interface Database {
           rating?: number
           total_jobs?: number
           documents_verified?: boolean
+          is_active?: boolean
+          deactivation_reason?: string | null
+          deactivated_at?: string | null
           created_at?: string
           updated_at?: string
         }

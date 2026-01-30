@@ -57,6 +57,9 @@ export function LoginPage() {
     if (message.includes('Email not confirmed')) {
       return 'Confirme seu e-mail antes de fazer login';
     }
+    if (message.includes('WORKER_BLOCKED')) {
+      return 'Sua conta está temporariamente bloqueada. Entre em contato com a administração para mais informações.';
+    }
     return 'Erro ao fazer login. Tente novamente.';
   }
 
