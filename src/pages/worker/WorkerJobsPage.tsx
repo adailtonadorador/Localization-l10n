@@ -18,7 +18,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { MapPin, Search, Filter, Eye, Calendar, Clock, Users, Building, Star, UserPlus } from "lucide-react";
+import { MapPin, Search, Filter, Eye, Calendar, Clock, Building, Star, UserPlus } from "lucide-react";
 
 interface Job {
   id: string;

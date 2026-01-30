@@ -21,6 +21,15 @@ interface WorkerProfile {
   rating: number
   total_jobs: number
   documents_verified: boolean
+  pix_key: string | null
+  address: string | null
+  cep: string | null
+  logradouro: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  uf: string | null
 }
 
 interface ClientProfile {

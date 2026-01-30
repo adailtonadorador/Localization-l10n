@@ -9,10 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { Eye, Users, Calendar, Clock, MapPin, Phone, Mail, Star, CheckCircle, XCircle, FileSignature, User } from "lucide-react";
+import { Eye, Users, Calendar, Clock, Phone, Mail, Star, FileSignature, User } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface WorkRecord {

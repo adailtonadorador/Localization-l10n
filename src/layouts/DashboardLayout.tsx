@@ -7,10 +7,8 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   Briefcase,
-  FileText,
   Clock,
   User,
-  Building2,
   Users,
   PlusCircle,
   LogOut,
@@ -18,7 +16,6 @@ import {
   Menu,
   X,
   Settings,
-  Shield,
   ClipboardList,
   Activity
 } from "lucide-react";
@@ -46,12 +43,6 @@ const menuItems = {
     { label: 'Candidatos', href: '/client/candidates', icon: Users },
     { label: 'Histórico', href: '/client/history', icon: Clock },
   ],
-};
-
-const roleLabels = {
-  worker: 'Trabalhador',
-  admin: 'Administrador',
-  client: 'Empresa',
 };
 
 const roleColors = {

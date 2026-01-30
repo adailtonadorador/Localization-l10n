@@ -411,19 +411,6 @@ export function AdminDashboard() {
     });
   }
 
-  function getRecordStatusBadge(status: string) {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-500">Concluído</Badge>;
-      case 'in_progress':
-        return <Badge className="bg-blue-500">Trabalhando</Badge>;
-      case 'absent':
-        return <Badge variant="destructive">Falta</Badge>;
-      default:
-        return <Badge variant="secondary">Pendente</Badge>;
-    }
-  }
-
   function formatCpf(cpf: string) {
     if (!cpf) return '';
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
