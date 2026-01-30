@@ -9,20 +9,21 @@ import { CompleteProfilePage } from "@/pages/auth/CompleteProfilePage";
 // Worker pages
 import { WorkerDashboard } from "@/pages/worker/WorkerDashboard";
 import { WorkerJobsPage } from "@/pages/worker/WorkerJobsPage";
-import { WorkerApplicationsPage } from "@/pages/worker/WorkerApplicationsPage";
+import { WorkerMyJobsPage } from "@/pages/worker/WorkerMyJobsPage";
 import { WorkerProfilePage } from "@/pages/worker/WorkerProfilePage";
 import { WorkerHistoryPage } from "@/pages/worker/WorkerHistoryPage";
 
 // Client pages
 import { ClientDashboard } from "@/pages/client/ClientDashboard";
 import { ClientJobsPage } from "@/pages/client/ClientJobsPage";
-import { ClientNewJobPage } from "@/pages/client/ClientNewJobPage";
+// ClientNewJobPage removido - somente admin cria vagas
 import { ClientCandidatesPage } from "@/pages/client/ClientCandidatesPage";
 import { ClientHistoryPage } from "@/pages/client/ClientHistoryPage";
 
 // Admin pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 import { AdminNewJobPage } from "@/pages/admin/AdminNewJobPage";
+import { AdminMonitoringPage } from "@/pages/admin/AdminMonitoringPage";
 
 function AuthRedirect({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, isProfileComplete } = useAuth();
@@ -101,10 +102,10 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/worker/applications"
+        path="/worker/my-jobs"
         element={
           <ProtectedRoute allowedRoles={['worker']}>
-            <WorkerApplicationsPage />
+            <WorkerMyJobsPage />
           </ProtectedRoute>
         }
       />
@@ -142,14 +143,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/client/jobs/new"
-        element={
-          <ProtectedRoute allowedRoles={['client']}>
-            <ClientNewJobPage />
-          </ProtectedRoute>
-        }
-      />
+{/* Rota de criação de vagas removida - somente admin cria vagas */}
       <Route
         path="/client/candidates"
         element={
@@ -181,6 +175,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminNewJobPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/monitoring"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminMonitoringPage />
           </ProtectedRoute>
         }
       />

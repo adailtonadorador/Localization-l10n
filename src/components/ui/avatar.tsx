@@ -19,13 +19,19 @@ Avatar.displayName = "Avatar";
 const AvatarImage = React.forwardRef<
   HTMLImageElement,
   React.ImgHTMLAttributes<HTMLImageElement>
->(({ className, ...props }, ref) => (
-  <img
-    ref={ref}
-    className={cn("aspect-square h-full w-full", className)}
-    {...props}
-  />
-));
+>(({ className, src, ...props }, ref) => {
+  // Don't render if src is empty or null
+  if (!src) return null;
+
+  return (
+    <img
+      ref={ref}
+      src={src}
+      className={cn("aspect-square h-full w-full", className)}
+      {...props}
+    />
+  );
+});
 AvatarImage.displayName = "AvatarImage";
 
 const AvatarFallback = React.forwardRef<

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { User, Building2, Mail, Lock, CheckCircle2, Shield, ArrowRight } from "lucide-react";
 
 export function RegisterPage() {
   const [activeTab, setActiveTab] = useState<"worker" | "client">("worker");
@@ -13,110 +14,34 @@ export function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Worker fields
-  const [workerName, setWorkerName] = useState("");
-  const [workerCpf, setWorkerCpf] = useState("");
-  const [workerEmail, setWorkerEmail] = useState("");
-  const [workerPhone, setWorkerPhone] = useState("");
-  const [workerPassword, setWorkerPassword] = useState("");
-  const [workerPasswordConfirm, setWorkerPasswordConfirm] = useState("");
-
-  // Client fields
-  const [clientCompany, setClientCompany] = useState("");
-  const [clientCnpj, setClientCnpj] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
-  const [clientPassword, setClientPassword] = useState("");
-  const [clientPasswordConfirm, setClientPasswordConfirm] = useState("");
+  // Basic fields for both worker and client
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
 
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
-  function formatCpf(value: string) {
-    const numbers = value.replace(/\D/g, '').slice(0, 11);
-    return numbers
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-  }
-
-  function formatCnpj(value: string) {
-    const numbers = value.replace(/\D/g, '').slice(0, 14);
-    return numbers
-      .replace(/(\d{2})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1/$2')
-      .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
-  }
-
-  function formatPhone(value: string) {
-    const numbers = value.replace(/\D/g, '').slice(0, 11);
-    if (numbers.length <= 10) {
-      return numbers
-        .replace(/(\d{2})(\d)/, '($1) $2')
-        .replace(/(\d{4})(\d)/, '$1-$2');
-    }
-    return numbers
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2');
-  }
-
-  async function handleWorkerSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (workerPassword !== workerPasswordConfirm) {
+    if (password !== passwordConfirm) {
       setError("As senhas não coincidem");
       return;
     }
 
-    if (workerPassword.length < 6) {
+    if (password.length < 6) {
       setError("A senha deve ter pelo menos 6 caracteres");
       return;
     }
 
     setLoading(true);
 
-    const { error } = await signUp(workerEmail, workerPassword, {
-      name: workerName,
-      role: 'worker',
-      phone: workerPhone,
-      cpf: workerCpf.replace(/\D/g, ''),
-    });
-
-    if (error) {
-      setError(getErrorMessage(error.message));
-      setLoading(false);
-      return;
-    }
-
-    setSuccess(true);
-    setLoading(false);
-  }
-
-  async function handleClientSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-    if (clientPassword !== clientPasswordConfirm) {
-      setError("As senhas não coincidem");
-      return;
-    }
-
-    if (clientPassword.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres");
-      return;
-    }
-
-    setLoading(true);
-
-    const { error } = await signUp(clientEmail, clientPassword, {
-      name: clientName,
-      role: 'client',
-      phone: clientPhone,
-      cnpj: clientCnpj.replace(/\D/g, ''),
-      company_name: clientCompany,
+    const { error } = await signUp(email, password, {
+      name,
+      role: activeTab,
     });
 
     if (error) {
@@ -142,20 +67,45 @@ export function RegisterPage() {
     return 'Erro ao criar conta. Tente novamente.';
   }
 
+  function resetForm() {
+    setName("");
+    setEmail("");
+    setPassword("");
+    setPasswordConfirm("");
+  }
+
   if (success) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-green-600">Conta criada com sucesso!</CardTitle>
-              <CardDescription>
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50 flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-green-200/20 rounded-full blur-3xl" />
+        </div>
+
+        <div className="w-full max-w-md relative z-10">
+          <Card className="border-0 shadow-xl shadow-slate-200/50 backdrop-blur-sm bg-white/90">
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-emerald-600">Conta criada com sucesso!</CardTitle>
+              <CardDescription className="text-base mt-2">
                 Enviamos um e-mail de confirmação para você. Por favor, verifique sua caixa de entrada e clique no link para ativar sua conta.
               </CardDescription>
             </CardHeader>
+            <CardContent className="pt-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+                <p className="font-medium mb-1">Dica importante:</p>
+                <p>Verifique também a pasta de spam caso não encontre o e-mail na caixa de entrada.</p>
+              </div>
+            </CardContent>
             <CardFooter>
-              <Button onClick={() => navigate('/login')} className="w-full">
-                Ir para Login
+              <Button onClick={() => navigate('/login')} className="w-full h-11 font-medium bg-emerald-600 hover:bg-emerald-700">
+                <span className="flex items-center gap-2">
+                  Ir para Login
+                  <ArrowRight className="h-4 w-4" />
+                </span>
               </Button>
             </CardFooter>
           </Card>
@@ -165,213 +115,273 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <Link to="/">
-            <h1 className="text-3xl font-bold text-primary">SAMA</h1>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4 py-8 relative overflow-hidden">
+      {/* Background decorations */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Logo */}
+        <div className="text-center mb-6">
+          <Link to="/" className="inline-flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-600/25">
+              <span className="text-2xl font-bold text-white">S</span>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">SAMA</h1>
+              <p className="text-xs text-slate-500">Trabalhos Temporários</p>
+            </div>
           </Link>
-          <p className="text-muted-foreground">Trabalhos Temporários</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Criar Conta</CardTitle>
-            <CardDescription>
-              Escolha o tipo de conta e preencha seus dados
+        <Card className="border-0 shadow-xl shadow-slate-200/50 backdrop-blur-sm bg-white/90">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-2xl font-bold text-center text-slate-900">Criar sua conta</CardTitle>
+            <CardDescription className="text-center">
+              Escolha o tipo de conta e preencha seus dados básicos
             </CardDescription>
           </CardHeader>
           <CardContent>
             {error && (
-              <div className="mb-4 p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-md">
+              <div className="mb-4 p-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-red-600 text-xs">!</span>
+                </div>
                 {error}
               </div>
             )}
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "worker" | "client")}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="worker">Sou Trabalhador</TabsTrigger>
-                <TabsTrigger value="client">Sou Empresa</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as "worker" | "client"); resetForm(); }}>
+              <TabsList className="grid w-full grid-cols-2 mb-6 h-12 p-1 bg-slate-100">
+                <TabsTrigger
+                  value="worker"
+                  className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm h-10 data-[state=active]:text-emerald-600"
+                >
+                  <User className="h-4 w-4" />
+                  Trabalhador
+                </TabsTrigger>
+                <TabsTrigger
+                  value="client"
+                  className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm h-10 data-[state=active]:text-emerald-600"
+                >
+                  <Building2 className="h-4 w-4" />
+                  Empresa
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="worker">
-                <form onSubmit={handleWorkerSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="worker-name">Nome Completo</Label>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="worker-name" className="text-sm font-medium text-slate-700">Nome Completo</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input
                         id="worker-name"
                         placeholder="João Silva"
-                        value={workerName}
-                        onChange={(e) => setWorkerName(e.target.value)}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         required
                         disabled={loading}
+                        className="pl-10 h-10 bg-white"
                       />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="worker-email" className="text-sm font-medium text-slate-700">E-mail</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="worker-email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="pl-10 h-10 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="worker-password" className="text-sm font-medium text-slate-700">Senha</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          id="worker-password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          disabled={loading}
+                          className="pl-10 h-10 bg-white"
+                        />
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="worker-cpf">CPF</Label>
-                      <Input
-                        id="worker-cpf"
-                        placeholder="000.000.000-00"
-                        value={workerCpf}
-                        onChange={(e) => setWorkerCpf(formatCpf(e.target.value))}
-                        required
-                        disabled={loading}
-                      />
+                      <Label htmlFor="worker-password-confirm" className="text-sm font-medium text-slate-700">Confirmar</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          id="worker-password-confirm"
+                          type="password"
+                          placeholder="••••••••"
+                          value={passwordConfirm}
+                          onChange={(e) => setPasswordConfirm(e.target.value)}
+                          required
+                          disabled={loading}
+                          className="pl-10 h-10 bg-white"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="worker-email">E-mail</Label>
-                    <Input
-                      id="worker-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={workerEmail}
-                      onChange={(e) => setWorkerEmail(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
+
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-sm text-emerald-700">
+                    <p>Após o cadastro, você completará seu perfil com telefone, CPF, PIX e endereço.</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="worker-phone">Telefone</Label>
-                    <Input
-                      id="worker-phone"
-                      placeholder="(11) 99999-9999"
-                      value={workerPhone}
-                      onChange={(e) => setWorkerPhone(formatPhone(e.target.value))}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="worker-password">Senha</Label>
-                    <Input
-                      id="worker-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={workerPassword}
-                      onChange={(e) => setWorkerPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="worker-password-confirm">Confirmar Senha</Label>
-                    <Input
-                      id="worker-password-confirm"
-                      type="password"
-                      placeholder="••••••••"
-                      value={workerPasswordConfirm}
-                      onChange={(e) => setWorkerPasswordConfirm(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Criando conta..." : "Criar Conta de Trabalhador"}
+
+                  <Button
+                    type="submit"
+                    className="w-full h-11 font-medium bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Criando conta...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        Criar Conta de Trabalhador
+                        <ArrowRight className="h-4 w-4" />
+                      </span>
+                    )}
                   </Button>
                 </form>
               </TabsContent>
 
               <TabsContent value="client">
-                <form onSubmit={handleClientSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="client-company">Nome da Empresa</Label>
-                    <Input
-                      id="client-company"
-                      placeholder="Empresa LTDA"
-                      value={clientCompany}
-                      onChange={(e) => setClientCompany(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
+                    <Label htmlFor="client-name" className="text-sm font-medium text-slate-700">Nome do Responsável</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="client-name"
+                        placeholder="Nome completo"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="pl-10 h-10 bg-white"
+                      />
+                    </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="client-email" className="text-sm font-medium text-slate-700">E-mail</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="client-email"
+                        type="email"
+                        placeholder="contato@empresa.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="pl-10 h-10 bg-white"
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="client-cnpj">CNPJ</Label>
-                      <Input
-                        id="client-cnpj"
-                        placeholder="00.000.000/0000-00"
-                        value={clientCnpj}
-                        onChange={(e) => setClientCnpj(formatCnpj(e.target.value))}
-                        required
-                        disabled={loading}
-                      />
+                      <Label htmlFor="client-password" className="text-sm font-medium text-slate-700">Senha</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          id="client-password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          disabled={loading}
+                          className="pl-10 h-10 bg-white"
+                        />
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="client-phone">Telefone</Label>
-                      <Input
-                        id="client-phone"
-                        placeholder="(11) 99999-9999"
-                        value={clientPhone}
-                        onChange={(e) => setClientPhone(formatPhone(e.target.value))}
-                        required
-                        disabled={loading}
-                      />
+                      <Label htmlFor="client-password-confirm" className="text-sm font-medium text-slate-700">Confirmar</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          id="client-password-confirm"
+                          type="password"
+                          placeholder="••••••••"
+                          value={passwordConfirm}
+                          onChange={(e) => setPasswordConfirm(e.target.value)}
+                          required
+                          disabled={loading}
+                          className="pl-10 h-10 bg-white"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="client-name">Nome do Responsável</Label>
-                    <Input
-                      id="client-name"
-                      placeholder="Nome completo"
-                      value={clientName}
-                      onChange={(e) => setClientName(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
+
+                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-700">
+                    <p>Após o cadastro, você completará seu perfil com dados da empresa, CNPJ e telefone.</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="client-email">E-mail</Label>
-                    <Input
-                      id="client-email"
-                      type="email"
-                      placeholder="contato@empresa.com"
-                      value={clientEmail}
-                      onChange={(e) => setClientEmail(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="client-password">Senha</Label>
-                    <Input
-                      id="client-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={clientPassword}
-                      onChange={(e) => setClientPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="client-password-confirm">Confirmar Senha</Label>
-                    <Input
-                      id="client-password-confirm"
-                      type="password"
-                      placeholder="••••••••"
-                      value={clientPasswordConfirm}
-                      onChange={(e) => setClientPasswordConfirm(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Criando conta..." : "Criar Conta Empresarial"}
+
+                  <Button
+                    type="submit"
+                    className="w-full h-11 font-medium bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Criando conta...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        Criar Conta Empresarial
+                        <ArrowRight className="h-4 w-4" />
+                      </span>
+                    )}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
           </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground text-center">
+          <CardFooter className="flex flex-col gap-4 pt-0">
+            <div className="relative w-full">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-slate-400">ou</span>
+              </div>
+            </div>
+            <p className="text-sm text-slate-600 text-center">
               Já tem uma conta?{" "}
-              <Link to="/login" className="text-primary hover:underline">
+              <Link to="/login" className="text-emerald-600 hover:text-emerald-700 font-semibold">
                 Entrar
               </Link>
             </p>
           </CardFooter>
         </Card>
+
+        {/* Security badge */}
+        <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-500">
+          <Shield className="h-4 w-4" />
+          <span>Seus dados estão protegidos com criptografia</span>
+        </div>
       </div>
     </div>
   );

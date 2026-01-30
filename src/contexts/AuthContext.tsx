@@ -77,15 +77,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setLoading(false)
       }
+    }).catch(() => {
+      if (isMounted) setLoading(false)
     })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         if (!isMounted) return
+
+        // Reset state on sign out
+        if (event === 'SIGNED_OUT') {
+          setSession(null)
+          setUser(null)
+          setProfile(null)
+          setWorkerProfile(null)
+          setClientProfile(null)
+          setIsProfileComplete(false)
+          setLoading(false)
+          return
+        }
+
         setSession(session)
         setUser(session?.user ?? null)
+
         if (session?.user) {
+          setLoading(true)
           await fetchProfile(session.user.id, isMounted)
         } else {
           setProfile(null)
@@ -114,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!isMounted) return
 
       if (error) throw error
+
       const userProfile = data as UserProfile
       setProfile(userProfile)
 
@@ -211,13 +229,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
-    await supabase.auth.signOut()
+    // Clear local state immediately
     setUser(null)
     setProfile(null)
     setWorkerProfile(null)
     setClientProfile(null)
     setSession(null)
     setIsProfileComplete(false)
+    setLoading(false)
+
+    // Sign out from Supabase (this will also trigger onAuthStateChange)
+    await supabase.auth.signOut({ scope: 'local' })
   }
 
   const value = {

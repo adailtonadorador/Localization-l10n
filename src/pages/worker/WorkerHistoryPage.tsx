@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Briefcase, DollarSign, Star, MapPin, Clock, Calendar, TrendingUp, Award } from "lucide-react";
 
 interface JobAssignment {
   id: string;
@@ -112,88 +113,168 @@ export function WorkerHistoryPage() {
 
   return (
     <DashboardLayout>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Histórico de Trabalhos</h2>
-        <p className="text-muted-foreground">Seus trabalhos realizados</p>
+      {/* Header */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Histórico de Trabalhos</h2>
+        <p className="text-muted-foreground">Acompanhe seu desempenho e ganhos na plataforma</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total de Trabalhos</CardDescription>
-            <CardTitle className="text-3xl">{completedJobs.length}</CardTitle>
-          </CardHeader>
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-4 mb-8">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-emerald-100 rounded-xl">
+                <Briefcase className="h-6 w-6 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-emerald-600">{completedJobs.length}</p>
+                <p className="text-sm text-muted-foreground">Trabalhos Concluídos</p>
+              </div>
+            </div>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Ganho</CardDescription>
-            <CardTitle className="text-3xl">R$ {totalEarnings.toFixed(2)}</CardTitle>
-          </CardHeader>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-white">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-green-100 rounded-xl">
+                <DollarSign className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-green-600">R$ {totalEarnings.toFixed(0)}</p>
+                <p className="text-sm text-muted-foreground">Total Ganho</p>
+              </div>
+            </div>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Avaliação Média</CardDescription>
-            <CardTitle className="text-3xl">
-              {avgRating > 0 ? `${avgRating.toFixed(1)} ★` : 'N/A'}
-            </CardTitle>
-          </CardHeader>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-white">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-amber-100 rounded-xl">
+                <Star className="h-6 w-6 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-amber-600">
+                  {avgRating > 0 ? avgRating.toFixed(1) : '-'}
+                </p>
+                <p className="text-sm text-muted-foreground">Avaliação Média</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <TrendingUp className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-blue-600">
+                  R$ {completedJobs.length > 0 ? (totalEarnings / completedJobs.length).toFixed(0) : '0'}
+                </p>
+                <p className="text-sm text-muted-foreground">Média por Trabalho</p>
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
 
+      {/* Jobs List */}
       {assignments.length > 0 ? (
         <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-1.5 bg-slate-800 rounded-lg">
+              <Clock className="h-4 w-4 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold">Trabalhos Realizados</h3>
+            <Badge variant="secondary">{assignments.length}</Badge>
+          </div>
+
           {assignments.map((assignment) => (
-            <Card key={assignment.id}>
+            <Card key={assignment.id} className="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+              <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                assignment.status === 'completed' ? 'bg-green-500' : 'bg-red-500'
+              }`} />
               <CardContent className="p-6">
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+                  {/* Main Info */}
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-lg">{assignment.jobs.title}</h3>
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-bold text-lg text-slate-900">{assignment.jobs.title}</h3>
+                        <p className="text-sm text-muted-foreground">{assignment.jobs.clients?.company_name}</p>
+                      </div>
                       {getStatusBadge(assignment.status)}
                     </div>
-                    <p className="text-muted-foreground">{assignment.jobs.clients?.company_name}</p>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Data</p>
-                        <p className="font-medium">{formatDate(assignment.jobs.date)}</p>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Data</p>
+                          <p className="font-medium text-sm">{formatDate(assignment.jobs.date)}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Horário</p>
-                        <p className="font-medium">
-                          {formatTime(assignment.jobs.start_time)} - {formatTime(assignment.jobs.end_time)}
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Horário</p>
+                          <p className="font-medium text-sm">
+                            {formatTime(assignment.jobs.start_time)} - {formatTime(assignment.jobs.end_time)}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Local</p>
-                        <p className="font-medium">{assignment.jobs.location}</p>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Local</p>
+                          <p className="font-medium text-sm truncate">{assignment.jobs.location}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Valor/hora</p>
-                        <p className="font-medium">R$ {assignment.jobs.hourly_rate}</p>
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Valor/hora</p>
+                          <p className="font-medium text-sm">R$ {assignment.jobs.hourly_rate}</p>
+                        </div>
                       </div>
                     </div>
 
                     {assignment.feedback && (
-                      <div className="mt-4 p-3 bg-muted rounded-lg">
-                        <p className="text-sm text-muted-foreground">Feedback da empresa:</p>
-                        <p className="text-sm mt-1">{assignment.feedback}</p>
+                      <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                        <p className="text-xs font-medium text-blue-700 mb-1">Feedback da empresa:</p>
+                        <p className="text-sm text-blue-900">{assignment.feedback}</p>
                       </div>
                     )}
                   </div>
 
-                  <div className="text-right ml-4">
-                    {assignment.rating && (
-                      <div className="mb-2">
-                        <span className="text-2xl font-bold">{assignment.rating}</span>
-                        <span className="text-yellow-500"> ★</span>
+                  {/* Rating & Earnings */}
+                  <div className="flex lg:flex-col items-center gap-4 p-4 bg-slate-50 rounded-xl min-w-[140px]">
+                    {assignment.rating ? (
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+                          <span className="text-2xl font-bold">{assignment.rating}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Avaliação</p>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <Award className="h-6 w-6 text-slate-300 mx-auto mb-1" />
+                        <p className="text-xs text-muted-foreground">Sem avaliação</p>
                       </div>
                     )}
+
                     {assignment.status === 'completed' && (
-                      <p className="text-lg font-bold text-green-600">
-                        + R$ {calculateEarnings(assignment).toFixed(2)}
-                      </p>
+                      <div className="text-center lg:border-t lg:pt-4 lg:mt-2">
+                        <p className="text-xl font-bold text-green-600">
+                          +R$ {calculateEarnings(assignment).toFixed(0)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Ganho</p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -202,9 +283,15 @@ export function WorkerHistoryPage() {
           ))}
         </div>
       ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Nenhum trabalho realizado ainda.</p>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="py-16 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Briefcase className="h-8 w-8 text-slate-400" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Nenhum trabalho realizado</h3>
+            <p className="text-muted-foreground">
+              Seu histórico de trabalhos aparecerá aqui após completar suas primeiras vagas.
+            </p>
           </CardContent>
         </Card>
       )}

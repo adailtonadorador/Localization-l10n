@@ -74,3 +74,18 @@ export interface JobApplication {
   status: 'pending' | 'approved' | 'rejected';
   applied_at: string;
 }
+
+// Project Task types
+export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
+export type TaskCategory = 'feature' | 'bug' | 'improvement' | 'documentation' | 'other';
+
+export interface ProjectTask {
+  id: string;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  category: TaskCategory;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
