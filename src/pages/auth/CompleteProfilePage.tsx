@@ -207,7 +207,7 @@ export function CompleteProfilePage() {
     }
   }
 
-  // Fetch company data by CNPJ
+  // Fetch company data by CNPJ via our serverless function
   async function fetchCompanyByCnpj(cnpjValue: string) {
     const cleanCnpj = cnpjValue.replace(/\D/g, '');
     if (cleanCnpj.length !== 14) return;
@@ -215,11 +215,8 @@ export function CompleteProfilePage() {
     setFetchingCnpj(true);
     setError(null);
     try {
-      const token = import.meta.env.VITE_RECEITAWS_TOKEN;
-      const url = token
-        ? `https://www.receitaws.com.br/v1/cnpj/${cleanCnpj}?token=${token}`
-        : `https://www.receitaws.com.br/v1/cnpj/${cleanCnpj}`;
-      const response = await fetch(url);
+      // Use our serverless API to avoid CORS issues
+      const response = await fetch(`/api/cnpj/${cleanCnpj}`);
       const data: ReceitaWsResponse = await response.json();
 
       if (data.status === 'ERROR' || data.message) {
