@@ -32,6 +32,23 @@ interface ViaCepResponse {
   erro?: boolean;
 }
 
+interface ReceitaWsResponse {
+  status: string;
+  nome: string;
+  fantasia: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  municipio: string;
+  uf: string;
+  cep: string;
+  telefone: string;
+  email: string;
+  situacao: string;
+  message?: string;
+}
+
 export function CompleteProfilePage() {
   const { profile, user, refreshProfile } = useAuth();
   const navigate = useNavigate();
@@ -61,7 +78,18 @@ export function CompleteProfilePage() {
   const [clientPhone, setClientPhone] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [companyName, setCompanyName] = useState("");
-  const [clientAddress, setClientAddress] = useState("");
+  const [fantasia, setFantasia] = useState("");
+  const [fetchingCnpj, setFetchingCnpj] = useState(false);
+
+  // Client address fields
+  const [clientCep, setClientCep] = useState("");
+  const [clientLogradouro, setClientLogradouro] = useState("");
+  const [clientNumero, setClientNumero] = useState("");
+  const [clientComplemento, setClientComplemento] = useState("");
+  const [clientBairro, setClientBairro] = useState("");
+  const [clientCidade, setClientCidade] = useState("");
+  const [clientUf, setClientUf] = useState("");
+  const [fetchingClientCep, setFetchingClientCep] = useState(false);
 
   useEffect(() => {
     checkProfileComplete();
@@ -179,6 +207,111 @@ export function CompleteProfilePage() {
     }
   }
 
+  // Fetch company data by CNPJ
+  async function fetchCompanyByCnpj(cnpjValue: string) {
+    const cleanCnpj = cnpjValue.replace(/\D/g, '');
+    if (cleanCnpj.length !== 14) return;
+
+    setFetchingCnpj(true);
+    setError(null);
+    try {
+      const response = await fetch(`https://www.receitaws.com.br/v1/cnpj/${cleanCnpj}`);
+      const data: ReceitaWsResponse = await response.json();
+
+      if (data.status === 'ERROR' || data.message) {
+        setError(data.message || "CNPJ não encontrado");
+        setFetchingCnpj(false);
+        return;
+      }
+
+      if (data.situacao !== 'ATIVA') {
+        setError(`Empresa com situação: ${data.situacao}. Apenas empresas ativas podem se cadastrar.`);
+        setFetchingCnpj(false);
+        return;
+      }
+
+      // Fill company data
+      setCompanyName(data.nome || '');
+      setFantasia(data.fantasia || '');
+
+      // Fill address data
+      if (data.cep) {
+        setClientCep(formatCep(data.cep));
+      }
+      setClientLogradouro(data.logradouro || '');
+      setClientNumero(data.numero || '');
+      setClientComplemento(data.complemento || '');
+      setClientBairro(data.bairro || '');
+      setClientCidade(data.municipio || '');
+      setClientUf(data.uf || '');
+
+      // Fill phone if available and not already set
+      if (data.telefone && !clientPhone) {
+        // ReceitaWS returns phone in format like "1199999999" or "(11) 9999-9999"
+        const cleanPhone = data.telefone.split('/')[0].replace(/\D/g, '').slice(0, 11);
+        if (cleanPhone.length >= 10) {
+          setClientPhone(formatPhone(cleanPhone));
+        }
+      }
+
+      setError(null);
+    } catch {
+      setError("Erro ao buscar CNPJ. Tente novamente.");
+    } finally {
+      setFetchingCnpj(false);
+    }
+  }
+
+  function handleCnpjChange(value: string) {
+    const formatted = formatCnpj(value);
+    setCnpj(formatted);
+
+    const cleanCnpj = value.replace(/\D/g, '');
+    if (cleanCnpj.length === 14) {
+      fetchCompanyByCnpj(cleanCnpj);
+    }
+  }
+
+  // Fetch client address by CEP
+  async function fetchClientAddressByCep(cepValue: string) {
+    const cleanCep = cepValue.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+
+    setFetchingClientCep(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data: ViaCepResponse = await response.json();
+
+      if (data.erro) {
+        setError("CEP não encontrado");
+        return;
+      }
+
+      setClientLogradouro(data.logradouro || '');
+      setClientBairro(data.bairro || '');
+      setClientCidade(data.localidade || '');
+      setClientUf(data.uf || '');
+      if (data.complemento) {
+        setClientComplemento(data.complemento);
+      }
+      setError(null);
+    } catch {
+      setError("Erro ao buscar CEP. Tente novamente.");
+    } finally {
+      setFetchingClientCep(false);
+    }
+  }
+
+  function handleClientCepChange(value: string) {
+    const formatted = formatCep(value);
+    setClientCep(formatted);
+
+    const cleanCep = value.replace(/\D/g, '');
+    if (cleanCep.length === 8) {
+      fetchClientAddressByCep(cleanCep);
+    }
+  }
+
   async function handleWorkerSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
@@ -292,6 +425,22 @@ export function CompleteProfilePage() {
       return;
     }
 
+    const cleanClientCep = clientCep.replace(/\D/g, '');
+    if (cleanClientCep.length !== 8) {
+      setError("CEP deve ter 8 dígitos");
+      setLoading(false);
+      return;
+    }
+
+    if (!clientLogradouro || !clientNumero || !clientBairro || !clientCidade || !clientUf) {
+      setError("Preencha todos os campos obrigatórios do endereço");
+      setLoading(false);
+      return;
+    }
+
+    // Build full address string
+    const fullAddress = `${clientLogradouro}, ${clientNumero}${clientComplemento ? ` - ${clientComplemento}` : ''}, ${clientBairro}, ${clientCidade} - ${clientUf}, CEP: ${clientCep}`;
+
     try {
       // Update user profile with phone
       const { error: userError } = await supabaseUntyped
@@ -306,7 +455,15 @@ export function CompleteProfilePage() {
         id: user.id,
         cnpj: cleanCnpj,
         company_name: companyName,
-        address: clientAddress || null,
+        fantasia: fantasia || null,
+        address: fullAddress,
+        cep: cleanClientCep,
+        logradouro: clientLogradouro,
+        numero: clientNumero,
+        complemento: clientComplemento || null,
+        bairro: clientBairro,
+        cidade: clientCidade,
+        uf: clientUf,
       });
 
       if (insertError) {
@@ -645,70 +802,197 @@ export function CompleteProfilePage() {
                   </div>
                 </div>
 
-                {/* Company Name */}
+                {/* CNPJ with auto-search */}
                 <div className="space-y-2">
-                  <Label htmlFor="company-name" className="text-sm font-medium">Nome da Empresa *</Label>
+                  <Label htmlFor="cnpj" className="text-sm font-medium">CNPJ *</Label>
                   <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="company-name"
-                      placeholder="Empresa LTDA"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
+                      id="cnpj"
+                      placeholder="00.000.000/0000-00"
+                      value={cnpj}
+                      onChange={(e) => handleCnpjChange(e.target.value)}
                       required
-                      disabled={loading}
+                      disabled={loading || fetchingCnpj}
                       className="pl-10 h-10 bg-white"
                     />
+                    {fetchingCnpj && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+                    )}
                   </div>
+                  <p className="text-xs text-muted-foreground">Digite o CNPJ para buscar os dados da empresa automaticamente</p>
                 </div>
 
-                {/* CNPJ and Phone */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cnpj" className="text-sm font-medium">CNPJ *</Label>
+                {/* Company Data Section */}
+                <div className="pt-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-slate-700">Dados da Empresa</span>
+                  </div>
+
+                  {/* Company Name */}
+                  <div className="space-y-2 mb-3">
+                    <Label htmlFor="company-name" className="text-sm font-medium">Razão Social *</Label>
                     <div className="relative">
-                      <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="cnpj"
-                        placeholder="00.000.000/0000-00"
-                        value={cnpj}
-                        onChange={(e) => setCnpj(formatCnpj(e.target.value))}
+                        id="company-name"
+                        placeholder="Razão Social da Empresa"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
                         required
                         disabled={loading}
                         className="pl-10 h-10 bg-white"
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="client-phone" className="text-sm font-medium">Telefone *</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+
+                  {/* Trade Name and Phone */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="fantasia" className="text-sm font-medium">Nome Fantasia</Label>
                       <Input
-                        id="client-phone"
-                        placeholder="(11) 99999-9999"
-                        value={clientPhone}
-                        onChange={(e) => setClientPhone(formatPhone(e.target.value))}
-                        required
+                        id="fantasia"
+                        placeholder="Nome Fantasia"
+                        value={fantasia}
+                        onChange={(e) => setFantasia(e.target.value)}
                         disabled={loading}
-                        className="pl-10 h-10 bg-white"
+                        className="h-10 bg-white"
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="client-phone" className="text-sm font-medium">Telefone *</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="client-phone"
+                          placeholder="(11) 99999-9999"
+                          value={clientPhone}
+                          onChange={(e) => setClientPhone(formatPhone(e.target.value))}
+                          required
+                          disabled={loading}
+                          className="pl-10 h-10 bg-white"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Address */}
-                <div className="space-y-2">
-                  <Label htmlFor="client-address" className="text-sm font-medium">Endereço</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="client-address"
-                      placeholder="Rua, número, bairro, cidade - UF"
-                      value={clientAddress}
-                      onChange={(e) => setClientAddress(e.target.value)}
-                      disabled={loading}
-                      className="pl-10 h-10 bg-white"
-                    />
+                {/* Address Section */}
+                <div className="pt-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-slate-700">Endereço</span>
+                  </div>
+
+                  {/* CEP with auto-search */}
+                  <div className="space-y-2 mb-4">
+                    <Label htmlFor="client-cep" className="text-sm font-medium">CEP *</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="client-cep"
+                        placeholder="00000-000"
+                        value={clientCep}
+                        onChange={(e) => handleClientCepChange(e.target.value)}
+                        required
+                        disabled={loading || fetchingClientCep}
+                        className="pl-10 h-10 bg-white"
+                      />
+                      {fetchingClientCep && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Street and Number */}
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    <div className="col-span-2 space-y-2">
+                      <Label htmlFor="client-logradouro" className="text-sm font-medium">Logradouro *</Label>
+                      <div className="relative">
+                        <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="client-logradouro"
+                          placeholder="Rua, Avenida..."
+                          value={clientLogradouro}
+                          onChange={(e) => setClientLogradouro(e.target.value)}
+                          required
+                          disabled={loading}
+                          className="pl-10 h-10 bg-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="client-numero" className="text-sm font-medium">Número *</Label>
+                      <Input
+                        id="client-numero"
+                        placeholder="123"
+                        value={clientNumero}
+                        onChange={(e) => setClientNumero(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="h-10 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Complement and Neighborhood */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="client-complemento" className="text-sm font-medium">Complemento</Label>
+                      <Input
+                        id="client-complemento"
+                        placeholder="Sala, Andar..."
+                        value={clientComplemento}
+                        onChange={(e) => setClientComplemento(e.target.value)}
+                        disabled={loading}
+                        className="h-10 bg-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="client-bairro" className="text-sm font-medium">Bairro *</Label>
+                      <Input
+                        id="client-bairro"
+                        placeholder="Bairro"
+                        value={clientBairro}
+                        onChange={(e) => setClientBairro(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="h-10 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* City and State */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2 space-y-2">
+                      <Label htmlFor="client-cidade" className="text-sm font-medium">Cidade *</Label>
+                      <div className="relative">
+                        <Map className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="client-cidade"
+                          placeholder="Cidade"
+                          value={clientCidade}
+                          onChange={(e) => setClientCidade(e.target.value)}
+                          required
+                          disabled={loading}
+                          className="pl-10 h-10 bg-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="client-uf" className="text-sm font-medium">UF *</Label>
+                      <Input
+                        id="client-uf"
+                        placeholder="SP"
+                        value={clientUf}
+                        onChange={(e) => setClientUf(e.target.value.toUpperCase().slice(0, 2))}
+                        required
+                        disabled={loading}
+                        maxLength={2}
+                        className="h-10 bg-white text-center"
+                      />
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -716,7 +1000,7 @@ export function CompleteProfilePage() {
                 <Button
                   type="submit"
                   className="w-full h-11 font-medium shadow-lg shadow-primary/25"
-                  disabled={loading}
+                  disabled={loading || fetchingCnpj}
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
