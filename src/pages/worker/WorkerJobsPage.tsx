@@ -94,11 +94,99 @@ export function WorkerJobsPage() {
     setDetailsOpen(true);
   }
 
+  // Verifica se dois intervalos de tempo se sobrepõem
+  function timeRangesOverlap(start1: string, end1: string, start2: string, end2: string): boolean {
+    // Converter para minutos desde meia-noite para facilitar comparação
+    const toMinutes = (time: string) => {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const s1 = toMinutes(start1);
+    const e1 = toMinutes(end1);
+    const s2 = toMinutes(start2);
+    const e2 = toMinutes(end2);
+
+    // Intervalos se sobrepõem se um começa antes do outro terminar
+    return s1 < e2 && s2 < e1;
+  }
+
   async function handleAssignToMe() {
     if (!selectedJob || !profile?.id) return;
 
     setAssigning(true);
     try {
+      // Obter as datas da vaga selecionada
+      const selectedJobDates = selectedJob.dates && selectedJob.dates.length > 0
+        ? selectedJob.dates
+        : [selectedJob.date];
+
+      // Buscar todas as vagas já atribuídas ao trabalhador
+      const { data: existingAssignments } = await supabaseUntyped
+        .from('job_assignments')
+        .select(`
+          job_id,
+          jobs (
+            id,
+            date,
+            dates,
+            start_time,
+            end_time,
+            title
+          )
+        `)
+        .eq('worker_id', profile.id)
+        .in('status', ['pending', 'confirmed']);
+
+      // Verificar conflito de datas e horários
+      if (existingAssignments && existingAssignments.length > 0) {
+        for (const assignment of existingAssignments) {
+          const existingJob = assignment.jobs as {
+            id: string;
+            date: string;
+            dates: string[] | null;
+            start_time: string;
+            end_time: string;
+            title: string;
+          };
+
+          if (!existingJob) continue;
+
+          const existingJobDates = existingJob.dates && existingJob.dates.length > 0
+            ? existingJob.dates
+            : [existingJob.date];
+
+          // Verificar se há datas em comum
+          const commonDates = selectedJobDates.filter(date => existingJobDates.includes(date));
+
+          if (commonDates.length > 0) {
+            // Verificar se os horários se sobrepõem
+            const hasTimeConflict = timeRangesOverlap(
+              selectedJob.start_time,
+              selectedJob.end_time,
+              existingJob.start_time,
+              existingJob.end_time
+            );
+
+            if (hasTimeConflict) {
+              const conflictDatesFormatted = commonDates.map(d =>
+                new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
+              ).join(', ');
+
+              alert(
+                `Não é possível se atribuir a esta vaga.\n\n` +
+                `Você já tem a vaga "${existingJob.title}" atribuída ` +
+                `na(s) data(s) ${conflictDatesFormatted} ` +
+                `com horário conflitante (${existingJob.start_time.slice(0,5)} - ${existingJob.end_time.slice(0,5)}).\n\n` +
+                `A vaga que você está tentando se atribuir é das ${selectedJob.start_time.slice(0,5)} às ${selectedJob.end_time.slice(0,5)}.`
+              );
+              setAssigning(false);
+              return;
+            }
+          }
+        }
+      }
+
       // Criar assignment
       const { error: assignError } = await supabaseUntyped.from('job_assignments').insert({
         job_id: selectedJob.id,
