@@ -10,14 +10,14 @@ import {
   Clock,
   User,
   Users,
-  PlusCircle,
   LogOut,
   Bell,
   Menu,
   X,
   Settings,
   ClipboardList,
-  Activity
+  Activity,
+  Building2
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -34,7 +34,8 @@ const menuItems = {
   ],
   admin: [
     { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { label: 'Nova Vaga', href: '/admin/jobs/new', icon: PlusCircle },
+    { label: 'Clientes', href: '/admin/clients', icon: Building2 },
+    { label: 'Trabalhadores', href: '/admin/workers', icon: Users },
     { label: 'Monitoramento', href: '/admin/monitoring', icon: Activity },
   ],
   client: [

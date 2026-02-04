@@ -24,6 +24,9 @@ import { ClientHistoryPage } from "@/pages/client/ClientHistoryPage";
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 import { AdminNewJobPage } from "@/pages/admin/AdminNewJobPage";
 import { AdminMonitoringPage } from "@/pages/admin/AdminMonitoringPage";
+import { AdminClientsPage } from "@/pages/admin/AdminClientsPage";
+import { AdminClientDetailPage } from "@/pages/admin/AdminClientDetailPage";
+import { AdminWorkersPage } from "@/pages/admin/AdminWorkersPage";
 
 function AuthRedirect({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, isProfileComplete } = useAuth();
@@ -179,6 +182,30 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/clients"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminClientsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/clients/:id"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminClientDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/workers"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminWorkersPage />
           </ProtectedRoute>
         }
       />
