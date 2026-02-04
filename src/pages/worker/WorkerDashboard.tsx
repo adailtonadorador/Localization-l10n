@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
@@ -50,6 +50,7 @@ interface JobAssignment {
 }
 
 export function WorkerDashboard() {
+  const location = useLocation();
   const { user, workerProfile } = useAuth();
   const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
   const [upcomingJobs, setUpcomingJobs] = useState<JobAssignment[]>([]);
@@ -62,11 +63,12 @@ export function WorkerDashboard() {
   });
   const [loading, setLoading] = useState(true);
 
+  // Recarrega dados quando navega para esta página
   useEffect(() => {
     if (user) {
       loadDashboardData();
     }
-  }, [user]);
+  }, [user, location.pathname]);
 
   async function loadDashboardData() {
     setLoading(true);

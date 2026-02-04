@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -121,6 +121,7 @@ interface Job {
 }
 
 export function AdminDashboard() {
+  const location = useLocation();
   const [stats, setStats] = useState<Stats>({
     totalWorkers: 0,
     totalClients: 0,
@@ -152,9 +153,10 @@ export function AdminDashboard() {
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [disableReason, setDisableReason] = useState("");
 
+  // Recarrega dados quando navega para esta página
   useEffect(() => {
     loadData();
-  }, []);
+  }, [location.pathname]);
 
   async function loadData() {
     setLoading(true);

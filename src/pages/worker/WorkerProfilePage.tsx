@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+// Avatar components not used - AvatarUpload handles avatar display
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import {
   User,
@@ -26,8 +26,7 @@ import {
   Loader2,
   Home,
   Map,
-  Wallet,
-  Camera
+  Wallet
 } from "lucide-react";
 
 interface ViaCepResponse {
@@ -62,7 +61,7 @@ export function WorkerProfilePage() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchingCep, setFetchingCep] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  // uploadingAvatar state removed - handled by AvatarUpload component
   const [avatarError, setAvatarError] = useState<string | null>(null);
 
   // Form state
@@ -223,8 +222,6 @@ export function WorkerProfilePage() {
       .replace(/(\d{2})(\d)/, '($1) $2')
       .replace(/(\d{5})(\d)/, '$1-$2');
   }
-
-  const initials = profile?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??';
 
   return (
     <DashboardLayout>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,7 @@ interface JobWithRecords {
 }
 
 export function AdminMonitoringPage() {
+  const location = useLocation();
   const [jobs, setJobs] = useState<JobWithRecords[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,9 +57,10 @@ export function AdminMonitoringPage() {
   const [selectedJob, setSelectedJob] = useState<JobWithRecords | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
+  // Recarrega dados quando navega para esta página ou muda a data
   useEffect(() => {
     loadJobs();
-  }, [filterDate]);
+  }, [filterDate, location.pathname]);
 
   async function loadJobs() {
     setLoading(true);

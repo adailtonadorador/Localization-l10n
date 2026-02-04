@@ -28,7 +28,8 @@ import { AdminMonitoringPage } from "@/pages/admin/AdminMonitoringPage";
 function AuthRedirect({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, isProfileComplete } = useAuth();
 
-  if (loading) {
+  // Se está carregando e não tem profile em cache, mostrar loading
+  if (loading && !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -36,17 +37,28 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (user && profile) {
-    if (!isProfileComplete && profile.role !== 'admin') {
-      return <Navigate to="/complete-profile" replace />;
+  // Redireciona para dashboard se tem usuário OU profile em cache
+  // Isso evita que usuário logado veja tela de login durante navegação
+  if (user || profile) {
+    if (profile) {
+      if (!isProfileComplete && profile.role !== 'admin') {
+        return <Navigate to="/complete-profile" replace />;
+      }
+
+      const redirectPath = profile.role === 'worker'
+        ? '/worker'
+        : profile.role === 'client'
+          ? '/client'
+          : '/admin';
+      return <Navigate to={redirectPath} replace />;
     }
 
-    const redirectPath = profile.role === 'worker'
-      ? '/worker'
-      : profile.role === 'client'
-        ? '/client'
-        : '/admin';
-    return <Navigate to={redirectPath} replace />;
+    // Tem user mas não tem profile, aguardar carregamento
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return <>{children}</>;

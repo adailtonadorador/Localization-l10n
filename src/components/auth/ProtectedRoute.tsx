@@ -18,7 +18,8 @@ export function ProtectedRoute({
   const { user, profile, loading, isProfileComplete } = useAuth()
   const location = useLocation()
 
-  if (loading) {
+  // Se está carregando e não tem profile em cache, mostrar loading
+  if (loading && !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -26,10 +27,13 @@ export function ProtectedRoute({
     )
   }
 
-  if (!user) {
+  // Só redireciona para login se não tem usuário E não tem profile em cache
+  // Isso evita redirecionamento quando user fica temporariamente null durante navegação
+  if (!user && !profile) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  // Se não tem profile em cache, aguardar carregamento
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">

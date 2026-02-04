@@ -358,7 +358,11 @@ export function AdminNewJobPage() {
                   ) : (
                     <Select value={clientId} onValueChange={setClientId}>
                       <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Selecione uma empresa" />
+                        {selectedClient ? (
+                          <span>{selectedClient.company_name}</span>
+                        ) : (
+                          <SelectValue placeholder="Selecione uma empresa" />
+                        )}
                       </SelectTrigger>
                       <SelectContent>
                         {clients.map((client) => (

@@ -70,19 +70,16 @@ const CACHE_KEYS = {
   profile: 'sama_profile_cache',
   workerProfile: 'sama_worker_profile_cache',
   clientProfile: 'sama_client_profile_cache',
+  session: 'sama_session_cache',
 }
 
-// Helper functions for cache
-function getCachedProfile<T>(key: string): T | null {
+// Helper functions for cache - sem expiração de tempo, só limpa no logout
+function getCachedData<T>(key: string): T | null {
   try {
     const cached = localStorage.getItem(key)
     if (cached) {
-      const { data, timestamp } = JSON.parse(cached)
-      // Cache válido por 24 horas
-      if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
-        return data as T
-      }
-      localStorage.removeItem(key)
+      const { data } = JSON.parse(cached)
+      return data as T
     }
   } catch {
     localStorage.removeItem(key)
@@ -90,7 +87,7 @@ function getCachedProfile<T>(key: string): T | null {
   return null
 }
 
-function setCachedProfile<T>(key: string, data: T | null) {
+function setCachedData<T>(key: string, data: T | null) {
   try {
     if (data) {
       localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }))
@@ -108,91 +105,107 @@ function clearAllCache() {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   // Inicializar estados com cache do localStorage para evitar tela em branco
-  const cachedProfile = getCachedProfile<UserProfile>(CACHE_KEYS.profile)
-  const cachedWorkerProfile = getCachedProfile<WorkerProfile>(CACHE_KEYS.workerProfile)
-  const cachedClientProfile = getCachedProfile<ClientProfile>(CACHE_KEYS.clientProfile)
+  const cachedProfile = getCachedData<UserProfile>(CACHE_KEYS.profile)
+  const cachedWorkerProfile = getCachedData<WorkerProfile>(CACHE_KEYS.workerProfile)
+  const cachedClientProfile = getCachedData<ClientProfile>(CACHE_KEYS.clientProfile)
 
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(cachedProfile)
   const [workerProfile, setWorkerProfile] = useState<WorkerProfile | null>(cachedWorkerProfile)
   const [clientProfile, setClientProfile] = useState<ClientProfile | null>(cachedClientProfile)
   const [session, setSession] = useState<Session | null>(null)
-  // Se temos cache, não mostrar loading inicial (dados serão atualizados em background)
+  // Se temos cache, não mostrar loading inicial
   const [loading, setLoading] = useState(!cachedProfile)
   const [isProfileComplete, setIsProfileComplete] = useState(!!cachedProfile)
 
-  // Flag to skip auth state changes during manual sign-in process (using ref for synchronous updates)
+  // Flag to skip auth state changes during manual sign-in process
   const isManualSignInRef = useRef(false)
+  // Flag to track if we've done initial session check
+  const initialCheckDoneRef = useRef(false)
 
   useEffect(() => {
     let isMounted = true
 
-    // Get initial session and check if worker is blocked
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!isMounted) return
+    async function initializeAuth() {
+      try {
+        // Get initial session
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession()
 
-      if (session?.user) {
-        // Check if user is a blocked worker
-        const { data: userData } = await supabaseUntyped
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
+        if (!isMounted) return
 
-        if (userData?.role === 'worker') {
-          const { data: workerData } = await supabaseUntyped
-            .from('workers')
-            .select('is_active')
-            .eq('id', session.user.id)
-            .single()
+        if (error) {
+          console.error('Error getting session:', error)
+          // Se temos cache, manter o usuário logado
+          if (!cachedProfile) {
+            clearAllCache()
+            setLoading(false)
+          }
+          initialCheckDoneRef.current = true
+          return
+        }
 
-          if (workerData && workerData.is_active === false) {
-            // Worker is blocked, sign them out and clear cache
+        if (currentSession?.user) {
+          // Verificar se trabalhador está bloqueado
+          const isBlocked = await checkIfWorkerBlocked(currentSession.user.id)
+
+          if (!isMounted) return
+
+          if (isBlocked) {
             clearAllCache()
             setProfile(null)
             setWorkerProfile(null)
             setClientProfile(null)
             setIsProfileComplete(false)
             await supabase.auth.signOut({ scope: 'local' })
-            if (isMounted) setLoading(false)
+            setLoading(false)
+            initialCheckDoneRef.current = true
             return
           }
+
+          setSession(currentSession)
+          setUser(currentSession.user)
+
+          // Atualizar profile em background (não bloqueia a UI)
+          fetchProfileInBackground(currentSession.user.id, isMounted)
+        } else if (!cachedProfile) {
+          // Não há sessão e não há cache
+          clearAllCache()
+          setLoading(false)
+        } else {
+          // Não há sessão mas temos cache - limpar tudo (sessão expirou)
+          clearAllCache()
+          setProfile(null)
+          setWorkerProfile(null)
+          setClientProfile(null)
+          setIsProfileComplete(false)
+          setLoading(false)
         }
 
-        setSession(session)
-        setUser(session.user)
-        fetchProfile(session.user.id, isMounted)
-      } else {
-        // Não há sessão, limpar cache e estados
-        clearAllCache()
-        setProfile(null)
-        setWorkerProfile(null)
-        setClientProfile(null)
-        setIsProfileComplete(false)
-        setLoading(false)
+        initialCheckDoneRef.current = true
+      } catch (err) {
+        console.error('Auth initialization error:', err)
+        if (isMounted && !cachedProfile) {
+          setLoading(false)
+        }
+        initialCheckDoneRef.current = true
       }
-    }).catch(() => {
-      if (isMounted) {
-        clearAllCache()
-        setProfile(null)
-        setWorkerProfile(null)
-        setClientProfile(null)
-        setIsProfileComplete(false)
-        setLoading(false)
-      }
-    })
+    }
+
+    initializeAuth()
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event, newSession) => {
         if (!isMounted) return
 
-        // Skip processing if we're in manual sign-in mode (will be handled by signIn function)
+        console.log('Auth event:', event)
+
+        // Skip processing if we're in manual sign-in mode
         if (isManualSignInRef.current && event === 'SIGNED_IN') {
           return
         }
 
-        // Reset state on sign out
+        // Eventos que devem limpar completamente o estado
         if (event === 'SIGNED_OUT') {
           setSession(null)
           setUser(null)
@@ -205,23 +218,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        setSession(session)
-        setUser(session?.user ?? null)
+        // TOKEN_REFRESHED - apenas atualizar sessão, manter profile
+        if (event === 'TOKEN_REFRESHED' && newSession) {
+          setSession(newSession)
+          setUser(newSession.user)
+          // Não precisa fazer nada com o profile - manter o que temos
+          return
+        }
 
-        if (session?.user) {
+        // SIGNED_IN ou INITIAL_SESSION - atualizar tudo
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && newSession?.user) {
+          setSession(newSession)
+          setUser(newSession.user)
+
           // Só mostrar loading se não temos profile em cache
-          // Isso evita tela em branco ao renovar token ou mudar de aba
-          const hasCachedData = !!getCachedProfile(CACHE_KEYS.profile)
-          if (!hasCachedData) {
+          if (!profile && !cachedProfile) {
             setLoading(true)
           }
-          await fetchProfile(session.user.id, isMounted)
-        } else {
-          setProfile(null)
-          setWorkerProfile(null)
-          setClientProfile(null)
-          setIsProfileComplete(false)
-          setLoading(false)
+
+          // Atualizar profile em background
+          fetchProfileInBackground(newSession.user.id, isMounted)
+          return
+        }
+
+        // USER_UPDATED - atualizar dados do user
+        if (event === 'USER_UPDATED' && newSession?.user) {
+          setSession(newSession)
+          setUser(newSession.user)
+          fetchProfileInBackground(newSession.user.id, isMounted)
+          return
+        }
+
+        // Para outros eventos, apenas atualizar sessão se disponível
+        if (newSession) {
+          setSession(newSession)
+          setUser(newSession.user)
         }
       }
     )
@@ -232,7 +263,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  async function fetchProfile(userId: string, isMounted: boolean = true) {
+  async function checkIfWorkerBlocked(userId: string): Promise<boolean> {
+    try {
+      const { data: userData } = await supabaseUntyped
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single()
+
+      if (userData?.role === 'worker') {
+        const { data: workerData } = await supabaseUntyped
+          .from('workers')
+          .select('is_active')
+          .eq('id', userId)
+          .single()
+
+        return workerData?.is_active === false
+      }
+    } catch (err) {
+      console.error('Error checking worker status:', err)
+    }
+    return false
+  }
+
+  // Busca profile sem bloquear a UI - atualiza em background
+  async function fetchProfileInBackground(userId: string, isMounted: boolean) {
     try {
       const { data, error } = await supabaseUntyped
         .from('users')
@@ -242,11 +297,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!isMounted) return
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching profile:', error)
+        // NÃO limpar o profile em caso de erro - manter o cache
+        setLoading(false)
+        return
+      }
 
       const userProfile = data as UserProfile
       setProfile(userProfile)
-      setCachedProfile(CACHE_KEYS.profile, userProfile)
+      setCachedData(CACHE_KEYS.profile, userProfile)
 
       // Fetch role-specific profile
       if (userProfile.role === 'worker') {
@@ -261,15 +321,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (workerData) {
           const workerProfileData = workerData as WorkerProfile
           setWorkerProfile(workerProfileData)
-          setCachedProfile(CACHE_KEYS.workerProfile, workerProfileData)
+          setCachedData(CACHE_KEYS.workerProfile, workerProfileData)
           setIsProfileComplete(true)
         } else {
           setWorkerProfile(null)
-          setCachedProfile(CACHE_KEYS.workerProfile, null)
+          setCachedData(CACHE_KEYS.workerProfile, null)
           setIsProfileComplete(false)
         }
         setClientProfile(null)
-        setCachedProfile(CACHE_KEYS.clientProfile, null)
+        setCachedData(CACHE_KEYS.clientProfile, null)
       } else if (userProfile.role === 'client') {
         const { data: clientData } = await supabaseUntyped
           .from('clients')
@@ -282,29 +342,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (clientData) {
           const clientProfileData = clientData as ClientProfile
           setClientProfile(clientProfileData)
-          setCachedProfile(CACHE_KEYS.clientProfile, clientProfileData)
+          setCachedData(CACHE_KEYS.clientProfile, clientProfileData)
           setIsProfileComplete(true)
         } else {
           setClientProfile(null)
-          setCachedProfile(CACHE_KEYS.clientProfile, null)
+          setCachedData(CACHE_KEYS.clientProfile, null)
           setIsProfileComplete(false)
         }
         setWorkerProfile(null)
-        setCachedProfile(CACHE_KEYS.workerProfile, null)
+        setCachedData(CACHE_KEYS.workerProfile, null)
       } else if (userProfile.role === 'admin') {
         setIsProfileComplete(true)
         setWorkerProfile(null)
         setClientProfile(null)
-        setCachedProfile(CACHE_KEYS.workerProfile, null)
-        setCachedProfile(CACHE_KEYS.clientProfile, null)
+        setCachedData(CACHE_KEYS.workerProfile, null)
+        setCachedData(CACHE_KEYS.clientProfile, null)
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-      if (isMounted) {
-        setProfile(null)
-        setCachedProfile(CACHE_KEYS.profile, null)
-        setIsProfileComplete(false)
-      }
+    } catch (err) {
+      console.error('Error in fetchProfileInBackground:', err)
+      // NÃO limpar estados em caso de erro - manter o cache
     } finally {
       if (isMounted) {
         setLoading(false)
@@ -313,14 +369,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function refreshProfile() {
-    if (user) {
-      await fetchProfile(user.id)
+    const currentUser = user || (session?.user)
+    if (currentUser) {
+      await fetchProfileInBackground(currentUser.id, true)
     }
   }
 
   async function signIn(email: string, password: string) {
     try {
-      // Set flag to prevent onAuthStateChange from processing during sign-in
       isManualSignInRef.current = true
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -333,36 +389,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error }
       }
 
-      // Check if user is a worker and if they are active
       if (data.user) {
-        const { data: userData } = await supabaseUntyped
-          .from('users')
-          .select('role')
-          .eq('id', data.user.id)
-          .single()
+        // Check if worker is blocked
+        const isBlocked = await checkIfWorkerBlocked(data.user.id)
 
-        if (userData?.role === 'worker') {
-          const { data: workerData } = await supabaseUntyped
-            .from('workers')
-            .select('is_active')
-            .eq('id', data.user.id)
-            .single()
-
-          // If worker exists and is not active, sign them out
-          if (workerData && workerData.is_active === false) {
-            await supabase.auth.signOut({ scope: 'local' })
-            isManualSignInRef.current = false
-            return {
-              error: new Error('WORKER_BLOCKED')
-            }
-          }
+        if (isBlocked) {
+          await supabase.auth.signOut({ scope: 'local' })
+          isManualSignInRef.current = false
+          return { error: new Error('WORKER_BLOCKED') }
         }
 
-        // Worker is active or user is not a worker, proceed with setting session
         setSession(data.session)
         setUser(data.user)
         setLoading(true)
-        await fetchProfile(data.user.id)
+        await fetchProfileInBackground(data.user.id, true)
       }
 
       isManualSignInRef.current = false
@@ -408,7 +448,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear cached profiles
     clearAllCache()
 
-    // Sign out from Supabase (this will also trigger onAuthStateChange)
+    // Sign out from Supabase
     await supabase.auth.signOut({ scope: 'local' })
   }
 

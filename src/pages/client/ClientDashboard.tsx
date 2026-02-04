@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
@@ -71,6 +71,7 @@ interface JobWithRecords extends Job {
 }
 
 export function ClientDashboard() {
+  const location = useLocation();
   const { profile } = useAuth();
   const [jobs, setJobs] = useState<JobWithRecords[]>([]);
   const [stats, setStats] = useState({
@@ -83,11 +84,12 @@ export function ClientDashboard() {
   const [selectedJob, setSelectedJob] = useState<JobWithRecords | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
+  // Recarrega dados quando navega para esta página
   useEffect(() => {
     if (profile?.id) {
       loadDashboardData();
     }
-  }, [profile?.id]);
+  }, [profile?.id, location.pathname]);
 
   async function loadDashboardData() {
     setLoading(true);
