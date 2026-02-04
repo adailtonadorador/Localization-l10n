@@ -33,8 +33,31 @@ import {
   CheckCircle2,
   Filter,
   Ban,
-  UserCheck
+  UserCheck,
+  Briefcase,
+  Calendar,
+  Building2
 } from "lucide-react";
+
+interface JobAssignment {
+  id: string;
+  job_id: string;
+  status: string;
+  jobs: {
+    id: string;
+    title: string;
+    date: string;
+    dates: string[] | null;
+    start_time: string;
+    end_time: string;
+    daily_rate: number;
+    status: string;
+    location: string;
+    clients: {
+      company_name: string;
+    };
+  };
+}
 
 interface Worker {
   id: string;
@@ -53,6 +76,7 @@ interface Worker {
     phone: string;
     avatar_url: string | null;
   };
+  job_assignments: JobAssignment[];
 }
 
 export function AdminWorkersPage() {
@@ -80,7 +104,24 @@ export function AdminWorkersPage() {
         .from('workers')
         .select(`
           *,
-          users (name, email, phone, avatar_url)
+          users (name, email, phone, avatar_url),
+          job_assignments (
+            id,
+            job_id,
+            status,
+            jobs (
+              id,
+              title,
+              date,
+              dates,
+              start_time,
+              end_time,
+              daily_rate,
+              status,
+              location,
+              clients (company_name)
+            )
+          )
         `)
         .order('created_at', { ascending: false });
 
@@ -329,108 +370,183 @@ export function AdminWorkersPage() {
         <CardContent className="pt-6">
           <div className="space-y-3">
             {filteredWorkers.length > 0 ? (
-              filteredWorkers.map((worker) => (
-                <div
-                  key={worker.id}
-                  className={`flex items-center justify-between p-4 rounded-xl transition-colors ${
-                    worker.is_active === false
-                      ? 'bg-red-50 border-2 border-red-200'
-                      : 'bg-slate-50 hover:bg-slate-100'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <Avatar className={`h-12 w-12 ring-2 ring-white shadow ${worker.is_active === false ? 'opacity-60' : ''}`}>
-                      <AvatarImage src={worker.users?.avatar_url || ''} />
-                      <AvatarFallback className={`${worker.is_active === false ? 'bg-slate-400' : 'bg-emerald-500'} text-white font-medium`}>
-                        {worker.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h4 className={`font-semibold ${worker.is_active === false ? 'text-slate-500' : 'text-slate-900'}`}>
-                          {worker.users?.name}
-                        </h4>
-                        {worker.is_active === false ? (
-                          <Badge variant="destructive" className="gap-1">
-                            <Ban className="h-3 w-3" />
-                            Bloqueado
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant={worker.documents_verified ? "default" : "outline"}
-                            className={worker.documents_verified ? "bg-emerald-500" : "border-amber-300 text-amber-700 bg-amber-50"}
-                          >
-                            {worker.documents_verified ? (
-                              <>
-                                <Shield className="h-3 w-3 mr-1" />
-                                Verificado
-                              </>
+              filteredWorkers.map((worker) => {
+                // Get active job assignments (not cancelled, not completed)
+                const activeJobs = worker.job_assignments?.filter(
+                  (a) => a.jobs && ['open', 'assigned', 'in_progress'].includes(a.jobs.status)
+                ) || [];
+
+                return (
+                  <div
+                    key={worker.id}
+                    className={`p-4 rounded-xl transition-colors ${
+                      worker.is_active === false
+                        ? 'bg-red-50 border-2 border-red-200'
+                        : 'bg-slate-50 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <Avatar className={`h-12 w-12 ring-2 ring-white shadow ${worker.is_active === false ? 'opacity-60' : ''}`}>
+                          <AvatarImage src={worker.users?.avatar_url || ''} />
+                          <AvatarFallback className={`${worker.is_active === false ? 'bg-slate-400' : 'bg-emerald-500'} text-white font-medium`}>
+                            {worker.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h4 className={`font-semibold ${worker.is_active === false ? 'text-slate-500' : 'text-slate-900'}`}>
+                              {worker.users?.name}
+                            </h4>
+                            {worker.is_active === false ? (
+                              <Badge variant="destructive" className="gap-1">
+                                <Ban className="h-3 w-3" />
+                                Bloqueado
+                              </Badge>
                             ) : (
-                              <>
-                                <Clock className="h-3 w-3 mr-1" />
-                                Pendente
-                              </>
+                              <Badge
+                                variant={worker.documents_verified ? "default" : "outline"}
+                                className={worker.documents_verified ? "bg-emerald-500" : "border-amber-300 text-amber-700 bg-amber-50"}
+                              >
+                                {worker.documents_verified ? (
+                                  <>
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    Verificado
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Pendente
+                                  </>
+                                )}
+                              </Badge>
                             )}
-                          </Badge>
-                        )}
+                            {activeJobs.length > 0 && (
+                              <Badge className="bg-blue-500 gap-1">
+                                <Briefcase className="h-3 w-3" />
+                                {activeJobs.length} vaga{activeJobs.length > 1 ? 's' : ''} ativa{activeJobs.length > 1 ? 's' : ''}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{worker.users?.email}</p>
+                          <p className="text-sm text-muted-foreground">CPF: {formatCpf(worker.cpf)}</p>
+                          {worker.is_active === false && worker.deactivation_reason && (
+                            <p className="text-xs text-red-600 mt-1 bg-red-100 px-2 py-1 rounded">
+                              <strong>Motivo:</strong> {worker.deactivation_reason}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">{worker.users?.email}</p>
-                      <p className="text-sm text-muted-foreground">CPF: {formatCpf(worker.cpf)}</p>
-                      {worker.is_active === false && worker.deactivation_reason && (
-                        <p className="text-xs text-red-600 mt-1 bg-red-100 px-2 py-1 rounded">
-                          <strong>Motivo:</strong> {worker.deactivation_reason}
+                      <div className="flex items-center gap-4">
+                        <div className="text-right text-sm">
+                          <p className="flex items-center justify-end gap-1 mb-1">
+                            <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                            <span className="font-semibold">{worker.rating?.toFixed(1) || '0.0'}</span>
+                          </p>
+                          <p className="text-muted-foreground">{worker.total_jobs} trabalhos</p>
+                          <p className="text-xs text-slate-400">
+                            {formatDateTime(worker.created_at)}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {!worker.documents_verified && worker.is_active !== false && (
+                            <Button
+                              size="sm"
+                              className="bg-emerald-500 hover:bg-emerald-600 gap-1"
+                              onClick={() => handleVerifyWorker(worker.id)}
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              Verificar
+                            </Button>
+                          )}
+                          {worker.is_active === false ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300"
+                              onClick={() => handleEnableWorker(worker.id)}
+                              disabled={actionLoading}
+                            >
+                              <UserCheck className="h-4 w-4" />
+                              Habilitar
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
+                              onClick={() => openDisableWorkerDialog(worker)}
+                            >
+                              <Ban className="h-4 w-4" />
+                              Desabilitar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Active Jobs */}
+                    {activeJobs.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-200">
+                        <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                          <Briefcase className="h-3 w-3" />
+                          Vagas atribuídas:
                         </p>
-                      )}
-                    </div>
+                        <div className="space-y-2">
+                          {activeJobs.map((assignment) => (
+                            <div
+                              key={assignment.id}
+                              className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                  <Building2 className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-medium text-sm truncate">
+                                    {assignment.jobs?.title}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {assignment.jobs?.clients?.company_name}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {new Date(assignment.jobs?.date + 'T00:00:00').toLocaleDateString('pt-BR', {
+                                    day: '2-digit',
+                                    month: 'short'
+                                  })}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {assignment.jobs?.start_time?.slice(0, 5)}
+                                </span>
+                                <Badge
+                                  className={`text-xs ${
+                                    assignment.jobs?.status === 'in_progress'
+                                      ? 'bg-blue-500'
+                                      : assignment.jobs?.status === 'assigned'
+                                      ? 'bg-purple-500'
+                                      : 'bg-emerald-500'
+                                  }`}
+                                >
+                                  {assignment.jobs?.status === 'in_progress'
+                                    ? 'Em andamento'
+                                    : assignment.jobs?.status === 'assigned'
+                                    ? 'Atribuída'
+                                    : 'Aberta'}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right text-sm">
-                      <p className="flex items-center justify-end gap-1 mb-1">
-                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                        <span className="font-semibold">{worker.rating?.toFixed(1) || '0.0'}</span>
-                      </p>
-                      <p className="text-muted-foreground">{worker.total_jobs} trabalhos</p>
-                      <p className="text-xs text-slate-400">
-                        {formatDateTime(worker.created_at)}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      {!worker.documents_verified && worker.is_active !== false && (
-                        <Button
-                          size="sm"
-                          className="bg-emerald-500 hover:bg-emerald-600 gap-1"
-                          onClick={() => handleVerifyWorker(worker.id)}
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                          Verificar
-                        </Button>
-                      )}
-                      {worker.is_active === false ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300"
-                          onClick={() => handleEnableWorker(worker.id)}
-                          disabled={actionLoading}
-                        >
-                          <UserCheck className="h-4 w-4" />
-                          Habilitar
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
-                          onClick={() => openDisableWorkerDialog(worker)}
-                        >
-                          <Ban className="h-4 w-4" />
-                          Desabilitar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">

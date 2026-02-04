@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +33,8 @@ import {
   Mail,
   Phone,
   FileText,
-  Eye
+  Eye,
+  Star
 } from "lucide-react";
 
 const AVAILABLE_SKILLS = [
@@ -69,6 +71,21 @@ interface Client {
   };
 }
 
+interface JobAssignment {
+  id: string;
+  worker_id: string;
+  workers: {
+    id: string;
+    rating: number;
+    users: {
+      name: string;
+      email: string;
+      phone: string | null;
+      avatar_url: string | null;
+    };
+  };
+}
+
 interface Job {
   id: string;
   title: string;
@@ -83,7 +100,7 @@ interface Job {
   skills_required: string[];
   status: string;
   created_at: string;
-  job_assignments: { id: string; worker_id: string }[];
+  job_assignments: JobAssignment[];
 }
 
 export function AdminClientDetailPage() {
@@ -134,12 +151,20 @@ export function AdminClientDetailPage() {
 
       setClient(clientData);
 
-      // Load jobs
+      // Load jobs with worker info
       const { data: jobsData } = await supabaseUntyped
         .from('jobs')
         .select(`
           *,
-          job_assignments (id, worker_id)
+          job_assignments (
+            id,
+            worker_id,
+            workers (
+              id,
+              rating,
+              users (name, email, phone, avatar_url)
+            )
+          )
         `)
         .eq('client_id', id)
         .order('created_at', { ascending: false });
@@ -575,11 +600,11 @@ export function AdminClientDetailPage() {
           <CardContent className="pt-6">
             <TabsContent value="jobs" className="mt-0">
               {jobs.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {jobs.map((job) => (
                     <div
                       key={job.id}
-                      className={`flex items-center justify-between p-4 rounded-xl transition-all ${
+                      className={`p-4 rounded-xl transition-all ${
                         job.status === 'assigned'
                           ? 'bg-purple-50 border-2 border-purple-200'
                           : job.status === 'in_progress'
@@ -587,42 +612,78 @@ export function AdminClientDetailPage() {
                           : 'bg-slate-50 hover:bg-slate-100'
                       }`}
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-slate-900 truncate">{job.title}</h4>
-                          {getStatusBadge(job.status)}
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-slate-900 truncate">{job.title}</h4>
+                            {getStatusBadge(job.status)}
+                          </div>
+                          <div className="flex items-center gap-3 text-sm text-slate-500">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {formatJobDates(job.dates, job.date)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" />
+                              {formatTime(job.start_time)} - {formatTime(job.end_time)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3 text-sm text-slate-500">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {formatJobDates(job.dates, job.date)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {formatTime(job.start_time)} - {formatTime(job.end_time)}
-                          </span>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right text-sm">
+                            <p className="font-bold text-lg text-emerald-600">R$ {job.daily_rate}/dia</p>
+                            <p className="text-muted-foreground">
+                              {job.job_assignments?.length || 0}/{job.required_workers} trabalhador(es)
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => {
+                              setSelectedJob(job);
+                              setDetailsOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                            Ver
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right text-sm">
-                          <p className="font-bold text-lg text-emerald-600">R$ {job.daily_rate}/dia</p>
-                          <p className="text-muted-foreground">
-                            {job.job_assignments?.length || 0}/{job.required_workers} trabalhador(es)
+
+                      {/* Workers assigned */}
+                      {job.job_assignments && job.job_assignments.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-200">
+                          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            Trabalhadores atribuídos:
                           </p>
+                          <div className="flex flex-wrap gap-2">
+                            {job.job_assignments.map((assignment) => (
+                              <div
+                                key={assignment.id}
+                                className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border"
+                              >
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={assignment.workers?.users?.avatar_url || ''} />
+                                  <AvatarFallback className="bg-purple-500 text-white text-xs">
+                                    {assignment.workers?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0">
+                                  <p className="font-medium text-sm truncate">
+                                    {assignment.workers?.users?.name || 'N/A'}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                                    {assignment.workers?.rating?.toFixed(1) || '0.0'}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1"
-                          onClick={() => {
-                            setSelectedJob(job);
-                            setDetailsOpen(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                          Ver
-                        </Button>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
