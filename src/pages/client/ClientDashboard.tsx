@@ -39,7 +39,7 @@ interface Job {
   dates: string[] | null;
   start_time: string;
   end_time: string;
-  hourly_rate: number;
+  daily_rate: number;
   required_workers: number;
   skills_required: string[];
   status: string;
@@ -71,7 +71,7 @@ interface JobWithRecords extends Job {
 }
 
 export function ClientDashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [jobs, setJobs] = useState<JobWithRecords[]>([]);
   const [stats, setStats] = useState({
     activeJobs: 0,
@@ -84,10 +84,10 @@ export function ClientDashboard() {
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (profile?.id) {
       loadDashboardData();
     }
-  }, [user]);
+  }, [profile?.id]);
 
   async function loadDashboardData() {
     setLoading(true);
@@ -114,7 +114,7 @@ export function ClientDashboard() {
             )
           )
         `)
-        .eq('client_id', user?.id)
+        .eq('client_id', profile?.id)
         .order('date', { ascending: false });
 
       const jobsList = (jobsData || []) as JobWithRecords[];
@@ -397,7 +397,7 @@ export function ClientDashboard() {
                           {job.job_assignments?.length || 0}/{job.required_workers}
                         </Badge>
                         <p className="font-bold text-lg text-emerald-600">
-                          R$ {job.hourly_rate}/h
+                          R$ {job.daily_rate}/dia
                         </p>
                         <Button
                           variant="ghost"
@@ -476,7 +476,7 @@ export function ClientDashboard() {
                       <Star className="h-3 w-3" />
                       Valor/Hora
                     </div>
-                    <p className="font-semibold text-sm">R$ {selectedJob.hourly_rate}</p>
+                    <p className="font-semibold text-sm">R$ {selectedJob.daily_rate}</p>
                   </div>
                 </div>
               </div>

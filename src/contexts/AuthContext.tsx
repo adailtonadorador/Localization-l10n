@@ -65,14 +65,61 @@ interface SignUpMetadata {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Cache keys for localStorage
+const CACHE_KEYS = {
+  profile: 'sama_profile_cache',
+  workerProfile: 'sama_worker_profile_cache',
+  clientProfile: 'sama_client_profile_cache',
+}
+
+// Helper functions for cache
+function getCachedProfile<T>(key: string): T | null {
+  try {
+    const cached = localStorage.getItem(key)
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached)
+      // Cache válido por 24 horas
+      if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
+        return data as T
+      }
+      localStorage.removeItem(key)
+    }
+  } catch {
+    localStorage.removeItem(key)
+  }
+  return null
+}
+
+function setCachedProfile<T>(key: string, data: T | null) {
+  try {
+    if (data) {
+      localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }))
+    } else {
+      localStorage.removeItem(key)
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
+function clearAllCache() {
+  Object.values(CACHE_KEYS).forEach(key => localStorage.removeItem(key))
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
+  // Inicializar estados com cache do localStorage para evitar tela em branco
+  const cachedProfile = getCachedProfile<UserProfile>(CACHE_KEYS.profile)
+  const cachedWorkerProfile = getCachedProfile<WorkerProfile>(CACHE_KEYS.workerProfile)
+  const cachedClientProfile = getCachedProfile<ClientProfile>(CACHE_KEYS.clientProfile)
+
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [workerProfile, setWorkerProfile] = useState<WorkerProfile | null>(null)
-  const [clientProfile, setClientProfile] = useState<ClientProfile | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(cachedProfile)
+  const [workerProfile, setWorkerProfile] = useState<WorkerProfile | null>(cachedWorkerProfile)
+  const [clientProfile, setClientProfile] = useState<ClientProfile | null>(cachedClientProfile)
   const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [isProfileComplete, setIsProfileComplete] = useState(false)
+  // Se temos cache, não mostrar loading inicial (dados serão atualizados em background)
+  const [loading, setLoading] = useState(!cachedProfile)
+  const [isProfileComplete, setIsProfileComplete] = useState(!!cachedProfile)
 
   // Flag to skip auth state changes during manual sign-in process (using ref for synchronous updates)
   const isManualSignInRef = useRef(false)
@@ -100,7 +147,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .single()
 
           if (workerData && workerData.is_active === false) {
-            // Worker is blocked, sign them out
+            // Worker is blocked, sign them out and clear cache
+            clearAllCache()
+            setProfile(null)
+            setWorkerProfile(null)
+            setClientProfile(null)
+            setIsProfileComplete(false)
             await supabase.auth.signOut({ scope: 'local' })
             if (isMounted) setLoading(false)
             return
@@ -111,10 +163,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session.user)
         fetchProfile(session.user.id, isMounted)
       } else {
+        // Não há sessão, limpar cache e estados
+        clearAllCache()
+        setProfile(null)
+        setWorkerProfile(null)
+        setClientProfile(null)
+        setIsProfileComplete(false)
         setLoading(false)
       }
     }).catch(() => {
-      if (isMounted) setLoading(false)
+      if (isMounted) {
+        clearAllCache()
+        setProfile(null)
+        setWorkerProfile(null)
+        setClientProfile(null)
+        setIsProfileComplete(false)
+        setLoading(false)
+      }
     })
 
     // Listen for auth changes
@@ -136,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setClientProfile(null)
           setIsProfileComplete(false)
           setLoading(false)
+          clearAllCache()
           return
         }
 
@@ -143,7 +209,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null)
 
         if (session?.user) {
-          setLoading(true)
+          // Só mostrar loading se não temos profile em cache
+          // Isso evita tela em branco ao renovar token ou mudar de aba
+          const hasCachedData = !!getCachedProfile(CACHE_KEYS.profile)
+          if (!hasCachedData) {
+            setLoading(true)
+          }
           await fetchProfile(session.user.id, isMounted)
         } else {
           setProfile(null)
@@ -175,6 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const userProfile = data as UserProfile
       setProfile(userProfile)
+      setCachedProfile(CACHE_KEYS.profile, userProfile)
 
       // Fetch role-specific profile
       if (userProfile.role === 'worker') {
@@ -187,13 +259,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!isMounted) return
 
         if (workerData) {
-          setWorkerProfile(workerData as WorkerProfile)
+          const workerProfileData = workerData as WorkerProfile
+          setWorkerProfile(workerProfileData)
+          setCachedProfile(CACHE_KEYS.workerProfile, workerProfileData)
           setIsProfileComplete(true)
         } else {
           setWorkerProfile(null)
+          setCachedProfile(CACHE_KEYS.workerProfile, null)
           setIsProfileComplete(false)
         }
         setClientProfile(null)
+        setCachedProfile(CACHE_KEYS.clientProfile, null)
       } else if (userProfile.role === 'client') {
         const { data: clientData } = await supabaseUntyped
           .from('clients')
@@ -204,22 +280,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!isMounted) return
 
         if (clientData) {
-          setClientProfile(clientData as ClientProfile)
+          const clientProfileData = clientData as ClientProfile
+          setClientProfile(clientProfileData)
+          setCachedProfile(CACHE_KEYS.clientProfile, clientProfileData)
           setIsProfileComplete(true)
         } else {
           setClientProfile(null)
+          setCachedProfile(CACHE_KEYS.clientProfile, null)
           setIsProfileComplete(false)
         }
         setWorkerProfile(null)
+        setCachedProfile(CACHE_KEYS.workerProfile, null)
       } else if (userProfile.role === 'admin') {
         setIsProfileComplete(true)
         setWorkerProfile(null)
         setClientProfile(null)
+        setCachedProfile(CACHE_KEYS.workerProfile, null)
+        setCachedProfile(CACHE_KEYS.clientProfile, null)
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
       if (isMounted) {
         setProfile(null)
+        setCachedProfile(CACHE_KEYS.profile, null)
         setIsProfileComplete(false)
       }
     } finally {
@@ -321,6 +404,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null)
     setIsProfileComplete(false)
     setLoading(false)
+
+    // Clear cached profiles
+    clearAllCache()
 
     // Sign out from Supabase (this will also trigger onAuthStateChange)
     await supabase.auth.signOut({ scope: 'local' })

@@ -42,7 +42,7 @@ interface Job {
   dates: string[] | null;
   start_time: string;
   end_time: string;
-  hourly_rate: number;
+  daily_rate: number;
   required_workers: number;
   skills_required: string[];
   status: string;
@@ -52,17 +52,17 @@ interface Job {
 }
 
 export function ClientJobsPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (profile?.id) {
       loadJobs();
     }
-  }, [user]);
+  }, [profile?.id]);
 
   async function loadJobs() {
     setLoading(true);
@@ -88,7 +88,7 @@ export function ClientJobsPage() {
             )
           )
         `)
-        .eq('client_id', user?.id)
+        .eq('client_id', profile?.id)
         .order('created_at', { ascending: false });
 
       setJobs((data || []) as Job[]);
@@ -216,7 +216,7 @@ export function ClientJobsPage() {
             )}
           </div>
           <div className="flex items-center justify-between mt-4 pt-4 border-t">
-            <span className="text-lg font-bold">R$ {job.hourly_rate}/h</span>
+            <span className="text-lg font-bold">R$ {job.daily_rate}/dia</span>
             <Button variant="outline" size="sm" onClick={() => openDetails(job)}>
               <Eye className="h-4 w-4 mr-1" />
               Ver Detalhes
@@ -368,7 +368,7 @@ export function ClientJobsPage() {
                       <Star className="h-3 w-3" />
                       Valor/Hora
                     </div>
-                    <p className="font-semibold text-sm">R$ {selectedJob.hourly_rate}</p>
+                    <p className="font-semibold text-sm">R$ {selectedJob.daily_rate}</p>
                   </div>
                 </div>
               </div>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AvatarUpload } from "@/components/ui/avatar-upload";
 import {
   User,
   Phone,
@@ -17,7 +18,8 @@ import {
   CheckCircle2,
   Loader2,
   Home,
-  Map
+  Map,
+  Camera
 } from "lucide-react";
 
 interface ViaCepResponse {
@@ -44,6 +46,7 @@ export function CompleteProfilePage() {
   const [phone, setPhone] = useState("");
   const [cpf, setCpf] = useState("");
   const [pix, setPix] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   // Address fields (worker)
   const [cep, setCep] = useState("");
@@ -183,6 +186,13 @@ export function CompleteProfilePage() {
     setError(null);
     setLoading(true);
 
+    // Validate photo
+    if (!avatarUrl) {
+      setError("A foto é obrigatória");
+      setLoading(false);
+      return;
+    }
+
     const cleanCpf = cpf.replace(/\D/g, '');
     if (cleanCpf.length !== 11) {
       setError("CPF deve ter 11 dígitos");
@@ -214,10 +224,10 @@ export function CompleteProfilePage() {
     const fullAddress = `${logradouro}, ${numero}${complemento ? ` - ${complemento}` : ''}, ${bairro}, ${cidade} - ${uf}, CEP: ${cep}`;
 
     try {
-      // Update user profile with phone
+      // Update user profile with phone and avatar
       const { error: userError } = await supabaseUntyped
         .from('users')
-        .update({ phone: cleanPhone })
+        .update({ phone: cleanPhone, avatar_url: avatarUrl })
         .eq('id', user.id);
 
       if (userError) throw userError;
@@ -400,6 +410,23 @@ export function CompleteProfilePage() {
                     {error}
                   </div>
                 )}
+
+                {/* Photo Upload */}
+                <div className="flex flex-col items-center pb-4 border-b">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Camera className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-slate-700">Foto de Perfil *</span>
+                  </div>
+                  <AvatarUpload
+                    userId={user?.id || ""}
+                    currentAvatarUrl={avatarUrl}
+                    name={profile.name}
+                    onUploadComplete={setAvatarUrl}
+                    onError={setError}
+                    size="lg"
+                    required
+                  />
+                </div>
 
                 {/* User info display */}
                 <div className="p-3 bg-slate-50 rounded-lg border">

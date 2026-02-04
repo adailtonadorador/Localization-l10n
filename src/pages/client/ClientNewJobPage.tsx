@@ -27,7 +27,7 @@ const AVAILABLE_SKILLS = [
 ];
 
 export function ClientNewJobPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +39,7 @@ export function ClientNewJobPage() {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [hourlyRate, setHourlyRate] = useState("");
+  const [dailyRate, setDailyRate] = useState("");
   const [requiredWorkers, setRequiredWorkers] = useState("1");
   const [skills, setSkills] = useState<string[]>([]);
 
@@ -72,8 +72,8 @@ export function ClientNewJobPage() {
       setError("Horário de início e fim são obrigatórios");
       return;
     }
-    if (!hourlyRate || parseFloat(hourlyRate) <= 0) {
-      setError("Valor por hora deve ser maior que zero");
+    if (!dailyRate || parseFloat(dailyRate) <= 0) {
+      setError("Valor por dia deve ser maior que zero");
       return;
     }
 
@@ -81,14 +81,14 @@ export function ClientNewJobPage() {
 
     try {
       const { error: insertError } = await supabaseUntyped.from('jobs').insert({
-        client_id: user?.id,
+        client_id: profile?.id,
         title: title.trim(),
         description: description.trim() || null,
         location: location.trim(),
         date,
         start_time: startTime,
         end_time: endTime,
-        hourly_rate: parseFloat(hourlyRate),
+        daily_rate: parseFloat(dailyRate),
         required_workers: parseInt(requiredWorkers) || 1,
         skills_required: skills,
         status: 'open',
@@ -201,15 +201,15 @@ export function ClientNewJobPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="hourly-rate">Valor por Hora (R$) *</Label>
+                <Label htmlFor="daily-rate">Valor por Dia (R$) *</Label>
                 <Input
-                  id="hourly-rate"
+                  id="daily-rate"
                   type="number"
                   min="1"
-                  step="0.50"
-                  placeholder="15.00"
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
+                  step="1"
+                  placeholder="150.00"
+                  value={dailyRate}
+                  onChange={(e) => setDailyRate(e.target.value)}
                   disabled={loading}
                 />
               </div>

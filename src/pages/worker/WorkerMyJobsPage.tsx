@@ -23,7 +23,7 @@ interface WorkRecord {
     location: string;
     start_time: string;
     end_time: string;
-    hourly_rate: number;
+    daily_rate: number;
     clients: {
       company_name: string;
     };
@@ -31,17 +31,17 @@ interface WorkRecord {
 }
 
 export function WorkerMyJobsPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [records, setRecords] = useState<WorkRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<WorkRecord | null>(null);
 
   useEffect(() => {
-    if (user) {
+    if (profile?.id) {
       loadRecords();
     }
-  }, [user]);
+  }, [profile?.id]);
 
   async function loadRecords() {
     setLoading(true);
@@ -56,11 +56,11 @@ export function WorkerMyJobsPage() {
             location,
             start_time,
             end_time,
-            hourly_rate,
+            daily_rate,
             clients (company_name)
           )
         `)
-        .eq('worker_id', user?.id)
+        .eq('worker_id', profile?.id)
         .gte('work_date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
         .order('work_date', { ascending: true });
 

@@ -106,7 +106,7 @@ interface Job {
   dates: string[] | null;
   start_time: string;
   end_time: string;
-  hourly_rate: number;
+  daily_rate: number;
   required_workers: number;
   skills_required: string[];
   status: string;
@@ -937,7 +937,7 @@ export function AdminDashboard() {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right text-sm">
-                          <p className="font-bold text-lg text-emerald-600">R$ {job.hourly_rate}/h</p>
+                          <p className="font-bold text-lg text-emerald-600">R$ {job.daily_rate}/dia</p>
                           <p className="text-muted-foreground">
                             {job.job_assignments?.length || 0}/{job.required_workers} trabalhador(es)
                           </p>
@@ -1020,7 +1020,7 @@ export function AdminDashboard() {
                       <Star className="h-3 w-3" />
                       Valor
                     </div>
-                    <p className="font-semibold text-sm">R$ {selectedJob.hourly_rate}/h</p>
+                    <p className="font-semibold text-sm">R$ {selectedJob.daily_rate}/dia</p>
                   </div>
                 </div>
               </div>

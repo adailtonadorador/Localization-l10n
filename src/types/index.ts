@@ -48,7 +48,7 @@ export interface Job {
   date: string;
   start_time: string;
   end_time: string;
-  hourly_rate: number;
+  daily_rate: number;
   required_workers: number;
   skills_required: string[];
   status: JobStatus;

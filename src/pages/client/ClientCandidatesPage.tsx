@@ -1,16 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Calendar, Star, Briefcase, Phone, Mail, Users } from "lucide-react";
 
 interface JobApplication {
   id: string;
-  status: 'pending' | 'approved' | 'rejected';
   applied_at: string;
   job_id: string;
   worker_id: string;
@@ -24,35 +22,36 @@ interface JobApplication {
       name: string;
       email: string;
       phone: string;
+      avatar_url: string | null;
     };
   };
   jobs: {
     id: string;
     title: string;
     date: string;
-    hourly_rate: number;
+    daily_rate: number;
   };
 }
 
 export function ClientCandidatesPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
+    if (profile?.id) {
       loadApplications();
     }
-  }, [user]);
+  }, [profile?.id]);
 
   async function loadApplications() {
     setLoading(true);
     try {
-      // First get client's job IDs
+      // Buscar IDs das vagas do cliente
       const { data: jobsData } = await supabaseUntyped
         .from('jobs')
         .select('id')
-        .eq('client_id', user?.id);
+        .eq('client_id', profile?.id);
 
       const jobIds = (jobsData || []).map((j: { id: string }) => j.id);
 
@@ -62,7 +61,7 @@ export function ClientCandidatesPage() {
         return;
       }
 
-      // Get applications for those jobs
+      // Buscar trabalhadores atribuídos às vagas
       const { data } = await supabaseUntyped
         .from('job_applications')
         .select(`
@@ -73,9 +72,9 @@ export function ClientCandidatesPage() {
             rating,
             total_jobs,
             skills,
-            users (name, email, phone)
+            users (name, email, phone, avatar_url)
           ),
-          jobs (id, title, date, hourly_rate)
+          jobs (id, title, date, daily_rate)
         `)
         .in('job_id', jobIds)
         .order('applied_at', { ascending: false });
@@ -88,135 +87,113 @@ export function ClientCandidatesPage() {
     }
   }
 
-  async function handleApprove(applicationId: string, jobId: string, workerId: string) {
-    try {
-      await supabaseUntyped
-        .from('job_applications')
-        .update({ status: 'approved' })
-        .eq('id', applicationId);
-
-      await supabaseUntyped.from('job_assignments').insert({
-        job_id: jobId,
-        worker_id: workerId,
-        status: 'pending',
-      });
-
-      loadApplications();
-      alert('Candidatura aprovada!');
-    } catch (error) {
-      console.error('Error approving:', error);
-      alert('Erro ao aprovar candidatura.');
-    }
+  function formatDateWithWeekday(dateStr: string) {
+    const date = new Date(dateStr + 'T00:00:00');
+    const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' });
+    const formattedDate = date.toLocaleDateString('pt-BR');
+    return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${formattedDate}`;
   }
 
-  async function handleReject(applicationId: string) {
-    try {
-      await supabaseUntyped
-        .from('job_applications')
-        .update({ status: 'rejected' })
-        .eq('id', applicationId);
+  // Agrupar trabalhadores por data
+  const groupedByDate = useMemo(() => {
+    const grouped: Record<string, JobApplication[]> = {};
 
-      loadApplications();
-      alert('Candidatura recusada.');
-    } catch (error) {
-      console.error('Error rejecting:', error);
-      alert('Erro ao recusar candidatura.');
-    }
-  }
+    applications.forEach(app => {
+      const date = app.jobs?.date || 'sem-data';
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(app);
+    });
 
-  function formatDate(dateStr: string) {
-    return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
-  }
+    // Ordenar por data (mais próxima primeiro)
+    const sortedDates = Object.keys(grouped).sort((a, b) => {
+      if (a === 'sem-data') return 1;
+      if (b === 'sem-data') return -1;
+      return new Date(a).getTime() - new Date(b).getTime();
+    });
 
-  function formatDateTime(dateStr: string) {
-    return new Date(dateStr).toLocaleString('pt-BR');
-  }
+    return sortedDates.map(date => ({
+      date,
+      applications: grouped[date]
+    }));
+  }, [applications]);
 
-  const pendingApplications = applications.filter(a => a.status === 'pending');
-  const approvedApplications = applications.filter(a => a.status === 'approved');
-  const rejectedApplications = applications.filter(a => a.status === 'rejected');
+  // Componente de linha compacta para cada trabalhador
+  function WorkerRow({ application }: { application: JobApplication }) {
+    const worker = application.workers;
+    const job = application.jobs;
 
-  function ApplicationCard({ application, showActions = false }: { application: JobApplication; showActions?: boolean }) {
+    const initials = worker?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??';
+
     return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <Avatar className="h-12 w-12">
-              <AvatarFallback>
-                {application.workers?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold">{application.workers?.users?.name}</h3>
-                  <p className="text-sm text-muted-foreground">{application.workers?.users?.email}</p>
-                  {application.workers?.users?.phone && (
-                    <p className="text-sm text-muted-foreground">{application.workers?.users?.phone}</p>
-                  )}
-                </div>
-                <Badge variant={
-                  application.status === 'pending' ? 'outline' :
-                  application.status === 'approved' ? 'default' : 'destructive'
-                }>
-                  {application.status === 'pending' ? 'Pendente' :
-                   application.status === 'approved' ? 'Aprovado' : 'Recusado'}
-                </Badge>
-              </div>
+      <div className="flex items-center gap-4 p-4 bg-card border rounded-lg hover:bg-muted/50 transition-colors">
+        {/* Avatar */}
+        <Avatar className="h-10 w-10 shrink-0">
+          <AvatarImage src={worker?.users?.avatar_url || ''} className="object-cover" />
+          <AvatarFallback className="text-sm bg-emerald-600 text-white">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
 
-              <div className="mt-3 p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium">Vaga: {application.jobs?.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  Data: {formatDate(application.jobs?.date)} • R$ {application.jobs?.hourly_rate}/h
-                </p>
-              </div>
-
-              <div className="flex items-center gap-4 mt-3 text-sm">
-                <span className="flex items-center gap-1">
-                  <span className="text-yellow-500">★</span>
-                  {application.workers?.rating?.toFixed(1) || 'N/A'}
-                </span>
-                <span className="text-muted-foreground">
-                  {application.workers?.total_jobs || 0} trabalhos
-                </span>
-              </div>
-
-              {application.workers?.skills?.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {application.workers.skills.slice(0, 4).map((skill, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">{skill}</Badge>
-                  ))}
-                  {application.workers.skills.length > 4 && (
-                    <Badge variant="secondary" className="text-xs">+{application.workers.skills.length - 4}</Badge>
-                  )}
-                </div>
-              )}
-
-              <p className="text-xs text-muted-foreground mt-3">
-                Candidatou em: {formatDateTime(application.applied_at)}
-              </p>
-
-              {showActions && (
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleReject(application.id)}
-                  >
-                    Recusar
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleApprove(application.id, application.job_id, application.worker_id)}
-                  >
-                    Aprovar
-                  </Button>
-                </div>
-              )}
-            </div>
+        {/* Info Principal */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="font-medium truncate">{worker?.users?.name}</h4>
+            <Badge variant="secondary" className="text-xs shrink-0">
+              <Briefcase className="w-3 h-3 mr-1" />
+              {job?.title}
+            </Badge>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
+            <span className="flex items-center gap-1">
+              <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+              {worker?.rating?.toFixed(1) || 'N/A'}
+            </span>
+            <span>{worker?.total_jobs || 0} trabalhos</span>
+            <span>R$ {job?.daily_rate}/dia</span>
+          </div>
+        </div>
+
+        {/* Contato (visível em telas maiores) */}
+        <div className="hidden md:flex flex-col gap-1 text-xs text-muted-foreground shrink-0">
+          <span className="flex items-center gap-1">
+            <Mail className="w-3 h-3" />
+            {worker?.users?.email}
+          </span>
+          {worker?.users?.phone && (
+            <span className="flex items-center gap-1">
+              <Phone className="w-3 h-3" />
+              {worker?.users?.phone}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Componente de grupo por data
+  function DateGroup({ date, applications: apps }: {
+    date: string;
+    applications: JobApplication[];
+  }) {
+    return (
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold text-lg">
+            {date === 'sem-data' ? 'Sem data definida' : formatDateWithWeekday(date)}
+          </h3>
+          <Badge variant="outline" className="ml-2">
+            {apps.length} {apps.length === 1 ? 'trabalhador' : 'trabalhadores'}
+          </Badge>
+        </div>
+        <div className="space-y-2 pl-7">
+          {apps.map((application) => (
+            <WorkerRow key={application.id} application={application} />
+          ))}
+        </div>
+      </div>
     );
   }
 
@@ -233,65 +210,46 @@ export function ClientCandidatesPage() {
   return (
     <DashboardLayout>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Candidatos</h2>
-        <p className="text-muted-foreground">Gerencie as candidaturas para suas vagas</p>
+        <h2 className="text-2xl font-bold mb-2">Trabalhadores</h2>
+        <p className="text-muted-foreground">
+          Veja quem estará trabalhando em suas vagas por dia
+        </p>
       </div>
 
-      <Tabs defaultValue="pending">
-        <TabsList className="mb-6">
-          <TabsTrigger value="pending">Pendentes ({pendingApplications.length})</TabsTrigger>
-          <TabsTrigger value="approved">Aprovados ({approvedApplications.length})</TabsTrigger>
-          <TabsTrigger value="rejected">Recusados ({rejectedApplications.length})</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="pending">
-          {pendingApplications.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {pendingApplications.map((application) => (
-                <ApplicationCard key={application.id} application={application} showActions />
-              ))}
+      {/* Resumo */}
+      {applications.length > 0 && (
+        <Card className="mb-6">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <Users className="w-5 h-5 text-primary" />
+              <span className="text-sm">
+                <strong>{applications.length}</strong> {applications.length === 1 ? 'trabalhador atribuído' : 'trabalhadores atribuídos'} em{' '}
+                <strong>{groupedByDate.length}</strong> {groupedByDate.length === 1 ? 'dia' : 'dias'}
+              </span>
             </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Nenhuma candidatura pendente.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+          </CardContent>
+        </Card>
+      )}
 
-        <TabsContent value="approved">
-          {approvedApplications.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {approvedApplications.map((application) => (
-                <ApplicationCard key={application.id} application={application} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Nenhuma candidatura aprovada.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="rejected">
-          {rejectedApplications.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {rejectedApplications.map((application) => (
-                <ApplicationCard key={application.id} application={application} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Nenhuma candidatura recusada.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Lista agrupada por data */}
+      {groupedByDate.length > 0 ? (
+        <div>
+          {groupedByDate.map((group) => (
+            <DateGroup
+              key={group.date}
+              date={group.date}
+              applications={group.applications}
+            />
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Users className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+            <p className="text-muted-foreground">Nenhum trabalhador atribuído às suas vagas ainda.</p>
+          </CardContent>
+        </Card>
+      )}
     </DashboardLayout>
   );
 }

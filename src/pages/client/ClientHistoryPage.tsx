@@ -26,21 +26,21 @@ interface JobAssignment {
     date: string;
     start_time: string;
     end_time: string;
-    hourly_rate: number;
+    daily_rate: number;
     location: string;
   };
 }
 
 export function ClientHistoryPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [assignments, setAssignments] = useState<JobAssignment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
+    if (profile?.id) {
       loadHistory();
     }
-  }, [user]);
+  }, [profile?.id]);
 
   async function loadHistory() {
     setLoading(true);
@@ -49,7 +49,7 @@ export function ClientHistoryPage() {
       const { data: jobsData } = await supabaseUntyped
         .from('jobs')
         .select('id')
-        .eq('client_id', user?.id);
+        .eq('client_id', profile?.id);
 
       const jobIds = (jobsData || []).map((j: { id: string }) => j.id);
 
@@ -68,7 +68,7 @@ export function ClientHistoryPage() {
             id,
             users (name)
           ),
-          jobs (id, title, date, start_time, end_time, hourly_rate, location)
+          jobs (id, title, date, start_time, end_time, daily_rate, location)
         `)
         .in('job_id', jobIds)
         .eq('status', 'completed')
@@ -112,7 +112,8 @@ export function ClientHistoryPage() {
   }
 
   function calculateCost(assignment: JobAssignment) {
-    return calculateHours(assignment) * assignment.jobs.hourly_rate;
+    // Agora daily_rate representa o valor por dia
+    return assignment.jobs.daily_rate;
   }
 
   // Calculate totals
@@ -250,7 +251,7 @@ export function ClientHistoryPage() {
                   <div className="text-right">
                     <Badge variant="default">Concluído</Badge>
                     <p className="text-lg font-bold mt-2">R$ {calculateCost(assignment).toFixed(2)}</p>
-                    <p className="text-sm text-muted-foreground">{calculateHours(assignment)}h × R$ {assignment.jobs?.hourly_rate}/h</p>
+                    <p className="text-sm text-muted-foreground">Jornada: {calculateHours(assignment).toFixed(1)}h | R$ {assignment.jobs?.daily_rate}/dia</p>
                     {!assignment.rating && (
                       <div className="mt-2">
                         <RatingModal

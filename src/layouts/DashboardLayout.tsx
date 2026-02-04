@@ -57,7 +57,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  if (!profile) return null;
+  // Mostrar loading APENAS se não temos profile
+  // Se temos profile (do cache), mostrar conteúdo mesmo durante atualização em background
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   const items = menuItems[profile.role];
   const userName = profile.name;

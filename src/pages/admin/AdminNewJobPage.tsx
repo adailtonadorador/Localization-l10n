@@ -83,7 +83,7 @@ export function AdminNewJobPage() {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [hourlyRate, setHourlyRate] = useState("");
+  const [dailyRate, setDailyRate] = useState("");
   const [requiredWorkers, setRequiredWorkers] = useState("1");
   const [skills, setSkills] = useState<string[]>([]);
 
@@ -268,8 +268,8 @@ export function AdminNewJobPage() {
       setError("Horário de início e fim são obrigatórios");
       return;
     }
-    if (!hourlyRate || parseFloat(hourlyRate) <= 0) {
-      setError("Valor por hora deve ser maior que zero");
+    if (!dailyRate || parseFloat(dailyRate) <= 0) {
+      setError("Valor por dia deve ser maior que zero");
       return;
     }
 
@@ -293,7 +293,7 @@ export function AdminNewJobPage() {
         dates: selectedDates, // Array with all selected dates
         start_time: startTime,
         end_time: endTime,
-        hourly_rate: parseFloat(hourlyRate),
+        daily_rate: parseFloat(dailyRate),
         required_workers: parseInt(requiredWorkers) || 1,
         skills_required: skills,
         status: 'open',
@@ -582,15 +582,15 @@ export function AdminNewJobPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="hourly-rate">Valor por Hora (R$) *</Label>
+                  <Label htmlFor="daily-rate">Valor por Dia (R$) *</Label>
                   <Input
-                    id="hourly-rate"
+                    id="daily-rate"
                     type="number"
                     min="1"
-                    step="0.50"
-                    placeholder="25.00"
-                    value={hourlyRate}
-                    onChange={(e) => setHourlyRate(e.target.value)}
+                    step="1"
+                    placeholder="150.00"
+                    value={dailyRate}
+                    onChange={(e) => setDailyRate(e.target.value)}
                     disabled={loading}
                     className="bg-white text-lg font-semibold"
                   />
@@ -612,14 +612,14 @@ export function AdminNewJobPage() {
                   />
                 </div>
 
-                {hourlyRate && startTime && endTime && (
+                {dailyRate && startTime && endTime && (
                   <div className="bg-emerald-50 rounded-lg p-3 mt-4">
-                    <p className="text-xs text-emerald-600 font-medium mb-1">Estimativa por trabalhador/dia:</p>
+                    <p className="text-xs text-emerald-600 font-medium mb-1">Valor por trabalhador/dia:</p>
                     <p className="text-xl font-bold text-emerald-700">
-                      R$ {(parseFloat(hourlyRate) * calculateHours(startTime, endTime)).toFixed(2)}
+                      R$ {parseFloat(dailyRate).toFixed(2)}
                     </p>
                     <p className="text-xs text-emerald-600">
-                      {calculateHours(startTime, endTime).toFixed(1)}h x R$ {parseFloat(hourlyRate).toFixed(2)}
+                      Jornada: {calculateHours(startTime, endTime).toFixed(1)}h
                     </p>
                   </div>
                 )}
@@ -666,27 +666,23 @@ export function AdminNewJobPage() {
                     <span className="text-muted-foreground">Trabalhadores:</span>
                     <span className="font-medium">{requiredWorkers}</span>
                   </div>
-                  {selectedDates.length > 0 && hourlyRate && startTime && endTime && (
+                  {selectedDates.length > 0 && dailyRate && startTime && endTime && (
                     <>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Horas por dia:</span>
+                        <span className="text-muted-foreground">Jornada por dia:</span>
                         <span className="font-medium">{calculateHours(startTime, endTime).toFixed(1)}h</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total de horas:</span>
+                        <span className="text-muted-foreground">Valor por dia:</span>
                         <span className="font-medium">
-                          {(selectedDates.length * calculateHours(startTime, endTime)).toFixed(1)}h
+                          R$ {parseFloat(dailyRate).toFixed(2)}
                         </span>
                       </div>
                       <div className="border-t pt-2 mt-2">
                         <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                          <span>Por trabalhador:</span>
+                          <span>Por trabalhador ({selectedDates.length} dia{selectedDates.length !== 1 ? 's' : ''}):</span>
                           <span>
-                            R$ {(
-                              selectedDates.length *
-                              parseFloat(hourlyRate) *
-                              calculateHours(startTime, endTime)
-                            ).toFixed(2)}
+                            R$ {(selectedDates.length * parseFloat(dailyRate)).toFixed(2)}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -695,8 +691,7 @@ export function AdminNewJobPage() {
                             R$ {(
                               selectedDates.length *
                               parseInt(requiredWorkers) *
-                              parseFloat(hourlyRate) *
-                              calculateHours(startTime, endTime)
+                              parseFloat(dailyRate)
                             ).toFixed(2)}
                           </span>
                         </div>

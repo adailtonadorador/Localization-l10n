@@ -28,7 +28,7 @@ interface Job {
   dates: string[] | null;
   start_time: string;
   end_time: string;
-  hourly_rate: number;
+  daily_rate: number;
   required_workers: number;
   skills_required: string[];
   status: string;
@@ -330,7 +330,7 @@ export function WorkerDashboard() {
                           {assignment.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
                         </Badge>
                         <p className="font-bold text-lg text-emerald-600">
-                          R$ {assignment.jobs.hourly_rate}/h
+                          R$ {assignment.jobs.daily_rate}/dia
                         </p>
                       </div>
                     </div>
@@ -401,7 +401,7 @@ export function WorkerDashboard() {
                           {job.required_workers} vaga(s)
                         </Badge>
                         <p className="font-bold text-lg text-emerald-600">
-                          R$ {job.hourly_rate}/h
+                          R$ {job.daily_rate}/dia
                         </p>
                         <Button
                           size="sm"
@@ -462,7 +462,7 @@ export function WorkerDashboard() {
                         <Clock className="h-3 w-3 mr-1" />
                         Aguardando
                       </Badge>
-                      <span className="font-bold text-emerald-600">R$ {application.jobs.hourly_rate}/h</span>
+                      <span className="font-bold text-emerald-600">R$ {application.jobs.daily_rate}/dia</span>
                     </div>
                   </div>
                 ))}

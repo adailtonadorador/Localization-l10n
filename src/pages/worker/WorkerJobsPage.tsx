@@ -31,7 +31,7 @@ interface Job {
   dates: string[] | null;
   start_time: string;
   end_time: string;
-  hourly_rate: number;
+  daily_rate: number;
   required_workers: number;
   skills_required: string[];
   status: string;
@@ -41,7 +41,7 @@ interface Job {
 }
 
 export function WorkerJobsPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,8 +52,10 @@ export function WorkerJobsPage() {
   const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
-    loadJobs();
-  }, [user]);
+    if (profile?.id) {
+      loadJobs();
+    }
+  }, [profile?.id]);
 
   async function loadJobs() {
     setLoading(true);
@@ -72,11 +74,11 @@ export function WorkerJobsPage() {
       setJobs(jobsData || []);
 
       // Load jobs the user has already taken
-      if (user) {
+      if (profile?.id) {
         const { data: assignmentsData } = await supabaseUntyped
           .from('job_assignments')
           .select('job_id')
-          .eq('worker_id', user.id);
+          .eq('worker_id', profile.id);
 
         setAppliedJobIds(assignmentsData?.map((a: { job_id: string }) => a.job_id) || []);
       }
@@ -93,14 +95,14 @@ export function WorkerJobsPage() {
   }
 
   async function handleAssignToMe() {
-    if (!selectedJob || !user) return;
+    if (!selectedJob || !profile?.id) return;
 
     setAssigning(true);
     try {
       // Criar assignment
       const { error: assignError } = await supabaseUntyped.from('job_assignments').insert({
         job_id: selectedJob.id,
-        worker_id: user.id,
+        worker_id: profile.id,
         status: 'confirmed',
       });
 
@@ -114,7 +116,7 @@ export function WorkerJobsPage() {
       const dates = selectedJob.dates && selectedJob.dates.length > 0 ? selectedJob.dates : [selectedJob.date];
       const workRecords = dates.map(date => ({
         job_id: selectedJob.id,
-        worker_id: user.id,
+        worker_id: profile.id,
         work_date: date,
         status: 'pending',
       }));
@@ -314,7 +316,7 @@ export function WorkerJobsPage() {
                     )}
                   </div>
                   <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                    <span className="text-lg font-bold">R$ {job.hourly_rate}/h</span>
+                    <span className="text-lg font-bold">R$ {job.daily_rate}/dia</span>
                     <div className="flex items-center gap-2">
                       {hasApplied && (
                         <Badge variant="secondary">Confirmado</Badge>
@@ -387,7 +389,7 @@ export function WorkerJobsPage() {
                       <Star className="h-3 w-3" />
                       Valor
                     </div>
-                    <p className="font-semibold text-sm">R$ {selectedJob.hourly_rate}/h</p>
+                    <p className="font-semibold text-sm">R$ {selectedJob.daily_rate}/dia</p>
                   </div>
                 </div>
               </div>

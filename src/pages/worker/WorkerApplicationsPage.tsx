@@ -19,7 +19,7 @@ interface JobApplication {
     date: string;
     start_time: string;
     end_time: string;
-    hourly_rate: number;
+    daily_rate: number;
     clients: {
       company_name: string;
     };
@@ -27,15 +27,15 @@ interface JobApplication {
 }
 
 export function WorkerApplicationsPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
+    if (profile?.id) {
       loadApplications();
     }
-  }, [user]);
+  }, [profile?.id]);
 
   async function loadApplications() {
     setLoading(true);
@@ -49,7 +49,7 @@ export function WorkerApplicationsPage() {
             clients (company_name)
           )
         `)
-        .eq('worker_id', user?.id)
+        .eq('worker_id', profile?.id)
         .order('applied_at', { ascending: false });
 
       setApplications(data || []);
@@ -148,7 +148,7 @@ export function WorkerApplicationsPage() {
             </p>
           </div>
           <div className="flex items-center justify-between mt-4 pt-4 border-t">
-            <span className="text-lg font-bold">R$ {application.jobs.hourly_rate}/h</span>
+            <span className="text-lg font-bold">R$ {application.jobs.daily_rate}/dia</span>
             {showCancel && (
               <Button
                 variant="destructive"

@@ -21,7 +21,7 @@ interface JobAssignment {
     date: string;
     start_time: string;
     end_time: string;
-    hourly_rate: number;
+    daily_rate: number;
     clients: {
       company_name: string;
     };
@@ -29,15 +29,15 @@ interface JobAssignment {
 }
 
 export function WorkerHistoryPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [assignments, setAssignments] = useState<JobAssignment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
+    if (profile?.id) {
       loadHistory();
     }
-  }, [user]);
+  }, [profile?.id]);
 
   async function loadHistory() {
     setLoading(true);
@@ -51,7 +51,7 @@ export function WorkerHistoryPage() {
             clients (company_name)
           )
         `)
-        .eq('worker_id', user?.id)
+        .eq('worker_id', profile?.id)
         .in('status', ['completed', 'no_show'])
         .order('created_at', { ascending: false });
 
@@ -88,12 +88,12 @@ export function WorkerHistoryPage() {
       const start = new Date(`2000-01-01T${assignment.jobs.start_time}`);
       const end = new Date(`2000-01-01T${assignment.jobs.end_time}`);
       const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      return hours * assignment.jobs.hourly_rate;
+      return hours * assignment.jobs.daily_rate;
     }
     const checkIn = new Date(assignment.check_in_time);
     const checkOut = new Date(assignment.check_out_time);
     const hours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
-    return hours * assignment.jobs.hourly_rate;
+    return hours * assignment.jobs.daily_rate;
   }
 
   // Calculate stats
@@ -238,7 +238,7 @@ export function WorkerHistoryPage() {
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="text-xs text-muted-foreground">Valor/hora</p>
-                          <p className="font-medium text-sm">R$ {assignment.jobs.hourly_rate}</p>
+                          <p className="font-medium text-sm">R$ {assignment.jobs.daily_rate}</p>
                         </div>
                       </div>
                     </div>

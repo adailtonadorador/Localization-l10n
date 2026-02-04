@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarUpload } from "@/components/ui/avatar-upload";
 import {
   User,
   Mail,
@@ -25,7 +26,8 @@ import {
   Loader2,
   Home,
   Map,
-  Wallet
+  Wallet,
+  Camera
 } from "lucide-react";
 
 interface ViaCepResponse {
@@ -60,12 +62,15 @@ export function WorkerProfilePage() {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchingCep, setFetchingCep] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState(profile?.name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
   const [skills, setSkills] = useState<string[]>(workerProfile?.skills || []);
   const [pix, setPix] = useState(workerProfile?.pix_key || '');
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
 
   // Address fields
   const [cep, setCep] = useState(workerProfile?.cep || '');
@@ -116,6 +121,25 @@ export function WorkerProfilePage() {
     }
   }
 
+  async function handleAvatarUpload(url: string) {
+    setAvatarError(null);
+    setAvatarUrl(url);
+
+    // Save immediately when avatar changes
+    try {
+      const { error } = await supabaseUntyped
+        .from('users')
+        .update({ avatar_url: url })
+        .eq('id', profile?.id);
+
+      if (error) throw error;
+      await refreshProfile();
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+      setAvatarError('Erro ao salvar foto. Tente novamente.');
+    }
+  }
+
   async function handleSave() {
     setLoading(true);
     try {
@@ -127,7 +151,7 @@ export function WorkerProfilePage() {
       // Update user profile
       const { error: userError } = await supabaseUntyped
         .from('users')
-        .update({ name, phone: phone.replace(/\D/g, '') })
+        .update({ name, phone: phone.replace(/\D/g, ''), avatar_url: avatarUrl })
         .eq('id', profile?.id);
 
       if (userError) throw userError;
@@ -213,12 +237,21 @@ export function WorkerProfilePage() {
       {/* Profile Header Card */}
       <Card className="border-0 shadow-sm mb-6">
         <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <Avatar className="h-20 w-20 ring-4 ring-emerald-100 shadow-lg">
-              <AvatarFallback className="bg-emerald-600 text-white text-2xl font-bold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            {/* Avatar with upload option */}
+            <div className="flex flex-col items-center gap-2">
+              <AvatarUpload
+                userId={profile?.id || ""}
+                currentAvatarUrl={avatarUrl || profile?.avatar_url}
+                name={profile?.name}
+                onUploadComplete={handleAvatarUpload}
+                onError={setAvatarError}
+                size="lg"
+              />
+              {avatarError && (
+                <p className="text-xs text-red-500">{avatarError}</p>
+              )}
+            </div>
             <div className="flex-1 text-center sm:text-left">
               <h3 className="text-xl font-bold text-slate-900">{profile?.name}</h3>
               <p className="text-muted-foreground">{profile?.email}</p>
