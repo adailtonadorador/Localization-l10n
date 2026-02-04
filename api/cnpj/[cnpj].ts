@@ -26,15 +26,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const token = process.env.RECEITAWS_TOKEN;
-    const url = token
-      ? `https://www.receitaws.com.br/v1/cnpj/${cleanCnpj}?token=${token}`
-      : `https://www.receitaws.com.br/v1/cnpj/${cleanCnpj}`;
+
+    // Build URL - token can be passed as query param or header depending on API version
+    const baseUrl = `https://www.receitaws.com.br/v1/cnpj/${cleanCnpj}`;
+    const url = token ? `${baseUrl}?token=${token}` : baseUrl;
+
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    };
+
+    // Some API versions require Authorization header
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
     const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-      },
+      method: 'GET',
+      headers,
     });
+
+    // Check if response is OK
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('ReceitaWS error:', response.status, errorText);
+      return res.status(response.status).json({
+        status: 'ERROR',
+        message: `Erro na API: ${response.status}`
+      });
+    }
 
     const data = await response.json();
     return res.status(200).json(data);
