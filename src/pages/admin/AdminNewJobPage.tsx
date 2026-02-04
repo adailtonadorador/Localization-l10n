@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
-import { BRAZILIAN_STATES, fetchCitiesByUF, type City } from "@/lib/brazil-locations";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,8 +25,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  X,
-  Loader2
+  X
 } from "lucide-react";
 
 const AVAILABLE_SKILLS = [
@@ -51,6 +49,14 @@ interface Client {
   id: string;
   company_name: string;
   cnpj: string;
+  address: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  uf: string | null;
+  cep: string | null;
   users: {
     name: string;
     email: string;
@@ -75,11 +81,7 @@ export function AdminNewJobPage() {
   const [clientId, setClientId] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [uf, setUf] = useState("");
-  const [city, setCity] = useState("");
-  const [cities, setCities] = useState<City[]>([]);
-  const [loadingCities, setLoadingCities] = useState(false);
-  const [addressDetails, setAddressDetails] = useState("");
+  const [addressComplement, setAddressComplement] = useState("");
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -95,21 +97,6 @@ export function AdminNewJobPage() {
     loadClients();
   }, []);
 
-  // Carregar cidades quando UF mudar
-  useEffect(() => {
-    if (uf) {
-      setLoadingCities(true);
-      setCity("");
-      fetchCitiesByUF(uf).then((data) => {
-        setCities(data);
-        setLoadingCities(false);
-      });
-    } else {
-      setCities([]);
-      setCity("");
-    }
-  }, [uf]);
-
   async function loadClients() {
     try {
       const { data } = await supabaseUntyped
@@ -118,6 +105,14 @@ export function AdminNewJobPage() {
           id,
           company_name,
           cnpj,
+          address,
+          logradouro,
+          numero,
+          complemento,
+          bairro,
+          cidade,
+          uf,
+          cep,
           users (name, email)
         `)
         .order('company_name');
@@ -252,12 +247,8 @@ export function AdminNewJobPage() {
       setError("Título é obrigatório");
       return;
     }
-    if (!uf) {
-      setError("Selecione um estado");
-      return;
-    }
-    if (!city) {
-      setError("Selecione um município");
+    if (!selectedClient?.address && !selectedClient?.logradouro) {
+      setError("A empresa selecionada não possui endereço cadastrado");
       return;
     }
     if (selectedDates.length === 0) {
@@ -275,10 +266,18 @@ export function AdminNewJobPage() {
 
     setLoading(true);
 
-    // Montar localização completa
-    const fullLocation = addressDetails.trim()
-      ? `${addressDetails.trim()}, ${city} - ${uf}`
-      : `${city} - ${uf}`;
+    // Montar localização completa usando endereço da empresa
+    let fullLocation = selectedClient?.address || '';
+    if (!fullLocation && selectedClient?.logradouro) {
+      fullLocation = `${selectedClient.logradouro}, ${selectedClient.numero || 'S/N'}`;
+      if (selectedClient.complemento) fullLocation += ` - ${selectedClient.complemento}`;
+      if (selectedClient.bairro) fullLocation += `, ${selectedClient.bairro}`;
+      if (selectedClient.cidade) fullLocation += `, ${selectedClient.cidade}`;
+      if (selectedClient.uf) fullLocation += ` - ${selectedClient.uf}`;
+    }
+    if (addressComplement.trim()) {
+      fullLocation = `${addressComplement.trim()} - ${fullLocation}`;
+    }
 
     try {
       // Create a single job with multiple dates
@@ -287,8 +286,8 @@ export function AdminNewJobPage() {
         title: title.trim(),
         description: description.trim() || null,
         location: fullLocation,
-        uf,
-        city,
+        uf: selectedClient?.uf || null,
+        city: selectedClient?.cidade || null,
         date: selectedDates[0], // Keep first date for backward compatibility
         dates: selectedDates, // Array with all selected dates
         start_time: startTime,
@@ -405,64 +404,52 @@ export function AdminNewJobPage() {
                   />
                 </div>
 
+                {/* Localização - Endereço da Empresa */}
                 <div className="space-y-4">
                   <Label className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    Localização *
+                    Localização
                   </Label>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="uf" className="text-sm">Estado</Label>
-                      <Select value={uf} onValueChange={setUf}>
-                        <SelectTrigger className="bg-white">
-                          <SelectValue placeholder="Selecione o estado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {BRAZILIAN_STATES.map((state) => (
-                            <SelectItem key={state.uf} value={state.uf}>
-                              {state.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="city" className="text-sm">Município</Label>
-                      <Select value={city} onValueChange={setCity} disabled={!uf || loadingCities}>
-                        <SelectTrigger className="bg-white">
-                          {loadingCities ? (
-                            <span className="flex items-center gap-2 text-muted-foreground">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Carregando...
-                            </span>
-                          ) : (
-                            <SelectValue placeholder={uf ? "Selecione o município" : "Selecione o estado primeiro"} />
+                  {selectedClient ? (
+                    <div className="space-y-3">
+                      {/* Endereço da empresa */}
+                      <div className="p-4 bg-slate-50 rounded-lg border">
+                        <p className="text-xs text-muted-foreground mb-1">Endereço da Empresa:</p>
+                        <p className="font-medium text-slate-900">
+                          {selectedClient.address || (selectedClient.logradouro
+                            ? `${selectedClient.logradouro}, ${selectedClient.numero || 'S/N'}${selectedClient.complemento ? ` - ${selectedClient.complemento}` : ''}, ${selectedClient.bairro || ''}, ${selectedClient.cidade || ''} - ${selectedClient.uf || ''}`
+                            : 'Endereço não cadastrado'
                           )}
-                        </SelectTrigger>
-                        <SelectContent>
-                          {cities.map((c) => (
-                            <SelectItem key={c.id} value={c.nome}>
-                              {c.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                        </p>
+                        {selectedClient.cep && (
+                          <p className="text-xs text-muted-foreground mt-1">CEP: {selectedClient.cep}</p>
+                        )}
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="addressDetails" className="text-sm">Endereço / Complemento (opcional)</Label>
-                    <Input
-                      id="addressDetails"
-                      placeholder="Ex: Av. Paulista, 1000 - Bela Vista"
-                      value={addressDetails}
-                      onChange={(e) => setAddressDetails(e.target.value)}
-                      disabled={loading}
-                      className="bg-white"
-                    />
-                  </div>
+                      {/* Complemento adicional */}
+                      <div className="space-y-2">
+                        <Label htmlFor="addressComplement" className="text-sm">Complemento adicional (opcional)</Label>
+                        <Input
+                          id="addressComplement"
+                          placeholder="Ex: Galpão 3, Setor de Cargas"
+                          value={addressComplement}
+                          onChange={(e) => setAddressComplement(e.target.value)}
+                          disabled={loading}
+                          className="bg-white"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Adicione informações extras sobre o local de trabalho
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-slate-50 rounded-lg border border-dashed">
+                      <p className="text-sm text-muted-foreground text-center">
+                        Selecione uma empresa para exibir o endereço
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
