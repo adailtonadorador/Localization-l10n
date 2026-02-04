@@ -215,7 +215,11 @@ export function CompleteProfilePage() {
     setFetchingCnpj(true);
     setError(null);
     try {
-      const response = await fetch(`https://www.receitaws.com.br/v1/cnpj/${cleanCnpj}`);
+      const token = import.meta.env.VITE_RECEITAWS_TOKEN;
+      const url = token
+        ? `https://www.receitaws.com.br/v1/cnpj/${cleanCnpj}?token=${token}`
+        : `https://www.receitaws.com.br/v1/cnpj/${cleanCnpj}`;
+      const response = await fetch(url);
       const data: ReceitaWsResponse = await response.json();
 
       if (data.status === 'ERROR' || data.message) {
