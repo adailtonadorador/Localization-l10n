@@ -32,3 +32,6 @@ dist-ssr
 # Temp files
 nul
 supabase/.temp/
+
+.vercel
+.env*.local

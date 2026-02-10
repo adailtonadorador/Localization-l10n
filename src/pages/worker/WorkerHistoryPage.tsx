@@ -6,14 +6,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, DollarSign, Star, MapPin, Clock, Calendar, TrendingUp, Award } from "lucide-react";
 
-interface JobAssignment {
+interface WorkRecord {
   id: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'no_show';
-  check_in_time: string | null;
-  check_out_time: string | null;
-  rating: number | null;
-  feedback: string | null;
-  created_at: string;
+  work_date: string;
+  status: string;
+  check_in: string | null;
+  check_out: string | null;
+  job_id: string;
+  worker_id: string;
   jobs: {
     id: string;
     title: string;
@@ -26,11 +26,14 @@ interface JobAssignment {
       company_name: string;
     };
   };
+  // Rating from job_assignment
+  rating?: number | null;
+  feedback?: string | null;
 }
 
 export function WorkerHistoryPage() {
   const { profile } = useAuth();
-  const [assignments, setAssignments] = useState<JobAssignment[]>([]);
+  const [records, setRecords] = useState<WorkRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,8 +45,9 @@ export function WorkerHistoryPage() {
   async function loadHistory() {
     setLoading(true);
     try {
-      const { data } = await supabaseUntyped
-        .from('job_assignments')
+      // Fetch completed work records
+      const { data: workRecords } = await supabaseUntyped
+        .from('work_records')
         .select(`
           *,
           jobs (
@@ -52,10 +56,36 @@ export function WorkerHistoryPage() {
           )
         `)
         .eq('worker_id', profile?.id)
-        .in('status', ['completed', 'no_show'])
-        .order('created_at', { ascending: false });
+        .eq('status', 'completed')
+        .order('work_date', { ascending: false });
 
-      setAssignments(data || []);
+      if (!workRecords || workRecords.length === 0) {
+        setRecords([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch ratings from job_assignments
+      const jobIds = [...new Set(workRecords.map((r: any) => r.job_id))];
+      const { data: assignments } = await supabaseUntyped
+        .from('job_assignments')
+        .select('job_id, rating, feedback')
+        .eq('worker_id', profile?.id)
+        .in('job_id', jobIds);
+
+      // Merge ratings with work records
+      const ratingsMap = new Map<string, { rating: number | null; feedback: string | null }>();
+      (assignments || []).forEach((a: any) => {
+        ratingsMap.set(a.job_id, { rating: a.rating, feedback: a.feedback });
+      });
+
+      const recordsWithRatings = workRecords.map((r: any) => ({
+        ...r,
+        rating: ratingsMap.get(r.job_id)?.rating || null,
+        feedback: ratingsMap.get(r.job_id)?.feedback || null,
+      }));
+
+      setRecords(recordsWithRatings);
     } catch (error) {
       console.error('Error loading history:', error);
     } finally {
@@ -82,24 +112,24 @@ export function WorkerHistoryPage() {
     }
   }
 
-  function calculateEarnings(assignment: JobAssignment) {
-    if (!assignment.check_in_time || !assignment.check_out_time) {
+  function calculateEarnings(record: WorkRecord) {
+    if (!record.check_in || !record.check_out) {
       // Estimate based on job hours
-      const start = new Date(`2000-01-01T${assignment.jobs.start_time}`);
-      const end = new Date(`2000-01-01T${assignment.jobs.end_time}`);
+      const start = new Date(`2000-01-01T${record.jobs.start_time}`);
+      const end = new Date(`2000-01-01T${record.jobs.end_time}`);
       const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      return hours * assignment.jobs.daily_rate;
+      return hours * record.jobs.daily_rate;
     }
-    const checkIn = new Date(assignment.check_in_time);
-    const checkOut = new Date(assignment.check_out_time);
+    const checkIn = new Date(record.check_in);
+    const checkOut = new Date(record.check_out);
     const hours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
-    return hours * assignment.jobs.daily_rate;
+    return hours * record.jobs.daily_rate;
   }
 
   // Calculate stats
-  const completedJobs = assignments.filter(a => a.status === 'completed');
-  const totalEarnings = completedJobs.reduce((sum, a) => sum + calculateEarnings(a), 0);
-  const avgRating = completedJobs.filter(a => a.rating).reduce((sum, a, _, arr) => sum + (a.rating || 0) / arr.length, 0);
+  const completedRecords = records.filter(r => r.status === 'completed');
+  const totalEarnings = completedRecords.reduce((sum, r) => sum + calculateEarnings(r), 0);
+  const avgRating = completedRecords.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating || 0) / arr.length, 0);
 
   if (loading) {
     return (
@@ -128,7 +158,7 @@ export function WorkerHistoryPage() {
                 <Briefcase className="h-6 w-6 text-emerald-600" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-emerald-600">{completedJobs.length}</p>
+                <p className="text-3xl font-bold text-emerald-600">{completedRecords.length}</p>
                 <p className="text-sm text-muted-foreground">Trabalhos Concluídos</p>
               </div>
             </div>
@@ -173,7 +203,7 @@ export function WorkerHistoryPage() {
               </div>
               <div>
                 <p className="text-3xl font-bold text-blue-600">
-                  R$ {completedJobs.length > 0 ? (totalEarnings / completedJobs.length).toFixed(0) : '0'}
+                  R$ {completedRecords.length > 0 ? (totalEarnings / completedRecords.length).toFixed(0) : '0'}
                 </p>
                 <p className="text-sm text-muted-foreground">Média por Trabalho</p>
               </div>
@@ -183,20 +213,20 @@ export function WorkerHistoryPage() {
       </div>
 
       {/* Jobs List */}
-      {assignments.length > 0 ? (
+      {records.length > 0 ? (
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-1.5 bg-slate-800 rounded-lg">
               <Clock className="h-4 w-4 text-white" />
             </div>
             <h3 className="text-lg font-semibold">Trabalhos Realizados</h3>
-            <Badge variant="secondary">{assignments.length}</Badge>
+            <Badge variant="secondary">{records.length}</Badge>
           </div>
 
-          {assignments.map((assignment) => (
-            <Card key={assignment.id} className="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+          {records.map((record) => (
+            <Card key={record.id} className="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
               <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-                assignment.status === 'completed' ? 'bg-green-500' : 'bg-red-500'
+                record.status === 'completed' ? 'bg-green-500' : 'bg-red-500'
               }`} />
               <CardContent className="p-6">
                 <div className="flex flex-col lg:flex-row lg:items-start gap-6">
@@ -204,10 +234,10 @@ export function WorkerHistoryPage() {
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-bold text-lg text-slate-900">{assignment.jobs.title}</h3>
-                        <p className="text-sm text-muted-foreground">{assignment.jobs.clients?.company_name}</p>
+                        <h3 className="font-bold text-lg text-slate-900">{record.jobs.title}</h3>
+                        <p className="text-sm text-muted-foreground">{record.jobs.clients?.company_name}</p>
                       </div>
-                      {getStatusBadge(assignment.status)}
+                      {getStatusBadge(record.status)}
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
@@ -215,7 +245,7 @@ export function WorkerHistoryPage() {
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="text-xs text-muted-foreground">Data</p>
-                          <p className="font-medium text-sm">{formatDate(assignment.jobs.date)}</p>
+                          <p className="font-medium text-sm">{formatDate(record.work_date)}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -223,7 +253,7 @@ export function WorkerHistoryPage() {
                         <div>
                           <p className="text-xs text-muted-foreground">Horário</p>
                           <p className="font-medium text-sm">
-                            {formatTime(assignment.jobs.start_time)} - {formatTime(assignment.jobs.end_time)}
+                            {formatTime(record.jobs.start_time)} - {formatTime(record.jobs.end_time)}
                           </p>
                         </div>
                       </div>
@@ -231,33 +261,33 @@ export function WorkerHistoryPage() {
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="text-xs text-muted-foreground">Local</p>
-                          <p className="font-medium text-sm truncate">{assignment.jobs.location}</p>
+                          <p className="font-medium text-sm truncate">{record.jobs.location}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="text-xs text-muted-foreground">Valor/hora</p>
-                          <p className="font-medium text-sm">R$ {assignment.jobs.daily_rate}</p>
+                          <p className="font-medium text-sm">R$ {record.jobs.daily_rate}</p>
                         </div>
                       </div>
                     </div>
 
-                    {assignment.feedback && (
+                    {record.feedback && (
                       <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl">
                         <p className="text-xs font-medium text-blue-700 mb-1">Feedback da empresa:</p>
-                        <p className="text-sm text-blue-900">{assignment.feedback}</p>
+                        <p className="text-sm text-blue-900">{record.feedback}</p>
                       </div>
                     )}
                   </div>
 
                   {/* Rating & Earnings */}
                   <div className="flex lg:flex-col items-center gap-4 p-4 bg-slate-50 rounded-xl min-w-[140px]">
-                    {assignment.rating ? (
+                    {record.rating ? (
                       <div className="text-center">
                         <div className="flex items-center justify-center gap-1 mb-1">
                           <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
-                          <span className="text-2xl font-bold">{assignment.rating}</span>
+                          <span className="text-2xl font-bold">{record.rating}</span>
                         </div>
                         <p className="text-xs text-muted-foreground">Avaliação</p>
                       </div>
@@ -268,10 +298,10 @@ export function WorkerHistoryPage() {
                       </div>
                     )}
 
-                    {assignment.status === 'completed' && (
+                    {record.status === 'completed' && (
                       <div className="text-center lg:border-t lg:pt-4 lg:mt-2">
                         <p className="text-xl font-bold text-green-600">
-                          +R$ {calculateEarnings(assignment).toFixed(0)}
+                          +R$ {calculateEarnings(record).toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Ganho</p>
                       </div>

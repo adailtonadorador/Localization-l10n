@@ -132,6 +132,7 @@ export function WorkerDashboard() {
       setAvailableJobs(jobsData || []);
 
       // Load upcoming assigned jobs
+      const today = new Date().toISOString().split('T')[0];
       const { data: assignmentsData } = await supabaseUntyped
         .from('job_assignments')
         .select(`
@@ -143,10 +144,14 @@ export function WorkerDashboard() {
         `)
         .eq('worker_id', user?.id)
         .in('status', ['pending', 'confirmed'])
-        .order('created_at', { ascending: false })
-        .limit(5);
+        .order('created_at', { ascending: false });
 
-      setUpcomingJobs(assignmentsData || []);
+      // Filter only future jobs (Supabase doesn't support filtering on joined tables)
+      const futureAssignments = (assignmentsData || []).filter(
+        (a: JobAssignment) => a.jobs?.date >= today
+      ).slice(0, 5);
+
+      setUpcomingJobs(futureAssignments);
 
       // Load pending applications
       const { data: applicationsData } = await supabaseUntyped
@@ -164,16 +169,44 @@ export function WorkerDashboard() {
 
       setPendingApplications(applicationsData || []);
 
-      // Calculate stats
-      const { data: completedJobs } = await supabaseUntyped
-        .from('job_assignments')
+      // Calculate stats from work_records
+      const { data: allCompletedRecords } = await supabaseUntyped
+        .from('work_records')
         .select('id')
         .eq('worker_id', user?.id)
         .eq('status', 'completed');
 
+      // Get current month's completed work records with job details for earnings
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+      const { data: monthlyRecords } = await supabaseUntyped
+        .from('work_records')
+        .select(`
+          id,
+          work_date,
+          check_in,
+          check_out,
+          jobs (daily_rate, start_time, end_time)
+        `)
+        .eq('worker_id', user?.id)
+        .eq('status', 'completed')
+        .gte('work_date', firstDayOfMonth)
+        .lte('work_date', lastDayOfMonth);
+
+      // Calculate monthly earnings
+      let monthlyEarnings = 0;
+      (monthlyRecords || []).forEach((record: any) => {
+        if (record.jobs) {
+          // Use daily_rate directly (it's the daily payment)
+          monthlyEarnings += record.jobs.daily_rate || 0;
+        }
+      });
+
       setStats({
-        totalJobs: workerProfile?.total_jobs || completedJobs?.length || 0,
-        monthlyEarnings: 0, // Would need to calculate from completed jobs
+        totalJobs: allCompletedRecords?.length || 0,
+        monthlyEarnings,
         rating: workerProfile?.rating || 0,
         pendingCount: applicationsData?.length || 0,
       });
