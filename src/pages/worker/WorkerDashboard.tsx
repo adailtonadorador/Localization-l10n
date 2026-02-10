@@ -10,6 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton, SkeletonJobCard, SkeletonStatsCard } from "@/components/ui/skeleton";
 import { useProfileCompleteness } from "@/components/ProfileCompleteness";
 import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
+import {
   Briefcase,
   DollarSign,
   Star,
@@ -19,7 +23,9 @@ import {
   ArrowRight,
   TrendingUp,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle,
+  Building
 } from "lucide-react";
 
 interface Job {
@@ -50,6 +56,19 @@ interface JobAssignment {
   id: string;
   status: string;
   jobs: Job;
+}
+
+interface ConflictInfo {
+  selectedJob: Job;
+  conflictingJob: {
+    title: string;
+    company_name?: string;
+    dates: string[];
+    start_time: string;
+    end_time: string;
+    location?: string;
+  };
+  conflictDates: string[];
 }
 
 // Alert component for incomplete profile
@@ -106,6 +125,8 @@ export function WorkerDashboard() {
     pendingCount: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [conflictInfo, setConflictInfo] = useState<ConflictInfo | null>(null);
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
 
   // Recarrega dados quando navega para esta página
   useEffect(() => {
@@ -217,8 +238,104 @@ export function WorkerDashboard() {
     }
   }
 
+  // Verifica se dois intervalos de tempo se sobrepõem
+  function timeRangesOverlap(start1: string, end1: string, start2: string, end2: string): boolean {
+    const toMinutes = (time: string) => {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    };
+    const s1 = toMinutes(start1);
+    const e1 = toMinutes(end1);
+    const s2 = toMinutes(start2);
+    const e2 = toMinutes(end2);
+    return s1 < e2 && s2 < e1;
+  }
+
   async function handleApply(jobId: string) {
     try {
+      // Buscar detalhes da vaga selecionada
+      const selectedJob = availableJobs.find(j => j.id === jobId);
+      if (!selectedJob) {
+        toast.error('Erro ao encontrar a vaga.');
+        return;
+      }
+
+      const selectedJobDates = selectedJob.dates && selectedJob.dates.length > 0
+        ? selectedJob.dates
+        : [selectedJob.date];
+
+      // Buscar todas as vagas já atribuídas ao trabalhador
+      const { data: existingAssignments } = await supabaseUntyped
+        .from('job_assignments')
+        .select(`
+          job_id,
+          jobs (
+            id,
+            date,
+            dates,
+            start_time,
+            end_time,
+            title,
+            location,
+            clients (company_name)
+          )
+        `)
+        .eq('worker_id', user?.id)
+        .in('status', ['pending', 'confirmed']);
+
+      // Verificar conflito de datas e horários
+      if (existingAssignments && existingAssignments.length > 0) {
+        for (const assignment of existingAssignments) {
+          const existingJob = assignment.jobs as {
+            id: string;
+            date: string;
+            dates: string[] | null;
+            start_time: string;
+            end_time: string;
+            title: string;
+            location?: string;
+            clients?: { company_name: string };
+          };
+
+          if (!existingJob) continue;
+
+          const existingJobDates = existingJob.dates && existingJob.dates.length > 0
+            ? existingJob.dates
+            : [existingJob.date];
+
+          // Verificar se há datas em comum
+          const commonDates = selectedJobDates.filter(date => existingJobDates.includes(date));
+
+          if (commonDates.length > 0) {
+            // Verificar se os horários se sobrepõem
+            const hasTimeConflict = timeRangesOverlap(
+              selectedJob.start_time,
+              selectedJob.end_time,
+              existingJob.start_time,
+              existingJob.end_time
+            );
+
+            if (hasTimeConflict) {
+              // Mostrar diálogo de conflito com detalhes
+              setConflictInfo({
+                selectedJob,
+                conflictingJob: {
+                  title: existingJob.title,
+                  company_name: existingJob.clients?.company_name,
+                  dates: existingJobDates,
+                  start_time: existingJob.start_time,
+                  end_time: existingJob.end_time,
+                  location: existingJob.location,
+                },
+                conflictDates: commonDates,
+              });
+              setConflictDialogOpen(true);
+              return;
+            }
+          }
+        }
+      }
+
       const { error } = await supabaseUntyped.from('job_applications').insert({
         job_id: jobId,
         worker_id: user?.id,
@@ -583,6 +700,106 @@ export function WorkerDashboard() {
           </Card>
         )}
       </div>
+
+      {/* Conflict Dialog */}
+      <Dialog open={conflictDialogOpen} onOpenChange={setConflictDialogOpen}>
+        <DialogContent className="max-w-lg">
+          {conflictInfo && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Conflito de Horário</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Você já tem um trabalho atribuído que conflita com esta vaga.
+                  </p>
+                </div>
+              </div>
+
+              {/* Conflict dates */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-red-800 mb-2">Datas em conflito:</p>
+                <div className="flex flex-wrap gap-2">
+                  {conflictInfo.conflictDates.map((date, i) => (
+                    <Badge key={i} variant="outline" className="bg-red-100 border-red-300 text-red-700">
+                      {new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: 'short'
+                      })}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Jobs comparison */}
+              <div className="grid gap-4">
+                {/* Conflicting job (existing) */}
+                <div className="border border-red-200 rounded-lg p-4 bg-red-50/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge variant="destructive" className="text-xs">Trabalho Atribuído</Badge>
+                  </div>
+                  <h3 className="font-semibold text-slate-900">{conflictInfo.conflictingJob.title}</h3>
+                  {conflictInfo.conflictingJob.company_name && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                      <Building className="h-3.5 w-3.5" />
+                      {conflictInfo.conflictingJob.company_name}
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4 text-red-500" />
+                      <span className="font-medium">
+                        {conflictInfo.conflictingJob.start_time.slice(0, 5)} - {conflictInfo.conflictingJob.end_time.slice(0, 5)}
+                      </span>
+                    </div>
+                    {conflictInfo.conflictingJob.location && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span className="truncate">{conflictInfo.conflictingJob.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Selected job (new) */}
+                <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge variant="secondary" className="text-xs">Vaga Selecionada</Badge>
+                  </div>
+                  <h3 className="font-semibold text-slate-900">{conflictInfo.selectedJob.title}</h3>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                    <Building className="h-3.5 w-3.5" />
+                    {conflictInfo.selectedJob.clients?.company_name}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4 text-slate-500" />
+                      <span className="font-medium">
+                        {conflictInfo.selectedJob.start_time.slice(0, 5)} - {conflictInfo.selectedJob.end_time.slice(0, 5)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <span className="truncate">{conflictInfo.selectedJob.location}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action */}
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setConflictDialogOpen(false)}>
+                  Entendi
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
