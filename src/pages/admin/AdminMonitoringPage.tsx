@@ -869,7 +869,7 @@ export function AdminMonitoringPage() {
       {/* Rating Dialog - for work records */}
       {selectedRecord && selectedRecord.job_assignments && (
         <RatingDialog
-          open={ratingDialogOpen && !selectedAssignment}
+          open={ratingDialogOpen && !selectedWorkRecord}
           onOpenChange={(open) => {
             setRatingDialogOpen(open);
             if (!open) setSelectedRecord(null);
