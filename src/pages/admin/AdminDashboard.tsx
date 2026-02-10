@@ -5,6 +5,7 @@ import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton, SkeletonStatsCard } from "@/components/ui/skeleton";
 import {
   Users,
   Building2,
@@ -179,11 +180,48 @@ export function AdminDashboard() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-            <p className="text-sm text-muted-foreground">Carregando...</p>
-          </div>
+        {/* Header */}
+        <div className="mb-6">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-48 mt-2" />
+        </div>
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6 mb-8">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonStatsCard key={i} />
+          ))}
+        </div>
+
+        {/* Content Skeleton */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2 border-0 shadow-sm">
+            <CardHeader>
+              <Skeleton className="h-5 w-40" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <Skeleton className="h-5 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full rounded" />
+              ))}
+            </CardContent>
+          </Card>
         </div>
       </DashboardLayout>
     );

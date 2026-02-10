@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
@@ -83,10 +84,11 @@ export function WorkerMyJobsPage() {
         .eq('id', record.id);
 
       if (error) throw error;
+      toast.success('Entrada registrada com sucesso!');
       loadRecords();
     } catch (error) {
       console.error('Error checking in:', error);
-      alert('Erro ao registrar entrada. Tente novamente.');
+      toast.error('Erro ao registrar entrada. Tente novamente.');
     }
   }
 
@@ -112,10 +114,11 @@ export function WorkerMyJobsPage() {
       if (error) throw error;
       setSignatureDialogOpen(false);
       setSelectedRecord(null);
+      toast.success('Saída registrada com sucesso!');
       loadRecords();
     } catch (error) {
       console.error('Error checking out:', error);
-      alert('Erro ao registrar saída. Tente novamente.');
+      toast.error('Erro ao registrar saída. Tente novamente.');
     }
   }
 

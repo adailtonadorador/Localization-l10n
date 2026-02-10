@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -305,7 +306,7 @@ export function AdminNewJobPage() {
         return;
       }
 
-      alert("Vaga criada com sucesso!");
+      toast.success("Vaga criada com sucesso!");
       navigate("/admin");
     } catch {
       setError("Erro ao criar vaga. Tente novamente.");

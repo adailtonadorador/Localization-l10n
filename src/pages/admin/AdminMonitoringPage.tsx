@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, Eye, Mail, Phone, Star, FileSignature, MapPin, Building } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { RatingDialog, RatingDisplay } from "@/components/RatingDialog";
 
 interface WorkRecord {
   id: string;
@@ -21,6 +22,7 @@ interface WorkRecord {
   signature_data: string | null;
   signed_at: string | null;
   status: string;
+  job_assignment_id: string | null;
   workers: {
     id: string;
     rating: number;
@@ -31,6 +33,11 @@ interface WorkRecord {
       phone: string | null;
     };
   };
+  job_assignments?: {
+    id: string;
+    rating: number | null;
+    feedback: string | null;
+  } | null;
 }
 
 interface JobWithRecords {
@@ -57,6 +64,10 @@ export function AdminMonitoringPage() {
   const [selectedJob, setSelectedJob] = useState<JobWithRecords | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
+  // Rating dialog state
+  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<WorkRecord | null>(null);
+
   // Recarrega dados quando navega para esta página ou muda a data
   useEffect(() => {
     loadJobs();
@@ -78,11 +89,17 @@ export function AdminMonitoringPage() {
             signature_data,
             signed_at,
             status,
+            job_assignment_id,
             workers (
               id,
               rating,
               total_jobs,
               users (name, email, phone)
+            ),
+            job_assignments (
+              id,
+              rating,
+              feedback
             )
           )
         `)
@@ -95,6 +112,11 @@ export function AdminMonitoringPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function openRatingDialog(record: WorkRecord, jobTitle: string) {
+    setSelectedRecord({ ...record, jobTitle } as WorkRecord & { jobTitle: string });
+    setRatingDialogOpen(true);
   }
 
   function formatTime(timeStr: string | null) {
@@ -494,6 +516,25 @@ export function AdminMonitoringPage() {
                                 </div>
                               </div>
                             )}
+
+                            {/* Rating Section - only for completed records */}
+                            {record.status === 'completed' && record.job_assignments && (
+                              <div className="pt-3 border-t">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Star className="h-4 w-4" />
+                                    <span>Avaliação</span>
+                                  </div>
+                                  <RatingDisplay
+                                    rating={record.job_assignments.rating}
+                                    feedback={record.job_assignments.feedback}
+                                    onEdit={() => openRatingDialog(record, selectedJob?.title || '')}
+                                    showEditButton={true}
+                                    size="sm"
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -505,6 +546,21 @@ export function AdminMonitoringPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Rating Dialog */}
+      {selectedRecord && selectedRecord.job_assignments && (
+        <RatingDialog
+          open={ratingDialogOpen}
+          onOpenChange={setRatingDialogOpen}
+          assignmentId={selectedRecord.job_assignments.id}
+          workerId={selectedRecord.workers?.id || ""}
+          workerName={selectedRecord.workers?.users?.name || "Trabalhador"}
+          jobTitle={(selectedRecord as WorkRecord & { jobTitle?: string }).jobTitle}
+          currentRating={selectedRecord.job_assignments.rating}
+          currentFeedback={selectedRecord.job_assignments.feedback}
+          onSuccess={loadJobs}
+        />
+      )}
     </DashboardLayout>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
@@ -173,13 +174,10 @@ export function WorkerJobsPage() {
                 new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
               ).join(', ');
 
-              alert(
-                `Não é possível se atribuir a esta vaga.\n\n` +
-                `Você já tem a vaga "${existingJob.title}" atribuída ` +
-                `na(s) data(s) ${conflictDatesFormatted} ` +
-                `com horário conflitante (${existingJob.start_time.slice(0,5)} - ${existingJob.end_time.slice(0,5)}).\n\n` +
-                `A vaga que você está tentando se atribuir é das ${selectedJob.start_time.slice(0,5)} às ${selectedJob.end_time.slice(0,5)}.`
-              );
+              toast.error('Conflito de horário', {
+                description: `Você já tem a vaga "${existingJob.title}" na(s) data(s) ${conflictDatesFormatted} com horário conflitante.`,
+                duration: 6000,
+              });
               setAssigning(false);
               return;
             }
@@ -196,7 +194,7 @@ export function WorkerJobsPage() {
 
       if (assignError) {
         console.error('Assignment error:', assignError);
-        alert('Erro ao se atribuir à vaga. Tente novamente.');
+        toast.error('Erro ao se atribuir à vaga. Tente novamente.');
         return;
       }
 
@@ -230,11 +228,13 @@ export function WorkerJobsPage() {
 
       setAppliedJobIds([...appliedJobIds, selectedJob.id]);
       setDetailsOpen(false);
-      alert('Vaga atribuída com sucesso! Acesse "Meus Trabalhos" para ver seus dias de trabalho.');
+      toast.success('Vaga atribuída com sucesso!', {
+        description: 'Acesse "Meus Trabalhos" para ver seus dias de trabalho.',
+      });
       loadJobs();
     } catch (error) {
       console.error('Error:', error);
-      alert('Erro ao se atribuir à vaga. Tente novamente.');
+      toast.error('Erro ao se atribuir à vaga. Tente novamente.');
     } finally {
       setAssigning(false);
     }

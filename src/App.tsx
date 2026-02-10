@@ -4,6 +4,8 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LandingPage } from "@/pages/LandingPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
+import { ForgotPasswordPage } from "@/pages/auth/ForgotPasswordPage";
+import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
 import { CompleteProfilePage } from "@/pages/auth/CompleteProfilePage";
 
 // Worker pages
@@ -87,6 +89,18 @@ function AppRoutes() {
             <RegisterPage />
           </AuthRedirect>
         }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <AuthRedirect>
+            <ForgotPasswordPage />
+          </AuthRedirect>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={<ResetPasswordPage />}
       />
 
       {/* Complete Profile route */}

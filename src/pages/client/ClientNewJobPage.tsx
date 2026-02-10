@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
@@ -100,7 +101,7 @@ export function ClientNewJobPage() {
         return;
       }
 
-      alert("Vaga criada com sucesso!");
+      toast.success("Vaga criada com sucesso!");
       navigate("/client/jobs");
     } catch {
       setError("Erro ao criar vaga. Tente novamente.");

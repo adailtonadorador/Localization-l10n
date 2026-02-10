@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
@@ -70,14 +71,14 @@ export function WorkerApplicationsPage() {
         .eq('id', applicationId);
 
       if (error) {
-        alert('Erro ao cancelar candidatura.');
+        toast.error('Erro ao cancelar candidatura.');
         return;
       }
 
       setApplications(applications.filter(a => a.id !== applicationId));
-      alert('Candidatura cancelada.');
+      toast.success('Candidatura cancelada.');
     } catch {
-      alert('Erro ao cancelar candidatura.');
+      toast.error('Erro ao cancelar candidatura.');
     }
   }
 

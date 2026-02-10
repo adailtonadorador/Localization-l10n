@@ -34,13 +34,13 @@ export function LandingPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/register">
+              <Link to="/register?type=worker">
                 <Button size="lg" className="w-full sm:w-auto text-base px-8 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/30 transition-all">
                   <Users className="w-5 h-5 mr-2" />
                   Sou Trabalhador
                 </Button>
               </Link>
-              <Link to="/register">
+              <Link to="/register?type=client">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8 h-12 rounded-xl border-2 hover:bg-slate-50 transition-all">
                   <Building2 className="w-5 h-5 mr-2" />
                   Sou Empresa

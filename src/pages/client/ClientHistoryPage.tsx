@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { RatingDialog, RatingDisplay } from "@/components/RatingDialog";
+import { Calendar, MapPin, Clock, DollarSign, Users, Briefcase } from "lucide-react";
 
 interface JobAssignment {
   id: string;
@@ -35,6 +36,10 @@ export function ClientHistoryPage() {
   const { profile } = useAuth();
   const [assignments, setAssignments] = useState<JobAssignment[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Rating dialog state
+  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<JobAssignment | null>(null);
 
   useEffect(() => {
     if (profile?.id) {
@@ -82,19 +87,9 @@ export function ClientHistoryPage() {
     }
   }
 
-  async function handleRateWorker(assignmentId: string, rating: number, feedback: string) {
-    try {
-      await supabaseUntyped
-        .from('job_assignments')
-        .update({ rating, feedback })
-        .eq('id', assignmentId);
-
-      loadHistory();
-      alert('Avaliação enviada!');
-    } catch (error) {
-      console.error('Error rating worker:', error);
-      alert('Erro ao enviar avaliação.');
-    }
+  function openRatingDialog(assignment: JobAssignment) {
+    setSelectedAssignment(assignment);
+    setRatingDialogOpen(true);
   }
 
   function formatDate(dateStr: string) {
@@ -121,61 +116,6 @@ export function ClientHistoryPage() {
   const totalWorkers = new Set(assignments.map(a => a.workers?.id)).size;
   const totalJobs = new Set(assignments.map(a => a.jobs?.id)).size;
 
-  function RatingModal({ assignment, onRate }: { assignment: JobAssignment; onRate: (rating: number, feedback: string) => void }) {
-    const [rating, setRating] = useState(5);
-    const [feedback, setFeedback] = useState("");
-    const [open, setOpen] = useState(false);
-
-    if (!open) {
-      return (
-        <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-          Avaliar
-        </Button>
-      );
-    }
-
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setOpen(false)}>
-        <Card className="w-full max-w-md" onClick={e => e.stopPropagation()}>
-          <CardHeader>
-            <CardTitle>Avaliar Trabalhador</CardTitle>
-            <CardDescription>{assignment.workers?.users?.name}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium mb-2">Nota</p>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setRating(n)}
-                    className={`text-2xl ${n <= rating ? 'text-yellow-500' : 'text-gray-300'}`}
-                  >
-                    ★
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-medium mb-2">Feedback (opcional)</p>
-              <textarea
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="Como foi o trabalho deste profissional?"
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button onClick={() => { onRate(rating, feedback); setOpen(false); }}>Enviar Avaliação</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <DashboardLayout>
@@ -189,77 +129,105 @@ export function ClientHistoryPage() {
   return (
     <DashboardLayout>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Histórico</h2>
-        <p className="text-muted-foreground">Trabalhos concluídos e gastos</p>
+        <h2 className="text-2xl font-bold text-slate-900">Histórico</h2>
+        <p className="text-muted-foreground">Trabalhos concluídos e avaliações</p>
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Gasto</CardDescription>
-            <CardTitle className="text-3xl">R$ {totalSpent.toFixed(2)}</CardTitle>
-          </CardHeader>
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-emerald-600 font-medium">Total Gasto</p>
+                <p className="text-3xl font-bold text-emerald-700">R$ {totalSpent.toFixed(2)}</p>
+              </div>
+              <div className="p-3 bg-emerald-100 rounded-xl">
+                <DollarSign className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Trabalhadores Contratados</CardDescription>
-            <CardTitle className="text-3xl">{totalWorkers}</CardTitle>
-          </CardHeader>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-600 font-medium">Trabalhadores</p>
+                <p className="text-3xl font-bold text-blue-700">{totalWorkers}</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <Users className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Vagas Concluídas</CardDescription>
-            <CardTitle className="text-3xl">{totalJobs}</CardTitle>
-          </CardHeader>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-white">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-purple-600 font-medium">Vagas Concluídas</p>
+                <p className="text-3xl font-bold text-purple-700">{totalJobs}</p>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-xl">
+                <Briefcase className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
 
       {assignments.length > 0 ? (
         <div className="space-y-4">
           {assignments.map((assignment) => (
-            <Card key={assignment.id}>
+            <Card key={assignment.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6">
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>
+                    <Avatar className="h-12 w-12 ring-2 ring-white shadow">
+                      <AvatarFallback className="bg-emerald-500 text-white font-medium">
                         {assignment.workers?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <h3 className="font-semibold">{assignment.jobs?.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Trabalhador: {assignment.workers?.users?.name}
+                    <div className="space-y-1">
+                      <h3 className="font-semibold text-slate-900">{assignment.jobs?.title}</h3>
+                      <p className="text-sm text-slate-600">
+                        {assignment.workers?.users?.name}
                       </p>
-                      <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                        <span>{formatDate(assignment.jobs?.date)}</span>
-                        <span>{formatTime(assignment.jobs?.start_time)} - {formatTime(assignment.jobs?.end_time)}</span>
-                        <span>{assignment.jobs?.location}</span>
+                      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mt-2">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {formatDate(assignment.jobs?.date)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          {formatTime(assignment.jobs?.start_time)} - {formatTime(assignment.jobs?.end_time)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {assignment.jobs?.location}
+                        </span>
                       </div>
-                      {assignment.rating && (
-                        <div className="mt-2">
-                          <span className="text-yellow-500">{'★'.repeat(assignment.rating)}</span>
-                          <span className="text-gray-300">{'★'.repeat(5 - assignment.rating)}</span>
-                          {assignment.feedback && (
-                            <p className="text-sm text-muted-foreground mt-1">"{assignment.feedback}"</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant="default">Concluído</Badge>
-                    <p className="text-lg font-bold mt-2">R$ {calculateCost(assignment).toFixed(2)}</p>
-                    <p className="text-sm text-muted-foreground">Jornada: {calculateHours(assignment).toFixed(1)}h | R$ {assignment.jobs?.daily_rate}/dia</p>
-                    {!assignment.rating && (
-                      <div className="mt-2">
-                        <RatingModal
-                          assignment={assignment}
-                          onRate={(rating, feedback) => handleRateWorker(assignment.id, rating, feedback)}
+
+                      {/* Rating Display */}
+                      <div className="mt-3 pt-3 border-t">
+                        <RatingDisplay
+                          rating={assignment.rating}
+                          feedback={assignment.feedback}
+                          onEdit={() => openRatingDialog(assignment)}
+                          showEditButton={true}
                         />
                       </div>
-                    )}
+                    </div>
+                  </div>
+
+                  <div className="text-right flex flex-col items-end gap-2">
+                    <Badge className="bg-emerald-500">Concluído</Badge>
+                    <p className="text-xl font-bold text-slate-900">R$ {calculateCost(assignment).toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {calculateHours(assignment).toFixed(1)}h | R$ {assignment.jobs?.daily_rate}/dia
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -267,11 +235,30 @@ export function ClientHistoryPage() {
           ))}
         </div>
       ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Nenhum trabalho concluído ainda.</p>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="py-16 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Briefcase className="h-8 w-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-medium text-slate-900 mb-1">Nenhum trabalho concluído</h3>
+            <p className="text-muted-foreground">Os trabalhos concluídos aparecerão aqui.</p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Rating Dialog */}
+      {selectedAssignment && (
+        <RatingDialog
+          open={ratingDialogOpen}
+          onOpenChange={setRatingDialogOpen}
+          assignmentId={selectedAssignment.id}
+          workerId={selectedAssignment.workers?.id || ""}
+          workerName={selectedAssignment.workers?.users?.name || "Trabalhador"}
+          jobTitle={selectedAssignment.jobs?.title}
+          currentRating={selectedAssignment.rating}
+          currentFeedback={selectedAssignment.feedback}
+          onSuccess={loadHistory}
+        />
       )}
     </DashboardLayout>
   );

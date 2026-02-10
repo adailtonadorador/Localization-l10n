@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Building2, Mail, Lock, CheckCircle2, Shield, ArrowRight } from "lucide-react";
 
 export function RegisterPage() {
-  const [activeTab, setActiveTab] = useState<"worker" | "client">("worker");
+  const [searchParams] = useSearchParams();
+  const typeFromUrl = searchParams.get('type');
+
+  const [activeTab, setActiveTab] = useState<"worker" | "client">(
+    typeFromUrl === 'client' ? 'client' : 'worker'
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -22,6 +27,13 @@ export function RegisterPage() {
 
   const { signUp } = useAuth();
   const navigate = useNavigate();
+
+  // Update tab when URL param changes
+  useEffect(() => {
+    if (typeFromUrl === 'client' || typeFromUrl === 'worker') {
+      setActiveTab(typeFromUrl);
+    }
+  }, [typeFromUrl]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -183,7 +195,8 @@ export function RegisterPage() {
                         onChange={(e) => setName(e.target.value)}
                         required
                         disabled={loading}
-                        className="pl-10 h-10 bg-white"
+                        autoComplete="name"
+                        className="pl-10 h-10 bg-white text-base"
                       />
                     </div>
                   </div>
@@ -200,7 +213,8 @@ export function RegisterPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         disabled={loading}
-                        className="pl-10 h-10 bg-white"
+                        autoComplete="email"
+                        className="pl-10 h-10 bg-white text-base"
                       />
                     </div>
                   </div>
@@ -218,7 +232,8 @@ export function RegisterPage() {
                           onChange={(e) => setPassword(e.target.value)}
                           required
                           disabled={loading}
-                          className="pl-10 h-10 bg-white"
+                          autoComplete="new-password"
+                          className="pl-10 h-10 bg-white text-base"
                         />
                       </div>
                     </div>
@@ -234,7 +249,8 @@ export function RegisterPage() {
                           onChange={(e) => setPasswordConfirm(e.target.value)}
                           required
                           disabled={loading}
-                          className="pl-10 h-10 bg-white"
+                          autoComplete="new-password"
+                          className="pl-10 h-10 bg-white text-base"
                         />
                       </div>
                     </div>
@@ -277,7 +293,8 @@ export function RegisterPage() {
                         onChange={(e) => setName(e.target.value)}
                         required
                         disabled={loading}
-                        className="pl-10 h-10 bg-white"
+                        autoComplete="name"
+                        className="pl-10 h-10 bg-white text-base"
                       />
                     </div>
                   </div>
@@ -294,7 +311,8 @@ export function RegisterPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         disabled={loading}
-                        className="pl-10 h-10 bg-white"
+                        autoComplete="email"
+                        className="pl-10 h-10 bg-white text-base"
                       />
                     </div>
                   </div>
@@ -312,7 +330,8 @@ export function RegisterPage() {
                           onChange={(e) => setPassword(e.target.value)}
                           required
                           disabled={loading}
-                          className="pl-10 h-10 bg-white"
+                          autoComplete="new-password"
+                          className="pl-10 h-10 bg-white text-base"
                         />
                       </div>
                     </div>
@@ -328,7 +347,8 @@ export function RegisterPage() {
                           onChange={(e) => setPasswordConfirm(e.target.value)}
                           required
                           disabled={loading}
-                          className="pl-10 h-10 bg-white"
+                          autoComplete="new-password"
+                          className="pl-10 h-10 bg-white text-base"
                         />
                       </div>
                     </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 // Avatar components not used - AvatarUpload handles avatar display
 import { AvatarUpload } from "@/components/ui/avatar-upload";
+import { ProfileCompleteness } from "@/components/ProfileCompleteness";
 import {
   User,
   Mail,
@@ -176,10 +178,10 @@ export function WorkerProfilePage() {
 
       await refreshProfile();
       setEditing(false);
-      alert('Perfil atualizado com sucesso!');
+      toast.success('Perfil atualizado com sucesso!');
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Erro ao atualizar perfil.');
+      toast.error('Erro ao atualizar perfil.');
     } finally {
       setLoading(false);
     }
@@ -318,6 +320,15 @@ export function WorkerProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Profile Completeness - only show when not 100% complete */}
+      <ProfileCompleteness
+        profile={profile}
+        workerProfile={workerProfile}
+        variant="full"
+        showEditButton={false}
+        className="mb-6"
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Personal Info Card */}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -412,7 +413,7 @@ export function AdminClientDetailPage() {
       resetForm();
       setShowJobForm(false);
       loadClientData();
-      alert("Vaga criada com sucesso!");
+      toast.success("Vaga criada com sucesso!");
     } catch {
       setFormError("Erro ao criar vaga. Tente novamente.");
     } finally {

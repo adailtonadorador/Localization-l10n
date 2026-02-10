@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
 import { BRAZILIAN_STATES } from "@/lib/brazil-locations";
@@ -141,10 +142,10 @@ export function AdminWorkersPage() {
         .eq('id', workerId);
 
       loadWorkers();
-      alert('Trabalhador verificado com sucesso!');
+      toast.success('Trabalhador verificado com sucesso!');
     } catch (error) {
       console.error('Error verifying worker:', error);
-      alert('Erro ao verificar trabalhador.');
+      toast.error('Erro ao verificar trabalhador.');
     }
   }
 
@@ -156,7 +157,7 @@ export function AdminWorkersPage() {
 
   async function handleDisableWorker() {
     if (!selectedWorker || !disableReason.trim()) {
-      alert('Por favor, informe o motivo da desabilitação.');
+      toast.warning('Por favor, informe o motivo da desabilitação.');
       return;
     }
 
@@ -173,10 +174,10 @@ export function AdminWorkersPage() {
 
       setDisableWorkerDialogOpen(false);
       loadWorkers();
-      alert('Trabalhador desabilitado com sucesso!');
+      toast.success('Trabalhador desabilitado com sucesso!');
     } catch (error) {
       console.error('Error disabling worker:', error);
-      alert('Erro ao desabilitar trabalhador.');
+      toast.error('Erro ao desabilitar trabalhador.');
     } finally {
       setActionLoading(false);
     }
@@ -199,10 +200,10 @@ export function AdminWorkersPage() {
         .eq('id', workerId);
 
       loadWorkers();
-      alert('Trabalhador habilitado com sucesso!');
+      toast.success('Trabalhador habilitado com sucesso!');
     } catch (error) {
       console.error('Error enabling worker:', error);
-      alert('Erro ao habilitar trabalhador.');
+      toast.error('Erro ao habilitar trabalhador.');
     } finally {
       setActionLoading(false);
     }

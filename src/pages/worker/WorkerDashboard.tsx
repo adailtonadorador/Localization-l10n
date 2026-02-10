@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton, SkeletonJobCard, SkeletonStatsCard } from "@/components/ui/skeleton";
+import { useProfileCompleteness } from "@/components/ProfileCompleteness";
 import {
   Briefcase,
   DollarSign,
@@ -49,9 +52,50 @@ interface JobAssignment {
   jobs: Job;
 }
 
+// Alert component for incomplete profile
+function ProfileCompletenessAlert({ profile, workerProfile }: { profile: any; workerProfile: any }) {
+  const { percentage, isComplete, hasRequiredMissing } = useProfileCompleteness(profile, workerProfile);
+
+  if (isComplete) return null;
+
+  return (
+    <div className={`mb-6 p-4 rounded-xl border ${hasRequiredMissing ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`font-semibold ${hasRequiredMissing ? 'text-amber-800' : 'text-blue-800'}`}>
+              {hasRequiredMissing ? 'Complete seu perfil para se candidatar' : 'Quase lá!'}
+            </span>
+            <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${hasRequiredMissing ? 'bg-amber-200 text-amber-700' : 'bg-blue-200 text-blue-700'}`}>
+              {percentage}%
+            </span>
+          </div>
+          <p className={`text-sm ${hasRequiredMissing ? 'text-amber-700' : 'text-blue-700'}`}>
+            {hasRequiredMissing
+              ? 'Preencha os campos obrigatórios para poder se candidatar às vagas.'
+              : 'Seu perfil está quase completo. Adicione mais informações para se destacar.'}
+          </p>
+        </div>
+        <Link to="/worker/profile">
+          <Button size="sm" variant={hasRequiredMissing ? 'default' : 'outline'}>
+            Completar Perfil
+          </Button>
+        </Link>
+      </div>
+      {/* Progress bar */}
+      <div className="mt-3 h-2 bg-white/50 rounded-full overflow-hidden">
+        <div
+          className={`h-full transition-all duration-500 rounded-full ${hasRequiredMissing ? 'bg-amber-500' : 'bg-blue-500'}`}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function WorkerDashboard() {
   const location = useLocation();
-  const { user, workerProfile } = useAuth();
+  const { user, profile, workerProfile } = useAuth();
   const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
   const [upcomingJobs, setUpcomingJobs] = useState<JobAssignment[]>([]);
   const [pendingApplications, setPendingApplications] = useState<JobApplication[]>([]);
@@ -150,18 +194,20 @@ export function WorkerDashboard() {
 
       if (error) {
         if (error.message.includes('duplicate')) {
-          alert('Você já se candidatou a esta vaga.');
+          toast.warning('Você já se candidatou a esta vaga.');
         } else {
-          alert('Erro ao candidatar. Tente novamente.');
+          toast.error('Erro ao candidatar. Tente novamente.');
         }
         return;
       }
 
       // Reload data
       loadDashboardData();
-      alert('Candidatura enviada com sucesso!');
+      toast.success('Candidatura enviada com sucesso!', {
+        description: 'Acompanhe o status em "Candidaturas Pendentes"',
+      });
     } catch {
-      alert('Erro ao candidatar. Tente novamente.');
+      toast.error('Erro ao candidatar. Tente novamente.');
     }
   }
 
@@ -190,11 +236,39 @@ export function WorkerDashboard() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-            <p className="text-sm text-muted-foreground">Carregando...</p>
-          </div>
+        {/* Stats Cards Skeleton */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonStatsCard key={i} />
+          ))}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Próximos Trabalhos Skeleton */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-60 mt-1" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <SkeletonJobCard key={i} />
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Vagas Disponíveis Skeleton */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-60 mt-1" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <SkeletonJobCard key={i} />
+              ))}
+            </CardContent>
+          </Card>
         </div>
       </DashboardLayout>
     );
@@ -284,6 +358,9 @@ export function WorkerDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Profile Completeness Alert */}
+      <ProfileCompletenessAlert profile={profile} workerProfile={workerProfile} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Próximos Trabalhos */}
@@ -408,7 +485,7 @@ export function WorkerDashboard() {
                         <Button
                           size="sm"
                           onClick={() => handleApply(job.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                         >
                           Candidatar
                         </Button>
