@@ -10,7 +10,13 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, Eye, Mail, Phone, Star, FileSignature, MapPin, Building } from "lucide-react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, Eye, Mail, Phone, Star, FileSignature, MapPin, Building, ClipboardCheck } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RatingDialog, RatingDisplay } from "@/components/RatingDialog";
 
@@ -55,23 +61,64 @@ interface JobWithRecords {
   work_records: WorkRecord[];
 }
 
+interface CompletedWorkRecord {
+  id: string;
+  work_date: string;
+  status: string;
+  check_in: string | null;
+  check_out: string | null;
+  job_id: string;
+  worker_id: string;
+  workers: {
+    id: string;
+    rating: number;
+    users: {
+      name: string;
+      email: string;
+      phone: string | null;
+      avatar_url: string | null;
+    };
+  };
+  jobs: {
+    id: string;
+    title: string;
+    date: string;
+    location: string;
+    clients: {
+      company_name: string;
+    };
+  };
+  // Rating from job_assignment (loaded separately)
+  assignment_id?: string;
+  rating?: number | null;
+  feedback?: string | null;
+}
+
 export function AdminMonitoringPage() {
   const location = useLocation();
+  const [activeTab, setActiveTab] = useState("monitoring");
   const [jobs, setJobs] = useState<JobWithRecords[]>([]);
+  const [completedRecords, setCompletedRecords] = useState<CompletedWorkRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDate, setFilterDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedJob, setSelectedJob] = useState<JobWithRecords | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [ratingFilter, setRatingFilter] = useState<"all" | "pending" | "rated">("all");
 
   // Rating dialog state
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<WorkRecord | null>(null);
+  const [selectedWorkRecord, setSelectedWorkRecord] = useState<CompletedWorkRecord | null>(null);
 
-  // Recarrega dados quando navega para esta página ou muda a data
+  // Recarrega dados quando navega para esta página ou muda a data/tab
   useEffect(() => {
-    loadJobs();
-  }, [filterDate, location.pathname]);
+    if (activeTab === "monitoring") {
+      loadJobs();
+    } else {
+      loadCompletedAssignments();
+    }
+  }, [filterDate, location.pathname, activeTab]);
 
   async function loadJobs() {
     setLoading(true);
@@ -114,8 +161,78 @@ export function AdminMonitoringPage() {
     }
   }
 
+  async function loadCompletedAssignments() {
+    setLoading(true);
+    try {
+      // Query completed work_records
+      const { data: workRecordsData, error: workRecordsError } = await supabaseUntyped
+        .from('work_records')
+        .select(`
+          id,
+          work_date,
+          status,
+          check_in,
+          check_out,
+          job_id,
+          worker_id,
+          workers (
+            id,
+            rating,
+            users (name, email, phone, avatar_url)
+          ),
+          jobs (
+            id,
+            title,
+            date,
+            location,
+            clients (company_name)
+          )
+        `)
+        .eq('status', 'completed')
+        .order('work_date', { ascending: false })
+        .limit(100);
+
+      if (workRecordsError) {
+        console.error('Error loading work records:', workRecordsError);
+        setCompletedRecords([]);
+        setLoading(false);
+        return;
+      }
+
+      // Now get the job_assignments to fetch ratings
+      const { data: assignmentsData } = await supabaseUntyped
+        .from('job_assignments')
+        .select('id, job_id, worker_id, rating, feedback');
+
+      // Merge ratings into work records
+      const recordsWithRatings = (workRecordsData || []).map((record: CompletedWorkRecord) => {
+        const assignment = (assignmentsData || []).find(
+          (a: { job_id: string; worker_id: string }) =>
+            a.job_id === record.job_id && a.worker_id === record.worker_id
+        );
+        return {
+          ...record,
+          assignment_id: assignment?.id,
+          rating: assignment?.rating ?? null,
+          feedback: assignment?.feedback ?? null,
+        };
+      });
+
+      setCompletedRecords(recordsWithRatings);
+    } catch (error) {
+      console.error('Error loading completed assignments:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function openRatingDialog(record: WorkRecord, jobTitle: string) {
     setSelectedRecord({ ...record, jobTitle } as WorkRecord & { jobTitle: string });
+    setRatingDialogOpen(true);
+  }
+
+  function openWorkRecordRatingDialog(record: CompletedWorkRecord) {
+    setSelectedWorkRecord(record);
     setRatingDialogOpen(true);
   }
 
@@ -164,6 +281,26 @@ export function AdminMonitoringPage() {
     );
   });
 
+  const filteredRecords = completedRecords.filter(record => {
+    // Filter by rating status
+    if (ratingFilter === "pending" && record.rating !== null) return false;
+    if (ratingFilter === "rated" && record.rating === null) return false;
+
+    // Filter by search term
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
+    return (
+      record.jobs?.title?.toLowerCase().includes(search) ||
+      record.jobs?.location?.toLowerCase().includes(search) ||
+      record.jobs?.clients?.company_name?.toLowerCase().includes(search) ||
+      record.workers?.users?.name?.toLowerCase().includes(search)
+    );
+  });
+
+  // Stats for ratings tab
+  const pendingRatingsCount = completedRecords.filter(r => r.rating === null).length;
+  const ratedCount = completedRecords.filter(r => r.rating !== null).length;
+
   function openDetails(job: JobWithRecords) {
     setSelectedJob(job);
     setDetailsOpen(true);
@@ -183,32 +320,50 @@ export function AdminMonitoringPage() {
     <DashboardLayout>
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2">Monitoramento de Trabalhos</h2>
-        <p className="text-muted-foreground">Acompanhe em tempo real o status dos trabalhos</p>
+        <p className="text-muted-foreground">Acompanhe em tempo real o status dos trabalhos e avaliações</p>
       </div>
 
-      {/* Filtros */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por vaga, empresa ou local..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="monitoring" className="gap-2">
+            <Eye className="h-4 w-4" />
+            Monitoramento
+          </TabsTrigger>
+          <TabsTrigger value="ratings" className="gap-2">
+            <Star className="h-4 w-4" />
+            Avaliações
+            {pendingRatingsCount > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 justify-center">
+                {pendingRatingsCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-        <div className="w-full sm:w-48">
-          <Input
-            type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-          />
-        </div>
-      </div>
+        <TabsContent value="monitoring" className="space-y-6">
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por vaga, empresa ou local..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-      {/* Resumo do dia */}
-      <div className="grid gap-4 md:grid-cols-4 mb-6">
+            <div className="w-full sm:w-48">
+              <Input
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Resumo do dia */}
+          <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
@@ -333,6 +488,170 @@ export function AdminMonitoringPage() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+
+        {/* Tab de Avaliações */}
+        <TabsContent value="ratings" className="space-y-6">
+          {/* Filtros de avaliação */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por vaga, empresa ou trabalhador..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant={ratingFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRatingFilter("all")}
+              >
+                Todos ({completedRecords.length})
+              </Button>
+              <Button
+                variant={ratingFilter === "pending" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRatingFilter("pending")}
+                className={ratingFilter === "pending" ? "" : "text-amber-600 border-amber-300"}
+              >
+                Pendentes ({pendingRatingsCount})
+              </Button>
+              <Button
+                variant={ratingFilter === "rated" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRatingFilter("rated")}
+                className={ratingFilter === "rated" ? "" : "text-green-600 border-green-300"}
+              >
+                Avaliados ({ratedCount})
+              </Button>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-2xl font-bold">{completedRecords.length}</p>
+                    <p className="text-sm text-muted-foreground">Total Concluídos</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-amber-200 bg-amber-50/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-amber-500" />
+                  <div>
+                    <p className="text-2xl font-bold text-amber-700">{pendingRatingsCount}</p>
+                    <p className="text-sm text-amber-600">Aguardando Avaliação</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-green-200 bg-green-50/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <div>
+                    <p className="text-2xl font-bold text-green-700">{ratedCount}</p>
+                    <p className="text-sm text-green-600">Já Avaliados</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Lista de trabalhos concluídos */}
+          {filteredRecords.length > 0 ? (
+            <div className="space-y-3">
+              {filteredRecords.map((record) => (
+                <Card key={record.id} className={`transition-all hover:shadow-md ${
+                  record.rating === null ? 'border-l-4 border-l-amber-400' : ''
+                }`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <Avatar className="h-12 w-12 ring-2 ring-white shadow flex-shrink-0">
+                          <AvatarFallback className="bg-emerald-500 text-white font-medium">
+                            {record.workers?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-slate-900 truncate">{record.workers?.users?.name}</h4>
+                            <Badge className="bg-green-500">Concluído</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {record.jobs?.title} - {record.jobs?.clients?.company_name}
+                          </p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {record.work_date ? new Date(record.work_date + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {record.jobs?.location || 'N/A'}
+                            </span>
+                            {record.check_in && record.check_out && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {new Date(record.check_in).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - {new Date(record.check_out).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                        <div className="text-right">
+                          <div className="flex items-center gap-1 mb-1">
+                            <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                            <span className="font-bold">{record.workers?.rating?.toFixed(1) || '0.0'}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Média geral</p>
+                        </div>
+
+                        <RatingDisplay
+                          rating={record.rating ?? null}
+                          feedback={record.feedback ?? null}
+                          onEdit={() => openWorkRecordRatingDialog(record)}
+                          showEditButton={true}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Star className="h-8 w-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 mb-1">Nenhum trabalho encontrado</h3>
+                <p className="text-muted-foreground">
+                  {ratingFilter === "pending"
+                    ? "Todos os trabalhos já foram avaliados!"
+                    : ratingFilter === "rated"
+                    ? "Nenhum trabalho foi avaliado ainda."
+                    : "Nenhum trabalho concluído encontrado."}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Dialog de detalhes */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
@@ -547,11 +866,14 @@ export function AdminMonitoringPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Rating Dialog */}
+      {/* Rating Dialog - for work records */}
       {selectedRecord && selectedRecord.job_assignments && (
         <RatingDialog
-          open={ratingDialogOpen}
-          onOpenChange={setRatingDialogOpen}
+          open={ratingDialogOpen && !selectedAssignment}
+          onOpenChange={(open) => {
+            setRatingDialogOpen(open);
+            if (!open) setSelectedRecord(null);
+          }}
           assignmentId={selectedRecord.job_assignments.id}
           workerId={selectedRecord.workers?.id || ""}
           workerName={selectedRecord.workers?.users?.name || "Trabalhador"}
@@ -559,6 +881,24 @@ export function AdminMonitoringPage() {
           currentRating={selectedRecord.job_assignments.rating}
           currentFeedback={selectedRecord.job_assignments.feedback}
           onSuccess={loadJobs}
+        />
+      )}
+
+      {/* Rating Dialog - for completed work records */}
+      {selectedWorkRecord && selectedWorkRecord.assignment_id && (
+        <RatingDialog
+          open={ratingDialogOpen && !!selectedWorkRecord}
+          onOpenChange={(open) => {
+            setRatingDialogOpen(open);
+            if (!open) setSelectedWorkRecord(null);
+          }}
+          assignmentId={selectedWorkRecord.assignment_id}
+          workerId={selectedWorkRecord.workers?.id || ""}
+          workerName={selectedWorkRecord.workers?.users?.name || "Trabalhador"}
+          jobTitle={selectedWorkRecord.jobs?.title}
+          currentRating={selectedWorkRecord.rating ?? null}
+          currentFeedback={selectedWorkRecord.feedback ?? null}
+          onSuccess={loadCompletedAssignments}
         />
       )}
     </DashboardLayout>
