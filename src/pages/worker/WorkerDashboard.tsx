@@ -27,9 +27,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Building,
-  ShieldAlert,
-  ThumbsUp,
-  Info
+  ShieldAlert
 } from "lucide-react";
 
 interface Job {

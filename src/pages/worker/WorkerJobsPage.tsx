@@ -20,7 +20,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { MapPin, Search, Filter, Eye, Calendar, Clock, Building, Star, UserPlus, AlertTriangle, ShieldAlert, Info as InfoIcon } from "lucide-react";
+import { MapPin, Search, Filter, Eye, Calendar, Clock, Building, Star, UserPlus, AlertTriangle, ShieldAlert } from "lucide-react";
 
 interface Job {
   id: string;
