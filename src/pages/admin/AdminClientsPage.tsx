@@ -6,6 +6,7 @@ import { BRAZILIAN_STATES } from "@/lib/brazil-locations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -21,7 +22,8 @@ import {
   CheckCircle2,
   Clock,
   ChevronRight,
-  Filter
+  Filter,
+  Plus
 } from "lucide-react";
 
 interface Client {
@@ -128,9 +130,17 @@ export function AdminClientsPage() {
   return (
     <DashboardLayout>
       {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">Clientes</h2>
-        <p className="text-muted-foreground">Gerencie empresas e suas vagas</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Clientes</h2>
+          <p className="text-muted-foreground">Gerencie empresas e suas vagas</p>
+        </div>
+        <Link to="/admin/clients/new">
+          <Button className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25">
+            <Plus className="h-4 w-4 mr-2" />
+            Cadastrar Cliente
+          </Button>
+        </Link>
       </div>
 
       {/* Stats Cards */}

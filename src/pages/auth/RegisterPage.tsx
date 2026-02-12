@@ -1,25 +1,18 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Building2, Mail, Lock, CheckCircle2, Shield, ArrowRight } from "lucide-react";
+import { User, Mail, Lock, CheckCircle2, Shield, ArrowRight } from "lucide-react";
 
 export function RegisterPage() {
-  const [searchParams] = useSearchParams();
-  const typeFromUrl = searchParams.get('type');
-
-  const [activeTab, setActiveTab] = useState<"worker" | "client">(
-    typeFromUrl === 'client' ? 'client' : 'worker'
-  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Basic fields for both worker and client
+  // Form fields
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,13 +20,6 @@ export function RegisterPage() {
 
   const { signUp } = useAuth();
   const navigate = useNavigate();
-
-  // Update tab when URL param changes
-  useEffect(() => {
-    if (typeFromUrl === 'client' || typeFromUrl === 'worker') {
-      setActiveTab(typeFromUrl);
-    }
-  }, [typeFromUrl]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,7 +39,7 @@ export function RegisterPage() {
 
     const { error } = await signUp(email, password, {
       name,
-      role: activeTab,
+      role: 'worker',
     });
 
     if (error) {
@@ -77,13 +63,6 @@ export function RegisterPage() {
       return 'E-mail inválido';
     }
     return 'Erro ao criar conta. Tente novamente.';
-  }
-
-  function resetForm() {
-    setName("");
-    setEmail("");
-    setPassword("");
-    setPasswordConfirm("");
   }
 
   if (success) {
@@ -150,9 +129,9 @@ export function RegisterPage() {
 
         <Card className="border-0 shadow-xl shadow-slate-200/50 backdrop-blur-sm bg-white/90">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl font-bold text-center text-slate-900">Criar sua conta</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center text-slate-900">Criar Conta de Trabalhador</CardTitle>
             <CardDescription className="text-center">
-              Escolha o tipo de conta e preencha seus dados básicos
+              Preencha seus dados básicos para começar
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -164,220 +143,102 @@ export function RegisterPage() {
                 {error}
               </div>
             )}
-            <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as "worker" | "client"); resetForm(); }}>
-              <TabsList className="grid w-full grid-cols-2 mb-6 h-12 p-1 bg-slate-100">
-                <TabsTrigger
-                  value="worker"
-                  className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm h-10 data-[state=active]:text-emerald-600"
-                >
-                  <User className="h-4 w-4" />
-                  Trabalhador
-                </TabsTrigger>
-                <TabsTrigger
-                  value="client"
-                  className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm h-10 data-[state=active]:text-emerald-600"
-                >
-                  <Building2 className="h-4 w-4" />
-                  Empresa
-                </TabsTrigger>
-              </TabsList>
 
-              <TabsContent value="worker">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="worker-name" className="text-sm font-medium text-slate-700">Nome Completo</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="worker-name"
-                        placeholder="João Silva"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                        disabled={loading}
-                        autoComplete="name"
-                        className="pl-10 h-10 bg-white text-base"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="worker-email" className="text-sm font-medium text-slate-700">E-mail</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="worker-email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        disabled={loading}
-                        autoComplete="email"
-                        className="pl-10 h-10 bg-white text-base"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="worker-password" className="text-sm font-medium text-slate-700">Senha</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input
-                          id="worker-password"
-                          type="password"
-                          placeholder="••••••••"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                          disabled={loading}
-                          autoComplete="new-password"
-                          className="pl-10 h-10 bg-white text-base"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="worker-password-confirm" className="text-sm font-medium text-slate-700">Confirmar</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input
-                          id="worker-password-confirm"
-                          type="password"
-                          placeholder="••••••••"
-                          value={passwordConfirm}
-                          onChange={(e) => setPasswordConfirm(e.target.value)}
-                          required
-                          disabled={loading}
-                          autoComplete="new-password"
-                          className="pl-10 h-10 bg-white text-base"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-sm text-emerald-700">
-                    <p>Após o cadastro, você completará seu perfil com telefone, CPF, PIX e endereço.</p>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-11 font-medium bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all"
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium text-slate-700">Nome Completo</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="name"
+                    placeholder="João Silva"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
                     disabled={loading}
-                  >
-                    {loading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Criando conta...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        Criar Conta de Trabalhador
-                        <ArrowRight className="h-4 w-4" />
-                      </span>
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
+                    autoComplete="name"
+                    className="pl-10 h-10 bg-white text-base"
+                  />
+                </div>
+              </div>
 
-              <TabsContent value="client">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="client-name" className="text-sm font-medium text-slate-700">Nome do Responsável</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="client-name"
-                        placeholder="Nome completo"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                        disabled={loading}
-                        autoComplete="name"
-                        className="pl-10 h-10 bg-white text-base"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="client-email" className="text-sm font-medium text-slate-700">E-mail</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="client-email"
-                        type="email"
-                        placeholder="contato@empresa.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        disabled={loading}
-                        autoComplete="email"
-                        className="pl-10 h-10 bg-white text-base"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="client-password" className="text-sm font-medium text-slate-700">Senha</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input
-                          id="client-password"
-                          type="password"
-                          placeholder="••••••••"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                          disabled={loading}
-                          autoComplete="new-password"
-                          className="pl-10 h-10 bg-white text-base"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="client-password-confirm" className="text-sm font-medium text-slate-700">Confirmar</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input
-                          id="client-password-confirm"
-                          type="password"
-                          placeholder="••••••••"
-                          value={passwordConfirm}
-                          onChange={(e) => setPasswordConfirm(e.target.value)}
-                          required
-                          disabled={loading}
-                          autoComplete="new-password"
-                          className="pl-10 h-10 bg-white text-base"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-700">
-                    <p>Após o cadastro, você completará seu perfil com dados da empresa, CNPJ e telefone.</p>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-11 font-medium bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all"
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-slate-700">E-mail</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                     disabled={loading}
-                  >
-                    {loading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Criando conta...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        Criar Conta Empresarial
-                        <ArrowRight className="h-4 w-4" />
-                      </span>
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+                    autoComplete="email"
+                    className="pl-10 h-10 bg-white text-base"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm font-medium text-slate-700">Senha</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={loading}
+                      autoComplete="new-password"
+                      className="pl-10 h-10 bg-white text-base"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password-confirm" className="text-sm font-medium text-slate-700">Confirmar</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="password-confirm"
+                      type="password"
+                      placeholder="••••••••"
+                      value={passwordConfirm}
+                      onChange={(e) => setPasswordConfirm(e.target.value)}
+                      required
+                      disabled={loading}
+                      autoComplete="new-password"
+                      className="pl-10 h-10 bg-white text-base"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-sm text-emerald-700">
+                <p>Após o cadastro, você completará seu perfil com telefone, CPF, PIX e endereço.</p>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-11 font-medium bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Criando conta...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    Criar Conta de Trabalhador
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
+                )}
+              </Button>
+            </form>
           </CardContent>
           <CardFooter className="flex flex-col gap-4 pt-0">
             <div className="relative w-full">

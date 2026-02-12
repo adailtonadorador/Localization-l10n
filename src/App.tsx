@@ -28,6 +28,7 @@ import { AdminNewJobPage } from "@/pages/admin/AdminNewJobPage";
 import { AdminMonitoringPage } from "@/pages/admin/AdminMonitoringPage";
 import { AdminClientsPage } from "@/pages/admin/AdminClientsPage";
 import { AdminClientDetailPage } from "@/pages/admin/AdminClientDetailPage";
+import { AdminNewClientPage } from "@/pages/admin/AdminNewClientPage";
 import { AdminWorkersPage } from "@/pages/admin/AdminWorkersPage";
 
 function AuthRedirect({ children }: { children: React.ReactNode }) {
@@ -204,6 +205,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminClientsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/clients/new"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminNewClientPage />
           </ProtectedRoute>
         }
       />
