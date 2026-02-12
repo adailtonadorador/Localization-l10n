@@ -20,7 +20,8 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { MapPin, Search, Filter, Eye, Calendar, Clock, Building, Star, UserPlus, AlertTriangle, ShieldAlert } from "lucide-react";
+import { MapPin, Search, Filter, Eye, Calendar, Clock, Building, Star, UserPlus, AlertTriangle, ShieldAlert, Map } from "lucide-react";
+import { LocationMap } from "@/components/ui/map";
 
 interface Job {
   id: string;
@@ -572,13 +573,19 @@ export function WorkerJobsPage() {
 
               {/* Content */}
               <div className="p-6 space-y-6">
-                {/* Location */}
+                {/* Location with Map */}
                 <div>
                   <h3 className="font-semibold text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
+                    <Map className="h-4 w-4" />
                     Localização
                   </h3>
-                  <p className="text-sm bg-slate-50 p-3 rounded-lg">{selectedJob.location}</p>
+                  <p className="text-sm bg-slate-50 p-3 rounded-lg mb-3">{selectedJob.location}</p>
+                  <LocationMap
+                    address={selectedJob.location}
+                    title={selectedJob.title}
+                    showUserLocation={true}
+                    height="250px"
+                  />
                 </div>
 
                 {/* Description */}
