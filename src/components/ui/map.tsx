@@ -63,55 +63,175 @@ function RecenterMap({ coords }: { coords: Coordinates }) {
   return null;
 }
 
-// Geocode address using Nominatim (OpenStreetMap)
-// Tries multiple search strategies for better results
+// Geocode address using our API proxy (avoids CORS issues)
+// Tries multiple search strategies from most specific to least specific
 async function geocodeAddress(address: string, cep?: string): Promise<Coordinates | null> {
+  // Get city info from ViaCEP if we have a CEP
+  let cityInfo: { city: string; state: string; street?: string; neighborhood?: string } | null = null;
+
+  if (cep) {
+    try {
+      const cleanCep = cep.replace(/\D/g, '');
+      if (cleanCep.length === 8) {
+        const viaCepResponse = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+        const viaCepData = await viaCepResponse.json();
+        if (viaCepData && !viaCepData.erro && viaCepData.localidade) {
+          cityInfo = {
+            city: viaCepData.localidade,
+            state: viaCepData.uf,
+            street: viaCepData.logradouro,
+            neighborhood: viaCepData.bairro
+          };
+        }
+      }
+    } catch (error) {
+      console.error('ViaCEP error:', error);
+    }
+  }
+
   const searchStrategies: string[] = [];
 
-  // Strategy 1: Full address
-  if (address) {
-    searchStrategies.push(address + ', Brasil');
+  // Clean address - remove "- complemento" parts and extra spaces
+  const cleanAddress = address
+    .replace(/\s*-\s*[^,]*(?=,)/g, '') // Remove "- complemento" before commas
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Parse address parts: "Rua X, 123, Bairro, Cidade - UF"
+  const parts = cleanAddress.split(',').map(p => p.trim()).filter(p => p && !p.includes('CEP:'));
+
+  // Extract city and state from "Cidade - UF" pattern at the end
+  const cityStateMatch = cleanAddress.match(/,\s*([^,]+)\s*-\s*([A-Z]{2})\s*$/i);
+  const city = cityStateMatch ? cityStateMatch[1].trim() : cityInfo?.city;
+  const state = cityStateMatch ? cityStateMatch[2].trim() : cityInfo?.state;
+
+  // First part is usually the street with number: "Rua X, 123" or "Rua X 123"
+  const firstPart = parts[0] || '';
+
+  // Try to extract street name and number
+  let street: string | null = null;
+  let number: string | null = null;
+
+  // Check if number is in the second part
+  if (parts.length > 1 && /^\d+/.test(parts[1])) {
+    street = firstPart;
+    number = parts[1].match(/^\d+/)?.[0] || null;
+  } else {
+    // Number might be in the first part: "Rua X, 123" or "Rua X 123"
+    const streetNumberMatch = firstPart.match(/^(.+?)\s*,?\s*(\d+)\s*$/);
+    if (streetNumberMatch) {
+      street = streetNumberMatch[1].trim();
+      number = streetNumberMatch[2];
+    } else {
+      street = firstPart;
+    }
   }
 
-  // Strategy 2: Try with CEP if available
-  if (cep) {
-    const cleanCep = cep.replace(/\D/g, '');
-    searchStrategies.push(`CEP ${cleanCep}, Brasil`);
+  // Extract neighborhood (part before "Cidade - UF")
+  let neighborhood: string | null = null;
+  if (parts.length >= 3) {
+    // Second to last part is usually the neighborhood
+    const potentialNeighborhood = parts[parts.length - 2];
+    if (potentialNeighborhood && !/^\d+/.test(potentialNeighborhood)) {
+      neighborhood = potentialNeighborhood;
+    }
   }
 
-  // Strategy 3: Extract city and state from address
-  // Common patterns: "Cidade - UF" or "Cidade/UF" or ", Cidade - UF,"
-  const cityStateMatch = address.match(/,\s*([^,]+)\s*-\s*([A-Z]{2})/i);
-  if (cityStateMatch) {
-    searchStrategies.push(`${cityStateMatch[1].trim()}, ${cityStateMatch[2].trim()}, Brasil`);
+  // Use ViaCEP data as fallback
+  if (!neighborhood && cityInfo?.neighborhood) {
+    neighborhood = cityInfo.neighborhood;
+  }
+  const finalStreet = street || cityInfo?.street;
+
+  // Special handling for DF addresses (quadras format: Q CSG 20, LOTE 2, etc.)
+  const isDF = state === 'DF';
+  let quadra: string | null = null;
+
+  if (isDF && finalStreet) {
+    // Extract quadra from formats like "Q CSG 20", "QS 01", "QNL 15", etc.
+    const quadraMatch = finalStreet.match(/Q\s*([A-Z]{1,4})\s*(\d+)/i);
+    if (quadraMatch) {
+      quadra = `Quadra ${quadraMatch[1]} ${quadraMatch[2]}`;
+    }
   }
 
-  // Strategy 4: Try to extract just the street and city
-  const parts = address.split(',').map(p => p.trim()).filter(p => p && !p.includes('CEP'));
-  if (parts.length >= 2) {
-    // Try street + city
-    searchStrategies.push(`${parts[0]}, ${parts[parts.length - 2]}, Brasil`);
+  // Strategy 1: For DF - try quadra + neighborhood + city
+  if (isDF && quadra && neighborhood) {
+    searchStrategies.push(`${quadra}, ${neighborhood}, Brasília, DF, Brasil`);
+    // Also try just the quadra identifier
+    const simpleQuadra = finalStreet?.match(/Q\s*[A-Z]{1,4}\s*\d+/i)?.[0];
+    if (simpleQuadra) {
+      searchStrategies.push(`${simpleQuadra}, ${neighborhood}, Brasília, Brasil`);
+    }
   }
 
-  for (const searchQuery of searchStrategies) {
+  // Strategy 2: Full address from ViaCEP (most reliable)
+  if (cityInfo?.street && cityInfo.neighborhood && city && state) {
+    searchStrategies.push(`${cityInfo.street}, ${cityInfo.neighborhood}, ${city}, ${state}, Brasil`);
+  }
+
+  // Strategy 3: Street + neighborhood + city + state
+  if (finalStreet && neighborhood && city && state) {
+    searchStrategies.push(`${finalStreet}, ${neighborhood}, ${city}, ${state}, Brasil`);
+  }
+
+  // Strategy 4: Street + number + city + state
+  if (finalStreet && number && city && state) {
+    searchStrategies.push(`${finalStreet}, ${number}, ${city}, ${state}, Brasil`);
+  }
+
+  // Strategy 5: Street + city + state
+  if (finalStreet && city && state) {
+    searchStrategies.push(`${finalStreet}, ${city}, ${state}, Brasil`);
+  }
+
+  // Strategy 6: Neighborhood + City + State
+  if (neighborhood && city && state) {
+    searchStrategies.push(`${neighborhood}, ${city}, ${state}, Brasil`);
+  }
+
+  // Strategy 7: For DF - try neighborhood as region
+  if (isDF && neighborhood) {
+    // Remove parentheses content for cleaner search
+    const cleanNeighborhood = neighborhood.replace(/\s*\([^)]*\)/g, '').trim();
+    if (cleanNeighborhood !== neighborhood) {
+      searchStrategies.push(`${cleanNeighborhood}, Brasília, DF, Brasil`);
+    }
+  }
+
+  // Strategy 8: Just City + State (last resort)
+  if (city && state) {
+    searchStrategies.push(`${city}, ${state}, Brasil`);
+  }
+
+  // Remove duplicates while preserving order
+  const uniqueStrategies = [...new Set(searchStrategies)];
+
+  console.log('Geocoding strategies:', uniqueStrategies);
+  console.log('Parsed address:', { street: finalStreet, number, neighborhood, city, state });
+
+  for (const searchQuery of uniqueStrategies) {
     try {
-      const encodedAddress = encodeURIComponent(searchQuery);
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&countrycodes=br`,
-        {
-          headers: {
-            'User-Agent': 'PlataformaSAMA/1.0',
-          },
-        }
-      );
+      // Use our API proxy to avoid CORS issues
+      const encodedQuery = encodeURIComponent(searchQuery);
+      const response = await fetch(`/api/geocode?q=${encodedQuery}`);
+
+      if (!response.ok) {
+        console.error('Geocoding response not ok:', response.status);
+        continue;
+      }
+
       const data = await response.json();
 
-      if (data && data.length > 0) {
-        console.log('Geocoding success with query:', searchQuery);
-        return {
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon),
-        };
+      if (data?.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          console.log('Geocoding success with query:', searchQuery, '-> lat:', lat, 'lon:', lon);
+          return { lat, lng: lon };
+        }
+      } else {
+        console.log('No results for query:', searchQuery);
       }
     } catch (error) {
       console.error('Geocoding error for query:', searchQuery, error);
@@ -150,13 +270,16 @@ export function LocationMap({
   const [error, setError] = useState<string | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
 
+  // Normalize CEP to avoid useEffect array size changes
+  const normalizedCep = cep || '';
+
   // Geocode the address
   useEffect(() => {
     async function loadCoordinates() {
       setLoading(true);
       setError(null);
 
-      const coords = await geocodeAddress(address, cep);
+      const coords = await geocodeAddress(address, normalizedCep || undefined);
       if (coords) {
         setCoordinates(coords);
       } else {
@@ -168,7 +291,7 @@ export function LocationMap({
     if (address) {
       loadCoordinates();
     }
-  }, [address, cep]);
+  }, [address, normalizedCep]);
 
   // Get user location
   useEffect(() => {

@@ -10,4 +10,22 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/api/geocode': {
+        target: 'https://nominatim.openstreetmap.org',
+        changeOrigin: true,
+        rewrite: (path) => {
+          // /api/geocode?q=xxx -> /search?q=xxx&format=json&countrycodes=br
+          const newPath = path.replace(/^\/api\/geocode/, '/search');
+          return newPath + (newPath.includes('?') ? '&' : '?') + 'format=json&countrycodes=br';
+        },
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('User-Agent', 'PlataformaSama/1.0');
+          });
+        },
+      },
+    },
+  },
 })
