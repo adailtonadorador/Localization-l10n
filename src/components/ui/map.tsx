@@ -46,6 +46,7 @@ interface Coordinates {
 
 interface LocationMapProps {
   address: string;
+  cep?: string;
   title?: string;
   showUserLocation?: boolean;
   height?: string;
@@ -63,30 +64,62 @@ function RecenterMap({ coords }: { coords: Coordinates }) {
 }
 
 // Geocode address using Nominatim (OpenStreetMap)
-async function geocodeAddress(address: string): Promise<Coordinates | null> {
-  try {
-    const encodedAddress = encodeURIComponent(address + ', Brasil');
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`,
-      {
-        headers: {
-          'User-Agent': 'PlataformaSAMA/1.0',
-        },
-      }
-    );
-    const data = await response.json();
+// Tries multiple search strategies for better results
+async function geocodeAddress(address: string, cep?: string): Promise<Coordinates | null> {
+  const searchStrategies: string[] = [];
 
-    if (data && data.length > 0) {
-      return {
-        lat: parseFloat(data[0].lat),
-        lng: parseFloat(data[0].lon),
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error('Geocoding error:', error);
-    return null;
+  // Strategy 1: Full address
+  if (address) {
+    searchStrategies.push(address + ', Brasil');
   }
+
+  // Strategy 2: Try with CEP if available
+  if (cep) {
+    const cleanCep = cep.replace(/\D/g, '');
+    searchStrategies.push(`CEP ${cleanCep}, Brasil`);
+  }
+
+  // Strategy 3: Extract city and state from address
+  // Common patterns: "Cidade - UF" or "Cidade/UF" or ", Cidade - UF,"
+  const cityStateMatch = address.match(/,\s*([^,]+)\s*-\s*([A-Z]{2})/i);
+  if (cityStateMatch) {
+    searchStrategies.push(`${cityStateMatch[1].trim()}, ${cityStateMatch[2].trim()}, Brasil`);
+  }
+
+  // Strategy 4: Try to extract just the street and city
+  const parts = address.split(',').map(p => p.trim()).filter(p => p && !p.includes('CEP'));
+  if (parts.length >= 2) {
+    // Try street + city
+    searchStrategies.push(`${parts[0]}, ${parts[parts.length - 2]}, Brasil`);
+  }
+
+  for (const searchQuery of searchStrategies) {
+    try {
+      const encodedAddress = encodeURIComponent(searchQuery);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&countrycodes=br`,
+        {
+          headers: {
+            'User-Agent': 'PlataformaSAMA/1.0',
+          },
+        }
+      );
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        console.log('Geocoding success with query:', searchQuery);
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+        };
+      }
+    } catch (error) {
+      console.error('Geocoding error for query:', searchQuery, error);
+    }
+  }
+
+  console.log('Geocoding failed for all strategies');
+  return null;
 }
 
 // Calculate distance between two coordinates (Haversine formula)
@@ -104,6 +137,7 @@ function calculateDistance(coord1: Coordinates, coord2: Coordinates): number {
 
 export function LocationMap({
   address,
+  cep,
   title,
   showUserLocation = true,
   height = '300px',
@@ -122,7 +156,7 @@ export function LocationMap({
       setLoading(true);
       setError(null);
 
-      const coords = await geocodeAddress(address);
+      const coords = await geocodeAddress(address, cep);
       if (coords) {
         setCoordinates(coords);
       } else {
@@ -134,7 +168,7 @@ export function LocationMap({
     if (address) {
       loadCoordinates();
     }
-  }, [address]);
+  }, [address, cep]);
 
   // Get user location
   useEffect(() => {

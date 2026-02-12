@@ -780,6 +780,7 @@ export function AdminClientDetailPage() {
                 </h3>
                 <LocationMap
                   address={getClientAddress()}
+                  cep={client.cep || undefined}
                   title={client.company_name}
                   showUserLocation={false}
                   height="350px"
