@@ -35,8 +35,10 @@ import {
   Phone,
   FileText,
   Eye,
-  Star
+  Star,
+  Map
 } from "lucide-react";
+import { LocationMap } from "@/components/ui/map";
 
 const AVAILABLE_SKILLS = [
   'Limpeza', 'Carga e Descarga', 'Atendimento ao Cliente', 'Vendas',
@@ -768,6 +770,20 @@ export function AdminClientDetailPage() {
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* Mapa da Localização */}
+              <div className="mt-6 pt-6 border-t">
+                <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <Map className="h-4 w-4 text-primary" />
+                  Localização no Mapa
+                </h3>
+                <LocationMap
+                  address={getClientAddress()}
+                  title={client.company_name}
+                  showUserLocation={false}
+                  height="350px"
+                />
               </div>
             </TabsContent>
           </CardContent>
