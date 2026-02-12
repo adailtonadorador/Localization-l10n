@@ -240,6 +240,16 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
     setLoading(true);
 
     try {
+      // Save current admin session before creating new user
+      const { data: currentSession } = await supabaseUntyped.auth.getSession();
+      const adminSession = currentSession?.session;
+
+      if (!adminSession) {
+        setError('Sessão expirada. Faça login novamente.');
+        setLoading(false);
+        return;
+      }
+
       // Check if CNPJ already exists
       const { data: existingClient } = await supabaseUntyped
         .from('clients')
@@ -266,6 +276,12 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
       });
 
       if (signUpError) {
+        // Restore admin session if signup fails
+        await supabaseUntyped.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token,
+        });
+
         if (signUpError.message.includes('User already registered')) {
           setError('Este e-mail já está cadastrado');
         } else {
@@ -276,10 +292,23 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
       }
 
       if (!authData.user) {
+        // Restore admin session
+        await supabaseUntyped.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token,
+        });
         setError('Erro ao criar usuário');
         setLoading(false);
         return;
       }
+
+      const newUserId = authData.user.id;
+
+      // Immediately restore admin session to perform database operations
+      await supabaseUntyped.auth.setSession({
+        access_token: adminSession.access_token,
+        refresh_token: adminSession.refresh_token,
+      });
 
       // Build full address
       const fullAddress = `${logradouro}, ${numero}${complemento ? ` - ${complemento}` : ''}, ${bairro}, ${cidade} - ${uf}, CEP: ${cep}`;
@@ -288,7 +317,7 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
       const { error: userError } = await supabaseUntyped
         .from('users')
         .update({ phone: cleanPhone })
-        .eq('id', authData.user.id);
+        .eq('id', newUserId);
 
       if (userError) {
         console.error('Error updating user:', userError);
@@ -301,7 +330,7 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
       const { error: clientError } = await supabaseUntyped
         .from('clients')
         .insert({
-          id: authData.user.id,
+          id: newUserId,
           cnpj: cleanCnpj,
           company_name: companyName,
           fantasia: fantasia || null,
@@ -323,7 +352,7 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
       }
 
       // Success!
-      onSuccess(authData.user.id);
+      onSuccess(newUserId);
     } catch (err) {
       console.error('Error creating client:', err);
       setError('Erro ao criar cliente. Tente novamente.');

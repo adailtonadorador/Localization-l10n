@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { AdminNewClientForm } from "@/components/admin/AdminNewClientForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,11 +9,12 @@ import { Button } from "@/components/ui/button";
 export function AdminNewClientPage() {
   const navigate = useNavigate();
 
-  function handleSuccess(clientId: string) {
-    // Show success message and redirect to client detail page
-    navigate(`/admin/clients/${clientId}`, {
-      state: { message: 'Cliente cadastrado com sucesso!' }
+  function handleSuccess(_clientId: string) {
+    // Show success message and redirect to clients list
+    toast.success('Cliente cadastrado com sucesso!', {
+      description: 'O cliente já pode acessar a plataforma com as credenciais criadas.'
     });
+    navigate('/admin/clients');
   }
 
   function handleCancel() {
