@@ -26,23 +26,6 @@ interface ViaCepResponse {
   erro?: boolean;
 }
 
-interface ReceitaWsResponse {
-  status: string;
-  nome: string;
-  fantasia: string;
-  logradouro: string;
-  numero: string;
-  complemento: string;
-  bairro: string;
-  municipio: string;
-  uf: string;
-  cep: string;
-  telefone: string;
-  email: string;
-  situacao: string;
-  message?: string;
-}
-
 interface AdminNewClientFormProps {
   onSuccess: (clientId: string) => void;
   onCancel?: () => void;
@@ -110,23 +93,31 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
     setFetchingCnpj(true);
     setError(null);
     try {
-      const response = await fetch(`/api/cnpj/${cleanCnpj}`);
-      const data: ReceitaWsResponse = await response.json();
+      // Usar BrasilAPI como fonte primária (gratuita e confiável)
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
 
-      if (data.status === 'ERROR' || data.message) {
-        setError(data.message || "CNPJ não encontrado");
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError("CNPJ não encontrado");
+        } else {
+          setError("Erro ao buscar CNPJ. Tente novamente.");
+        }
         setFetchingCnpj(false);
         return;
       }
 
-      if (data.situacao !== 'ATIVA') {
-        setError(`Empresa com situação: ${data.situacao}. Apenas empresas ativas podem se cadastrar.`);
+      const data = await response.json();
+
+      // BrasilAPI retorna descricao_situacao_cadastral
+      if (data.descricao_situacao_cadastral && data.descricao_situacao_cadastral !== 'ATIVA') {
+        setError(`Empresa com situação: ${data.descricao_situacao_cadastral}. Apenas empresas ativas podem se cadastrar.`);
         setFetchingCnpj(false);
         return;
       }
 
-      setCompanyName(data.nome || '');
-      setFantasia(data.fantasia || '');
+      // BrasilAPI usa razao_social e nome_fantasia
+      setCompanyName(data.razao_social || '');
+      setFantasia(data.nome_fantasia || '');
 
       if (data.cep) {
         setCep(formatCep(data.cep));
@@ -138,8 +129,9 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
       setCidade(data.municipio || '');
       setUf(data.uf || '');
 
-      if (data.telefone && !phone) {
-        const cleanPhone = data.telefone.split('/')[0].replace(/\D/g, '').slice(0, 11);
+      // BrasilAPI usa ddd_telefone_1
+      if (data.ddd_telefone_1 && !phone) {
+        const cleanPhone = data.ddd_telefone_1.replace(/\D/g, '').slice(0, 11);
         if (cleanPhone.length >= 10) {
           setPhone(formatPhone(cleanPhone));
         }
