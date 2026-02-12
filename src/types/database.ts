@@ -52,6 +52,10 @@ export interface Database {
           is_active: boolean
           deactivation_reason: string | null
           deactivated_at: string | null
+          approval_status: 'pending' | 'approved' | 'rejected'
+          approval_date: string | null
+          approval_notes: string | null
+          rejected_reason: string | null
           created_at: string
           updated_at: string
         }
@@ -65,6 +69,10 @@ export interface Database {
           is_active?: boolean
           deactivation_reason?: string | null
           deactivated_at?: string | null
+          approval_status?: 'pending' | 'approved' | 'rejected'
+          approval_date?: string | null
+          approval_notes?: string | null
+          rejected_reason?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -78,6 +86,10 @@ export interface Database {
           is_active?: boolean
           deactivation_reason?: string | null
           deactivated_at?: string | null
+          approval_status?: 'pending' | 'approved' | 'rejected'
+          approval_date?: string | null
+          approval_notes?: string | null
+          rejected_reason?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -248,6 +260,7 @@ export interface Database {
       job_status: 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
       assignment_status: 'pending' | 'confirmed' | 'completed' | 'no_show'
       application_status: 'pending' | 'approved' | 'rejected'
+      worker_approval_status: 'pending' | 'approved' | 'rejected'
     }
   }
 }

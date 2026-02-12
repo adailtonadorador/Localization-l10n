@@ -22,6 +22,10 @@ interface WorkerProfile {
   total_jobs: number
   documents_verified: boolean
   is_active: boolean
+  approval_status: 'pending' | 'approved' | 'rejected'
+  approval_date: string | null
+  approval_notes: string | null
+  rejected_reason: string | null
   pix_key: string | null
   address: string | null
   cep: string | null

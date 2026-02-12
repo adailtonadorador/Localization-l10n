@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton, SkeletonJobCard, SkeletonStatsCard } from "@/components/ui/skeleton";
 import { useProfileCompleteness } from "@/components/ProfileCompleteness";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,10 @@ import {
   CheckCircle2,
   AlertCircle,
   AlertTriangle,
-  Building
+  Building,
+  ShieldAlert,
+  ThumbsUp,
+  Info
 } from "lucide-react";
 
 interface Job {
@@ -69,6 +73,47 @@ interface ConflictInfo {
     location?: string;
   };
   conflictDates: string[];
+}
+
+// Alert component for approval status
+function ApprovalStatusAlert({ workerProfile }: { workerProfile: any }) {
+  const approvalStatus = workerProfile?.approval_status;
+
+  if (approvalStatus === 'approved') return null;
+
+  if (approvalStatus === 'pending') {
+    return (
+      <Alert className="mb-6 border-blue-300 bg-blue-50">
+        <Clock className="h-5 w-5 text-blue-600" />
+        <AlertTitle className="text-blue-800">Conta em Análise</AlertTitle>
+        <AlertDescription className="text-blue-700">
+          Sua conta está sendo analisada pelo administrador. Você poderá acessar e se candidatar às vagas assim que sua conta for aprovada.
+          <span className="block font-medium mt-2">Aguarde o contato da equipe.</span>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (approvalStatus === 'rejected') {
+    return (
+      <Alert className="mb-6 border-red-300 bg-red-50">
+        <ShieldAlert className="h-5 w-5 text-red-600" />
+        <AlertTitle className="text-red-800">Conta Rejeitada</AlertTitle>
+        <AlertDescription className="text-red-700">
+          Sua conta foi rejeitada.
+          {workerProfile?.rejected_reason && (
+            <>
+              <br />
+              <span className="font-semibold">Motivo:</span> {workerProfile.rejected_reason}
+            </>
+          )}
+          <span className="block font-medium mt-2">Entre em contato com o suporte para mais informações.</span>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return null;
 }
 
 // Alert component for incomplete profile
@@ -508,6 +553,9 @@ export function WorkerDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Approval Status Alert */}
+      <ApprovalStatusAlert workerProfile={workerProfile} />
 
       {/* Profile Completeness Alert */}
       <ProfileCompletenessAlert profile={profile} workerProfile={workerProfile} />

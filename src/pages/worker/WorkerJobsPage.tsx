@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -19,7 +20,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { MapPin, Search, Filter, Eye, Calendar, Clock, Building, Star, UserPlus, AlertTriangle } from "lucide-react";
+import { MapPin, Search, Filter, Eye, Calendar, Clock, Building, Star, UserPlus, AlertTriangle, ShieldAlert, Info as InfoIcon } from "lucide-react";
 
 interface Job {
   id: string;
@@ -55,7 +56,7 @@ interface ConflictInfo {
 }
 
 export function WorkerJobsPage() {
-  const { profile } = useAuth();
+  const { profile, workerProfile } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,6 +130,12 @@ export function WorkerJobsPage() {
 
   async function handleAssignToMe() {
     if (!selectedJob || !profile?.id) return;
+
+    // Check if worker is approved
+    if (workerProfile?.approval_status !== 'approved') {
+      toast.error('Você precisa ser aprovado pelo administrador antes de se candidatar a vagas.');
+      return;
+    }
 
     setAssigning(true);
     try {
@@ -313,6 +320,10 @@ export function WorkerJobsPage() {
     return acc;
   }, {} as Record<string, number>);
 
+  // Check worker approval status
+  const approvalStatus = workerProfile?.approval_status;
+  const isApproved = approvalStatus === 'approved';
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -329,6 +340,58 @@ export function WorkerJobsPage() {
         <h2 className="text-2xl font-bold mb-2">Vagas Disponíveis</h2>
         <p className="text-muted-foreground">Encontre oportunidades de trabalho perto de você</p>
       </div>
+
+      {/* Approval Status Alert */}
+      {!isApproved && (
+        <Alert className={`mb-6 ${approvalStatus === 'rejected' ? 'border-red-300 bg-red-50' : 'border-blue-300 bg-blue-50'}`}>
+          <ShieldAlert className={`h-5 w-5 ${approvalStatus === 'rejected' ? 'text-red-600' : 'text-blue-600'}`} />
+          <AlertTitle className={approvalStatus === 'rejected' ? 'text-red-800' : 'text-blue-800'}>
+            {approvalStatus === 'pending' && 'Conta em Análise'}
+            {approvalStatus === 'rejected' && 'Conta Rejeitada'}
+          </AlertTitle>
+          <AlertDescription className={approvalStatus === 'rejected' ? 'text-red-700' : 'text-blue-700'}>
+            {approvalStatus === 'pending' && (
+              <>
+                Sua conta está sendo analisada pelo administrador. Você poderá acessar e se candidatar às vagas assim que sua conta for aprovada.
+                <br />
+                <span className="text-sm font-medium mt-2 block">Aguarde o contato da equipe.</span>
+              </>
+            )}
+            {approvalStatus === 'rejected' && (
+              <>
+                Sua conta foi rejeitada.
+                {workerProfile?.rejected_reason && (
+                  <>
+                    <br />
+                    <span className="font-semibold">Motivo:</span> {workerProfile.rejected_reason}
+                  </>
+                )}
+                <br />
+                <span className="text-sm font-medium mt-2 block">Entre em contato com o suporte para mais informações.</span>
+              </>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Hide job listings if not approved */}
+      {!isApproved ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShieldAlert className="h-8 w-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-medium text-slate-900 mb-2">Acesso Restrito</h3>
+            <p className="text-muted-foreground">
+              {approvalStatus === 'pending'
+                ? 'Aguarde a aprovação da sua conta para acessar as vagas.'
+                : 'Sua conta foi rejeitada. Entre em contato com o suporte.'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Original content - only show if approved */}
 
       {/* Filtros */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
@@ -680,6 +743,8 @@ export function WorkerJobsPage() {
           )}
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </DashboardLayout>
   );
 }
