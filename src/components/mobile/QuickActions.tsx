@@ -58,18 +58,14 @@ export function QuickActions({ profileCompleteness }: QuickActionsProps) {
   ].filter(action => action.show);
 
   return (
-    <div className="mt-4 mb-6">
-      <div className="flex items-center justify-between px-1 mb-3">
+    <div className="mt-6 mb-6">
+      <div className="flex items-center justify-between px-1 mb-4">
         <h3 className="text-sm font-semibold text-slate-700">
           Acesso Rápido
         </h3>
-        <span className="text-xs text-slate-400">Deslize e explore</span>
       </div>
-      <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
-        <div
-          className="flex gap-4 pb-2"
-          style={{ scrollSnapType: 'x mandatory' }}
-        >
+      <div className="flex justify-center">
+        <div className="flex gap-6">
           {actions.map((action, index) => {
             const Icon = action.icon;
             return (
@@ -77,17 +73,15 @@ export function QuickActions({ profileCompleteness }: QuickActionsProps) {
                 key={index}
                 to={action.href}
                 className="flex flex-col items-center justify-center
-                          flex-shrink-0 cursor-pointer
+                          cursor-pointer
                           active:scale-95 transition-transform"
-                style={{ scrollSnapAlign: 'start' }}
               >
                 <div className={`w-16 h-16 rounded-2xl ${action.bgColor}
-                              flex items-center justify-center
-                              shadow-sm`}>
+                              flex items-center justify-center`}>
                   <Icon className={`w-7 h-7 ${action.color}`} />
                 </div>
-                <span className="mt-2 text-[11px] font-medium text-slate-600
-                               text-center leading-tight w-16">
+                <span className="mt-2 text-xs font-medium text-slate-600
+                               text-center leading-tight max-w-[72px]">
                   {action.label}
                 </span>
               </Link>

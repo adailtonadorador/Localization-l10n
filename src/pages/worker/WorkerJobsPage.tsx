@@ -365,8 +365,8 @@ export function WorkerJobsPage() {
   return (
     <DashboardLayout>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Vagas Disponíveis</h2>
-        <p className="text-muted-foreground">Encontre oportunidades de trabalho perto de você</p>
+        <h2 className="text-2xl font-bold mb-2 text-slate-900">Vagas Disponíveis</h2>
+        <p className="text-slate-600">Encontre oportunidades de trabalho perto de você</p>
       </div>
 
       {/* Approval Status Alert */}
@@ -477,55 +477,51 @@ export function WorkerJobsPage() {
           {filteredJobs.map((job) => {
             const hasApplied = appliedJobIds.includes(job.id);
             return (
-              <Card key={job.id}>
-                <CardHeader>
+              <Card key={job.id} className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-b">
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-lg">{job.title}</CardTitle>
-                      <CardDescription>{job.clients?.company_name}</CardDescription>
+                      <CardTitle className="text-lg text-slate-900">{job.title}</CardTitle>
+                      <CardDescription className="flex items-center gap-1 mt-1">
+                        <Building className="h-3.5 w-3.5" />
+                        {job.clients?.company_name}
+                      </CardDescription>
                     </div>
-                    <Badge variant="secondary" className="whitespace-nowrap flex-shrink-0">{job.required_workers} vaga(s)</Badge>
+                    <Badge className="whitespace-nowrap flex-shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">{job.required_workers} vaga(s)</Badge>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-4">
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span>{formatJobDates(job.dates, job.date)}</span>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium">{formatJobDates(job.dates, job.date)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Clock className="h-4 w-4 text-cyan-600" />
                       <span>{formatTime(job.start_time)} - {formatTime(job.end_time)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span>{job.location}</span>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <MapPin className="h-4 w-4 text-purple-600" />
+                      <span className="truncate">{job.location}</span>
                     </div>
                     {job.description && (
-                      <p className="text-muted-foreground mt-2 line-clamp-2">{job.description}</p>
+                      <p className="text-slate-500 mt-2 line-clamp-2">{job.description}</p>
                     )}
                     {job.skills_required?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {job.skills_required.map((skill, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">{skill}</Badge>
+                          <Badge key={index} variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">{skill}</Badge>
                         ))}
                       </div>
                     )}
                   </div>
                   <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                    <span className="text-lg font-bold">R$ {job.daily_rate}/dia</span>
+                    <span className="text-lg font-bold text-blue-700">R$ {job.daily_rate}/dia</span>
                     <div className="flex items-center gap-2">
                       {hasApplied && (
-                        <Badge variant="secondary">Confirmado</Badge>
+                        <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white">Confirmado</Badge>
                       )}
-                      <Button variant="outline" size="sm" onClick={() => openJobDetails(job)}>
+                      <Button size="sm" onClick={() => openJobDetails(job)} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm">
                         <Eye className="h-4 w-4 mr-1" />
                         Ver Detalhes
                       </Button>
