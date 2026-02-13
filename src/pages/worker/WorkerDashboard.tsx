@@ -903,9 +903,14 @@ export function WorkerDashboard() {
                     key={job.id}
                     className="group p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-slate-900 truncate">{job.title}</h4>
+                        <div className="flex items-start justify-between gap-2 sm:block">
+                          <h4 className="font-semibold text-slate-900 truncate">{job.title}</h4>
+                          <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50 sm:hidden flex-shrink-0">
+                            {job.required_workers} vaga(s)
+                          </Badge>
+                        </div>
                         <p className="text-sm text-muted-foreground">{job.clients?.company_name}</p>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-slate-500">
                           <span className="flex items-center gap-1">
@@ -921,30 +926,35 @@ export function WorkerDashboard() {
                           <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
                           <span className="truncate">{job.location}</span>
                         </p>
+                        <p className="font-bold text-lg text-[#0A2A5A] mt-2 sm:hidden">
+                          R$ {job.daily_rate}/dia
+                        </p>
                       </div>
-                      <div className="text-right flex flex-col items-end gap-2">
+                      <div className="hidden sm:flex text-right flex-col items-end gap-2">
                         <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
                           {job.required_workers} vaga(s)
                         </Badge>
                         <p className="font-bold text-lg text-[#0A2A5A]">
                           R$ {job.daily_rate}/dia
                         </p>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openJobDetails(job)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Detalhes
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleAcceptJob(job.id)}
-                          >
-                            Aceitar
-                          </Button>
-                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 sm:flex-col sm:items-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 sm:flex-none"
+                          onClick={() => openJobDetails(job)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Detalhes
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="flex-1 sm:flex-none"
+                          onClick={() => handleAcceptJob(job.id)}
+                        >
+                          Aceitar
+                        </Button>
                       </div>
                     </div>
                   </div>

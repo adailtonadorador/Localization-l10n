@@ -451,26 +451,28 @@ export function WorkerMyJobsPage() {
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {upcomingRecords.map((record) => (
-              <Card key={record.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+              <Card key={record.id} className="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-semibold text-slate-900">{record.jobs.title}</h4>
-                      <p className="text-xs text-muted-foreground">{record.jobs.clients?.company_name}</p>
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-slate-900 truncate">{record.jobs.title}</h4>
+                      <p className="text-xs text-muted-foreground truncate">{record.jobs.clients?.company_name}</p>
                     </div>
-                    {getStatusBadge(record)}
+                    <div className="flex-shrink-0">
+                      {getStatusBadge(record)}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-purple-500" />
-                      <span className="font-medium">{formatDate(record.work_date)}</span>
+                      <Calendar className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                      <span className="font-medium truncate">{formatDate(record.work_date)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
+                      <Clock className="h-4 w-4 flex-shrink-0" />
                       <span>{formatScheduleTime(record.jobs.start_time)} - {formatScheduleTime(record.jobs.end_time)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
+                      <MapPin className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">{record.jobs.location}</span>
                     </div>
                   </div>

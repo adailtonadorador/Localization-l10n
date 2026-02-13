@@ -484,7 +484,7 @@ export function WorkerJobsPage() {
                       <CardTitle className="text-lg">{job.title}</CardTitle>
                       <CardDescription>{job.clients?.company_name}</CardDescription>
                     </div>
-                    <Badge variant="secondary">{job.required_workers} vaga(s)</Badge>
+                    <Badge variant="secondary" className="whitespace-nowrap flex-shrink-0">{job.required_workers} vaga(s)</Badge>
                   </div>
                 </CardHeader>
                 <CardContent>

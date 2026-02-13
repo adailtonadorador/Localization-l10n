@@ -18,9 +18,9 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <img src="/logo.png" alt="Sama Conecta" className="w-10 h-10 object-contain" />
-            <div className="hidden sm:block">
-              <span className="text-xl font-bold text-[#0A2A5A]">Sama Conecta</span>
-              <span className="text-xs text-slate-500 block -mt-1">Conectando Oportunidades</span>
+            <div>
+              <span className="text-lg sm:text-xl font-bold text-[#0A2A5A]">Sama Conecta</span>
+              <span className="text-[10px] sm:text-xs text-slate-500 block -mt-1">Conectando Oportunidades</span>
             </div>
           </Link>
 
