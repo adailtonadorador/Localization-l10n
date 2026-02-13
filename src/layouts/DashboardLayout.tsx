@@ -17,7 +17,8 @@ import {
   Settings,
   ClipboardList,
   Activity,
-  Building2
+  Building2,
+  AlertTriangle
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -37,6 +38,7 @@ const menuItems = {
     { label: 'Clientes', href: '/admin/clients', icon: Building2 },
     { label: 'Trabalhadores', href: '/admin/workers', icon: Users },
     { label: 'Monitoramento', href: '/admin/monitoring', icon: Activity },
+    { label: 'Desistências', href: '/admin/withdrawals', icon: AlertTriangle },
   ],
   client: [
     { label: 'Dashboard', href: '/client', icon: LayoutDashboard },

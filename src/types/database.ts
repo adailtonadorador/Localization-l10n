@@ -221,11 +221,13 @@ export interface Database {
           id: string
           job_id: string
           worker_id: string
-          status: 'pending' | 'confirmed' | 'completed' | 'no_show'
+          status: 'pending' | 'confirmed' | 'completed' | 'no_show' | 'withdrawn'
           check_in_time: string | null
           check_out_time: string | null
           rating: number | null
           feedback: string | null
+          withdrawal_reason: string | null
+          withdrawn_at: string | null
           created_at: string
           updated_at: string
         }
@@ -233,11 +235,13 @@ export interface Database {
           id?: string
           job_id: string
           worker_id: string
-          status?: 'pending' | 'confirmed' | 'completed' | 'no_show'
+          status?: 'pending' | 'confirmed' | 'completed' | 'no_show' | 'withdrawn'
           check_in_time?: string | null
           check_out_time?: string | null
           rating?: number | null
           feedback?: string | null
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -245,11 +249,13 @@ export interface Database {
           id?: string
           job_id?: string
           worker_id?: string
-          status?: 'pending' | 'confirmed' | 'completed' | 'no_show'
+          status?: 'pending' | 'confirmed' | 'completed' | 'no_show' | 'withdrawn'
           check_in_time?: string | null
           check_out_time?: string | null
           rating?: number | null
           feedback?: string | null
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -258,7 +264,7 @@ export interface Database {
     Enums: {
       user_role: 'worker' | 'admin' | 'client'
       job_status: 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
-      assignment_status: 'pending' | 'confirmed' | 'completed' | 'no_show'
+      assignment_status: 'pending' | 'confirmed' | 'completed' | 'no_show' | 'withdrawn'
       application_status: 'pending' | 'approved' | 'rejected'
       worker_approval_status: 'pending' | 'approved' | 'rejected'
     }

@@ -14,9 +14,9 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import { WithdrawalDialog } from "@/components/WithdrawalDialog";
 import {
   Briefcase,
-  DollarSign,
   Star,
   Clock,
   MapPin,
@@ -27,7 +27,8 @@ import {
   AlertCircle,
   AlertTriangle,
   Building,
-  ShieldAlert
+  ShieldAlert,
+  XCircle
 } from "lucide-react";
 
 interface Job {
@@ -170,6 +171,8 @@ export function WorkerDashboard() {
   const [loading, setLoading] = useState(true);
   const [conflictInfo, setConflictInfo] = useState<ConflictInfo | null>(null);
   const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false);
+  const [selectedJobForWithdrawal, setSelectedJobForWithdrawal] = useState<{ id: string; title: string; job_id: string } | null>(null);
 
   // Recarrega dados quando navega para esta página
   useEffect(() => {
@@ -294,8 +297,14 @@ export function WorkerDashboard() {
     return s1 < e2 && s2 < e1;
   }
 
-  async function handleApply(jobId: string) {
+  async function handleAcceptJob(jobId: string) {
     try {
+      // Check if worker is approved
+      if (workerProfile?.approval_status !== 'approved') {
+        toast.error('Você precisa ser aprovado pelo administrador antes de aceitar vagas.');
+        return;
+      }
+
       // Buscar detalhes da vaga selecionada
       const selectedJob = availableJobs.find(j => j.id === jobId);
       if (!selectedJob) {
@@ -379,28 +388,57 @@ export function WorkerDashboard() {
         }
       }
 
-      const { error } = await supabaseUntyped.from('job_applications').insert({
+      // Criar assignment diretamente (atribuir vaga ao trabalhador)
+      const { error: assignError } = await supabaseUntyped.from('job_assignments').insert({
         job_id: jobId,
         worker_id: user?.id,
-        status: 'pending',
+        status: 'confirmed',
       });
 
-      if (error) {
-        if (error.message.includes('duplicate')) {
-          toast.warning('Você já se candidatou a esta vaga.');
+      if (assignError) {
+        if (assignError.message.includes('duplicate')) {
+          toast.warning('Você já está atribuído a esta vaga.');
         } else {
-          toast.error('Erro ao candidatar. Tente novamente.');
+          toast.error('Erro ao aceitar vaga. Tente novamente.');
         }
         return;
       }
 
+      // Criar work_records para cada dia da vaga
+      const dates = selectedJob.dates && selectedJob.dates.length > 0 ? selectedJob.dates : [selectedJob.date];
+      const workRecords = dates.map(date => ({
+        job_id: selectedJob.id,
+        worker_id: user?.id,
+        work_date: date,
+        status: 'pending',
+      }));
+
+      const { error: recordsError } = await supabaseUntyped.from('work_records').insert(workRecords);
+
+      if (recordsError) {
+        console.error('Work records error:', recordsError);
+      }
+
+      // Verificar se todas as vagas foram preenchidas e atualizar status
+      const { count: totalAssigned } = await supabaseUntyped
+        .from('job_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('job_id', selectedJob.id);
+
+      if ((totalAssigned || 0) >= selectedJob.required_workers) {
+        await supabaseUntyped
+          .from('jobs')
+          .update({ status: 'assigned' })
+          .eq('id', selectedJob.id);
+      }
+
       // Reload data
       loadDashboardData();
-      toast.success('Candidatura enviada com sucesso!', {
-        description: 'Acompanhe o status em "Candidaturas Pendentes"',
+      toast.success('Diária aceita com sucesso!', {
+        description: 'Acesse "Meus Trabalhos" para ver seus dias de trabalho.',
       });
     } catch {
-      toast.error('Erro ao candidatar. Tente novamente.');
+      toast.error('Erro ao aceitar vaga. Tente novamente.');
     }
   }
 
@@ -426,12 +464,81 @@ export function WorkerDashboard() {
     return timeStr.slice(0, 5);
   }
 
+  function handleWithdrawClick(assignment: JobAssignment) {
+    setSelectedJobForWithdrawal({
+      id: assignment.id,
+      title: assignment.jobs.title,
+      job_id: assignment.jobs.id
+    });
+    setWithdrawalDialogOpen(true);
+  }
+
+  async function handleWithdrawalSubmit(reason: string) {
+    if (!selectedJobForWithdrawal || !user?.id) return;
+
+    try {
+      // 1. Atualizar o assignment para status 'withdrawn'
+      const { error: assignmentError } = await supabaseUntyped
+        .from('job_assignments')
+        .update({
+          status: 'withdrawn',
+          withdrawal_reason: reason,
+          withdrawn_at: new Date().toISOString()
+        })
+        .eq('id', selectedJobForWithdrawal.id)
+        .select();
+
+      if (assignmentError) {
+        console.error('Assignment error:', assignmentError);
+        if (assignmentError.message?.includes('invalid input value') || assignmentError.code === '22P02') {
+          toast.error('Erro: Status de desistência não configurado no banco de dados.', {
+            description: 'Entre em contato com o administrador.'
+          });
+          return;
+        }
+        throw assignmentError;
+      }
+
+      // 2. Deletar todos os work_records associados a este job_id e worker_id
+      await supabaseUntyped
+        .from('work_records')
+        .delete()
+        .eq('job_id', selectedJobForWithdrawal.job_id)
+        .eq('worker_id', user.id);
+
+      // 3. Verificar se ainda há outros trabalhadores atribuídos
+      const { count } = await supabaseUntyped
+        .from('job_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('job_id', selectedJobForWithdrawal.job_id)
+        .in('status', ['pending', 'confirmed']);
+
+      // 4. Se não houver mais trabalhadores, retornar a vaga para status 'open'
+      if (count === 0) {
+        await supabaseUntyped
+          .from('jobs')
+          .update({ status: 'open' })
+          .eq('id', selectedJobForWithdrawal.job_id);
+      }
+
+      setWithdrawalDialogOpen(false);
+      setSelectedJobForWithdrawal(null);
+      toast.success('Desistência registrada com sucesso!', {
+        description: 'A vaga ficou disponível novamente para outros trabalhadores.'
+      });
+      loadDashboardData();
+    } catch (error: any) {
+      console.error('Erro ao confirmar desistência:', error);
+      toast.error('Erro ao registrar desistência. Tente novamente.');
+    }
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
         {/* Stats Cards Skeleton */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+          {Array.from({ length: 3 }).map((_, i) => (
             <SkeletonStatsCard key={i} />
           ))}
         </div>
@@ -470,7 +577,7 @@ export function WorkerDashboard() {
   return (
     <DashboardLayout>
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
         <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -485,24 +592,6 @@ export function WorkerDashboard() {
             <div className="flex items-center gap-1 text-xs text-emerald-600">
               <TrendingUp className="h-3 w-3" />
               <span>Trabalhos realizados</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardDescription className="text-blue-600 font-medium">Ganhos Este Mês</CardDescription>
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <DollarSign className="h-4 w-4 text-blue-600" />
-              </div>
-            </div>
-            <CardTitle className="text-3xl font-bold">R$ {stats.monthlyEarnings.toFixed(2)}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center gap-1 text-xs text-blue-600">
-              <TrendingUp className="h-3 w-3" />
-              <span>Pagamentos confirmados</span>
             </div>
           </CardContent>
         </Card>
@@ -578,35 +667,48 @@ export function WorkerDashboard() {
                     key={assignment.id}
                     className="group p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-slate-900 truncate">{assignment.jobs.title}</h4>
-                        <p className="text-sm text-muted-foreground">{assignment.jobs.clients?.company_name}</p>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-slate-500">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {formatDate(assignment.jobs.date)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {formatTime(assignment.jobs.start_time)} - {formatTime(assignment.jobs.end_time)}
-                          </span>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-slate-900 truncate">{assignment.jobs.title}</h4>
+                          <p className="text-sm text-muted-foreground">{assignment.jobs.clients?.company_name}</p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-slate-500">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {formatDate(assignment.jobs.date)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" />
+                              {formatTime(assignment.jobs.start_time)} - {formatTime(assignment.jobs.end_time)}
+                            </span>
+                          </div>
+                          <p className="flex items-center gap-1 text-sm text-slate-500 mt-1">
+                            <MapPin className="h-3.5 w-3.5" />
+                            {assignment.jobs.location}
+                          </p>
                         </div>
-                        <p className="flex items-center gap-1 text-sm text-slate-500 mt-1">
-                          <MapPin className="h-3.5 w-3.5" />
-                          {assignment.jobs.location}
-                        </p>
+                        <div className="text-right flex flex-col items-end gap-2">
+                          <Badge
+                            variant={assignment.status === 'confirmed' ? 'default' : 'secondary'}
+                            className={assignment.status === 'confirmed' ? 'bg-emerald-500' : ''}
+                          >
+                            {assignment.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
+                          </Badge>
+                          <p className="font-bold text-lg text-emerald-600">
+                            R$ {assignment.jobs.daily_rate}/dia
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right flex flex-col items-end gap-2">
-                        <Badge
-                          variant={assignment.status === 'confirmed' ? 'default' : 'secondary'}
-                          className={assignment.status === 'confirmed' ? 'bg-emerald-500' : ''}
+                      <div className="pt-3 border-t border-slate-200">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleWithdrawClick(assignment)}
+                          className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                         >
-                          {assignment.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
-                        </Badge>
-                        <p className="font-bold text-lg text-emerald-600">
-                          R$ {assignment.jobs.daily_rate}/dia
-                        </p>
+                          <XCircle className="h-4 w-4" />
+                          Desistir da Diária
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -680,10 +782,10 @@ export function WorkerDashboard() {
                         </p>
                         <Button
                           size="sm"
-                          onClick={() => handleApply(job.id)}
+                          onClick={() => handleAcceptJob(job.id)}
                           className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                         >
-                          Candidatar
+                          Aceitar a Diária
                         </Button>
                       </div>
                     </div>
@@ -846,6 +948,14 @@ export function WorkerDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Withdrawal Dialog */}
+      <WithdrawalDialog
+        open={withdrawalDialogOpen}
+        onOpenChange={setWithdrawalDialogOpen}
+        onSubmit={handleWithdrawalSubmit}
+        jobTitle={selectedJobForWithdrawal?.title || ''}
+      />
     </DashboardLayout>
   );
 }

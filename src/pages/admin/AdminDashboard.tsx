@@ -16,7 +16,10 @@ import {
   ChevronRight,
   Activity,
   MapPin,
-  Calendar
+  Calendar,
+  AlertTriangle,
+  Clock,
+  FileText
 } from "lucide-react";
 
 interface Stats {
@@ -54,6 +57,23 @@ interface JobsByStatus {
   cancelled: number;
 }
 
+interface RecentWithdrawal {
+  id: string;
+  withdrawal_reason: string;
+  withdrawn_at: string;
+  workers: {
+    profiles: {
+      full_name: string;
+    };
+  };
+  jobs: {
+    title: string;
+    clients: {
+      company_name: string;
+    };
+  };
+}
+
 export function AdminDashboard() {
   const location = useLocation();
   const [stats, setStats] = useState<Stats>({
@@ -66,6 +86,7 @@ export function AdminDashboard() {
   });
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>([]);
   const [recentClients, setRecentClients] = useState<RecentClient[]>([]);
+  const [recentWithdrawals, setRecentWithdrawals] = useState<RecentWithdrawal[]>([]);
   const [jobsByStatus, setJobsByStatus] = useState<JobsByStatus>({
     open: 0,
     assigned: 0,
@@ -146,6 +167,32 @@ export function AdminDashboard() {
 
       setRecentClients(clientsData || []);
 
+      // Load recent withdrawals
+      const { data: withdrawalsData } = await supabaseUntyped
+        .from('job_assignments')
+        .select(`
+          id,
+          withdrawal_reason,
+          withdrawn_at,
+          workers (
+            profiles (
+              full_name
+            )
+          ),
+          jobs (
+            title,
+            clients (
+              company_name
+            )
+          )
+        `)
+        .eq('status', 'withdrawn')
+        .not('withdrawn_at', 'is', null)
+        .order('withdrawn_at', { ascending: false })
+        .limit(5);
+
+      setRecentWithdrawals(withdrawalsData || []);
+
     } catch (error) {
       console.error('Error loading admin data:', error);
     } finally {
@@ -174,6 +221,15 @@ export function AdminDashboard() {
     return new Date(dateStr).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short'
+    });
+  }
+
+  function formatDateTime(dateStr: string) {
+    return new Date(dateStr).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   }
 
@@ -398,6 +454,60 @@ export function AdminDashboard() {
         </Card>
       </div>
 
+      {/* Withdrawals Alert Card */}
+      {recentWithdrawals.length > 0 && (
+        <Card className="border-0 shadow-sm border-l-4 border-l-red-500 mb-6">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Desistências Recentes</CardTitle>
+                <CardDescription>Trabalhadores que desistiram de diárias</CardDescription>
+              </div>
+            </div>
+            <Link to="/admin/withdrawals">
+              <Button variant="outline" size="sm" className="gap-1 text-red-600 border-red-200 hover:bg-red-50">
+                Ver Todas
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentWithdrawals.map((withdrawal) => (
+                <div key={withdrawal.id} className="flex items-start gap-3 p-3 bg-red-50/50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-slate-900">
+                      {withdrawal.workers?.profiles?.full_name || 'Trabalhador'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {withdrawal.jobs?.title} - {withdrawal.jobs?.clients?.company_name}
+                    </p>
+                    <div className="mt-2 p-2 bg-white rounded border border-red-100">
+                      <p className="text-xs text-red-700 flex items-start gap-1">
+                        <FileText className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-2">{withdrawal.withdrawal_reason}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <Badge variant="outline" className="text-xs bg-red-50 border-red-200 text-red-700">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {formatDateTime(withdrawal.withdrawn_at)}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Quick Access Cards */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Recent Clients */}
@@ -507,6 +617,26 @@ export function AdminDashboard() {
                   </div>
                 </div>
                 <ChevronRight className="h-5 w-5 text-purple-500" />
+              </div>
+            </Link>
+
+            <Link to="/admin/withdrawals">
+              <div className="flex items-center justify-between p-4 bg-red-50 hover:bg-red-100 rounded-xl transition-colors cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center">
+                    <AlertTriangle className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Desistências</p>
+                    <p className="text-sm text-muted-foreground">
+                      Ver histórico de desistências
+                      {recentWithdrawals.length > 0 && (
+                        <Badge className="ml-2 bg-red-500">{recentWithdrawals.length} recentes</Badge>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-red-500" />
               </div>
             </Link>
           </CardContent>

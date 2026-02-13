@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SignatureDialog } from "@/components/SignatureDialog";
-import { Clock, MapPin, CheckCircle, Calendar, Building, Play, LogOut, Briefcase, ArrowRight } from "lucide-react";
+import { WithdrawalDialog } from "@/components/WithdrawalDialog";
+import { Clock, MapPin, CheckCircle, Calendar, Building, Play, LogOut, Briefcase, ArrowRight, XCircle } from "lucide-react";
 
 interface WorkRecord {
   id: string;
@@ -31,12 +32,21 @@ interface WorkRecord {
   };
 }
 
+interface JobAssignment {
+  id: string;
+  job_id: string;
+  worker_id: string;
+  status: string;
+}
+
 export function WorkerMyJobsPage() {
   const { profile } = useAuth();
   const [records, setRecords] = useState<WorkRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<WorkRecord | null>(null);
+  const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false);
+  const [selectedJobForWithdrawal, setSelectedJobForWithdrawal] = useState<{ id: string; title: string; job_id: string } | null>(null);
 
   useEffect(() => {
     if (profile?.id) {
@@ -119,6 +129,97 @@ export function WorkerMyJobsPage() {
     } catch (error) {
       console.error('Error checking out:', error);
       toast.error('Erro ao registrar saída. Tente novamente.');
+    }
+  }
+
+  function handleWithdrawClick(record: WorkRecord) {
+    setSelectedJobForWithdrawal({
+      id: record.id,
+      title: record.jobs.title,
+      job_id: record.job_id
+    });
+    setWithdrawalDialogOpen(true);
+  }
+
+  async function handleWithdrawalSubmit(reason: string) {
+    if (!selectedJobForWithdrawal || !profile?.id) return;
+
+    try {
+      // 1. Buscar o assignment correspondente (incluindo withdrawn para poder deletar work_records)
+      const { data: assignments, error: fetchError } = await supabaseUntyped
+        .from('job_assignments')
+        .select('id, status')
+        .eq('job_id', selectedJobForWithdrawal.job_id)
+        .eq('worker_id', profile.id)
+        .limit(1);
+
+      if (fetchError) throw fetchError;
+
+      if (!assignments || assignments.length === 0) {
+        toast.error('Atribuição não encontrada.');
+        return;
+      }
+
+      const assignment = assignments[0];
+
+      // 2. Se ainda não foi marcado como withdrawn, atualizar
+      if (assignment.status !== 'withdrawn') {
+        const { error: assignmentError } = await supabaseUntyped
+          .from('job_assignments')
+          .update({
+            status: 'withdrawn',
+            withdrawal_reason: reason,
+            withdrawn_at: new Date().toISOString()
+          })
+          .eq('id', assignment.id)
+          .select();
+
+        if (assignmentError) {
+          if (assignmentError.message?.includes('invalid input value') || assignmentError.code === '22P02') {
+            toast.error('Erro: Status de desistência não configurado no banco de dados.', {
+              description: 'Entre em contato com o administrador.'
+            });
+            return;
+          }
+          throw assignmentError;
+        }
+      }
+
+      // 3. Deletar todos os work_records associados a este job_id e worker_id
+      const { error: deleteError } = await supabaseUntyped
+        .from('work_records')
+        .delete()
+        .eq('job_id', selectedJobForWithdrawal.job_id)
+        .eq('worker_id', profile.id);
+
+      if (deleteError) {
+        console.error('Erro ao deletar work_records:', deleteError);
+      }
+
+      // 4. Verificar se ainda há outros trabalhadores atribuídos
+      const { count } = await supabaseUntyped
+        .from('job_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('job_id', selectedJobForWithdrawal.job_id)
+        .in('status', ['pending', 'confirmed']);
+
+      // 5. Se não houver mais trabalhadores, retornar a vaga para status 'open'
+      if (count === 0) {
+        await supabaseUntyped
+          .from('jobs')
+          .update({ status: 'open' })
+          .eq('id', selectedJobForWithdrawal.job_id);
+      }
+
+      setWithdrawalDialogOpen(false);
+      setSelectedJobForWithdrawal(null);
+      toast.success('Desistência registrada com sucesso!', {
+        description: 'A vaga ficou disponível novamente para outros trabalhadores.'
+      });
+      loadRecords();
+    } catch (error: any) {
+      console.error('Erro ao confirmar desistência:', error);
+      toast.error('Erro ao registrar desistência. Tente novamente.');
     }
   }
 
@@ -369,6 +470,17 @@ export function WorkerMyJobsPage() {
                       <span className="truncate">{record.jobs.location}</span>
                     </div>
                   </div>
+                  <div className="mt-4 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleWithdrawClick(record)}
+                      className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Desistir da Diária
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -432,6 +544,13 @@ export function WorkerMyJobsPage() {
         open={signatureDialogOpen}
         onOpenChange={setSignatureDialogOpen}
         onSubmit={handleSignatureSubmit}
+      />
+
+      <WithdrawalDialog
+        open={withdrawalDialogOpen}
+        onOpenChange={setWithdrawalDialogOpen}
+        onSubmit={handleWithdrawalSubmit}
+        jobTitle={selectedJobForWithdrawal?.title || ''}
       />
     </DashboardLayout>
   );

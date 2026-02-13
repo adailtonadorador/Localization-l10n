@@ -91,12 +91,13 @@ export function WorkerJobsPage() {
 
       setJobs(jobsData || []);
 
-      // Load jobs the user has already taken
+      // Load jobs the user has already taken (excluding withdrawn)
       if (profile?.id) {
         const { data: assignmentsData } = await supabaseUntyped
           .from('job_assignments')
           .select('job_id')
-          .eq('worker_id', profile.id);
+          .eq('worker_id', profile.id)
+          .in('status', ['pending', 'confirmed']);
 
         setAppliedJobIds(assignmentsData?.map((a: { job_id: string }) => a.job_id) || []);
       }
@@ -638,10 +639,10 @@ export function WorkerJobsPage() {
                       disabled={assigning}
                     >
                       <UserPlus className="h-4 w-4" />
-                      {assigning ? 'Atribuindo...' : 'Atribuir para Mim'}
+                      {assigning ? 'Aceitando...' : 'Aceitar a Diária'}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center mt-2">
-                      Ao se atribuir, você confirma presença nos dias agendados.
+                      Ao aceitar, você confirma presença nos dias agendados.
                     </p>
                   </div>
                 )}
