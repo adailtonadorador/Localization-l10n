@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabaseUntyped } from "@/lib/supabase";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard,
   Briefcase,
@@ -59,6 +61,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [newWithdrawalsCount, setNewWithdrawalsCount] = useState(0);
+
+  // Buscar contagem de desistências recentes (últimas 24h) para admin
+  useEffect(() => {
+    if (profile?.role === 'admin') {
+      loadWithdrawalsCount();
+    }
+  }, [profile?.role, location.pathname]);
+
+  async function loadWithdrawalsCount() {
+    try {
+      const yesterday = new Date();
+      yesterday.setHours(yesterday.getHours() - 24);
+
+      const { count } = await supabaseUntyped
+        .from('withdrawal_history')
+        .select('*', { count: 'exact', head: true })
+        .gte('withdrawn_at', yesterday.toISOString());
+
+      setNewWithdrawalsCount(count || 0);
+    } catch (error) {
+      console.error('Error loading withdrawals count:', error);
+    }
+  }
 
   // Mostrar loading APENAS se não temos profile
   // Se temos profile (do cache), mostrar conteúdo mesmo durante atualização em background
@@ -118,19 +144,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {items.map((item) => {
             const isActive = location.pathname === item.href;
             const Icon = item.icon;
+            const showWithdrawalsBadge = item.href === '/admin/withdrawals' && newWithdrawalsCount > 0;
             return (
               <Link
                 key={item.href}
                 to={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                <Icon className="h-5 w-5" />
-                {item.label}
+                <div className="flex items-center gap-3">
+                  <Icon className="h-5 w-5" />
+                  {item.label}
+                </div>
+                {showWithdrawalsBadge && (
+                  <Badge className={`text-xs ${isActive ? 'bg-white text-primary' : 'bg-red-500 text-white'}`}>
+                    {newWithdrawalsCount}
+                  </Badge>
+                )}
               </Link>
             );
           })}
