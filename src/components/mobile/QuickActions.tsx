@@ -58,7 +58,7 @@ export function QuickActions({ profileCompleteness }: QuickActionsProps) {
   ].filter(action => action.show);
 
   return (
-    <div className="mb-6">
+    <div className="mt-4 mb-6">
       <div className="flex items-center justify-between px-1 mb-3">
         <h3 className="text-sm font-semibold text-slate-700">
           Acesso Rápido
