@@ -17,12 +17,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-600/20">
-              <span className="text-xl font-bold text-white">S</span>
-            </div>
+            <img src="/logo.png" alt="Sama Conect" className="w-10 h-10 object-contain" />
             <div className="hidden sm:block">
-              <span className="text-xl font-bold text-slate-900">SAMA</span>
-              <span className="text-xs text-slate-500 block -mt-1">Trabalhos Temporários</span>
+              <span className="text-xl font-bold text-emerald-700">Sama Conect</span>
+              <span className="text-xs text-slate-500 block -mt-1">Conectando Oportunidades</span>
             </div>
           </Link>
 
@@ -105,10 +103,8 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center">
-                  <span className="text-lg font-bold text-white">S</span>
-                </div>
-                <span className="text-lg font-bold text-white">SAMA</span>
+                <img src="/logo.png" alt="Sama Conect" className="w-9 h-9 object-contain bg-white rounded-lg p-1" />
+                <span className="text-lg font-bold text-white">Sama Conect</span>
               </div>
               <p className="text-sm text-slate-400 leading-relaxed">
                 Conectando trabalhadores e empresas para trabalhos temporários de forma rápida e segura.
@@ -142,7 +138,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
           <div className="mt-12 pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-slate-500">
-              © 2025 SAMA. Todos os direitos reservados.
+              © 2025 Sama Conect. Todos os direitos reservados.
             </p>
             <div className="flex items-center gap-4">
               <a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors">

@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
+import { useIsMobile } from "@/hooks/useMediaQuery";
+import { BottomNavBar } from "@/components/mobile/BottomNavBar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +62,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { profile, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [newWithdrawalsCount, setNewWithdrawalsCount] = useState(0);
 
@@ -118,15 +121,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - hidden on mobile when using bottom nav */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r shadow-sm transform transition-transform duration-200 ease-in-out md:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b px-6">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-              <span className="text-lg font-bold text-primary-foreground">S</span>
-            </div>
-            <span className="text-xl font-bold">SAMA</span>
+            <img src="/logo.png" alt="Sama Conect" className="w-9 h-9 object-contain" />
+            <span className="text-xl font-bold text-emerald-700">Sama Conect</span>
           </Link>
           <button
             className="md:hidden p-2 hover:bg-slate-100 rounded-lg"
@@ -161,7 +162,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   {item.label}
                 </div>
                 {showWithdrawalsBadge && (
-                  <Badge className={`text-xs ${isActive ? 'bg-white text-primary' : 'bg-red-500 text-white'}`}>
+                  <Badge className="text-xs bg-red-500 text-white hover:bg-red-600">
                     {newWithdrawalsCount}
                   </Badge>
                 )}
@@ -185,59 +186,81 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="md:pl-72">
-        {/* Top header */}
-        <header className="sticky top-0 z-30 h-16 border-b bg-white/80 backdrop-blur-sm flex items-center justify-between px-4 md:px-6">
-          <div className="flex items-center gap-4">
-            <button
-              className="md:hidden p-2 hover:bg-slate-100 rounded-lg"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <div>
-              <h1 className="text-lg font-semibold text-slate-900">
-                {profile.role === 'worker' && 'Painel do Trabalhador'}
-                {profile.role === 'admin' && 'Painel Administrativo'}
-                {profile.role === 'client' && 'Painel da Empresa'}
-              </h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                Bem-vindo de volta, {userName.split(' ')[0]}!
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5 text-slate-600" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-              <span className="sr-only">Notificações</span>
-            </Button>
-
-            <Button variant="ghost" size="icon" className="hidden sm:flex">
-              <Settings className="h-5 w-5 text-slate-600" />
-              <span className="sr-only">Configurações</span>
-            </Button>
-
-            <div className="hidden sm:flex items-center gap-3 ml-2 pl-4 border-l">
-              <Avatar className="h-9 w-9 ring-2 ring-slate-100">
-                <AvatarImage src={profile.avatar_url || ''} />
-                <AvatarFallback className={`${roleColors[profile.role]} text-white text-sm font-medium`}>
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden lg:block">
-                <p className="text-sm font-medium">{userName}</p>
-                <p className="text-xs text-muted-foreground">{profile.email}</p>
+        {/* Top header - Simplified on mobile */}
+        <header className={`sticky top-0 z-30 border-b bg-white/80 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 ${isMobile ? 'h-14' : 'h-16'}`}>
+          {isMobile ? (
+            // Mobile Header - Simplified
+            <>
+              <Link to="/" className="flex items-center gap-2">
+                <img src="/logo.png" alt="Sama Conect" className="w-8 h-8 object-contain" />
+                <span className="text-lg font-bold text-emerald-700">Sama Conect</span>
+              </Link>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                  <Bell className="h-5 w-5 text-slate-600" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                </Button>
+                <button
+                  className="p-2 hover:bg-slate-100 rounded-lg"
+                  onClick={() => setMobileMenuOpen(true)}
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
               </div>
-            </div>
-          </div>
+            </>
+          ) : (
+            // Desktop Header
+            <>
+              <div className="flex items-center gap-4">
+                <div>
+                  <h1 className="text-lg font-semibold text-slate-900">
+                    {profile.role === 'worker' && 'Painel do Trabalhador'}
+                    {profile.role === 'admin' && 'Painel Administrativo'}
+                    {profile.role === 'client' && 'Painel da Empresa'}
+                  </h1>
+                  <p className="text-xs text-muted-foreground hidden sm:block">
+                    Bem-vindo de volta, {userName.split(' ')[0]}!
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5 text-slate-600" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                  <span className="sr-only">Notificações</span>
+                </Button>
+
+                <Button variant="ghost" size="icon" className="hidden sm:flex">
+                  <Settings className="h-5 w-5 text-slate-600" />
+                  <span className="sr-only">Configurações</span>
+                </Button>
+
+                <div className="hidden sm:flex items-center gap-3 ml-2 pl-4 border-l">
+                  <Avatar className="h-9 w-9 ring-2 ring-slate-100">
+                    <AvatarImage src={profile.avatar_url || ''} />
+                    <AvatarFallback className={`${roleColors[profile.role]} text-white text-sm font-medium`}>
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="hidden lg:block">
+                    <p className="text-sm font-medium">{userName}</p>
+                    <p className="text-xs text-muted-foreground">{profile.email}</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </header>
 
-        {/* Page content */}
-        <main className="p-4 md:p-6 lg:p-8">
+        {/* Page content - Add padding bottom for mobile bottom nav */}
+        <main className={`p-4 md:p-6 lg:p-8 ${isMobile ? 'pb-24' : ''}`}>
           {children}
         </main>
       </div>
+
+      {/* Bottom Navigation - Mobile only */}
+      {isMobile && <BottomNavBar />}
     </div>
   );
 }

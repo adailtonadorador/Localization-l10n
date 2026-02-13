@@ -32,12 +32,6 @@ interface WorkRecord {
   };
 }
 
-interface JobAssignment {
-  id: string;
-  job_id: string;
-  worker_id: string;
-  status: string;
-}
 
 export function WorkerMyJobsPage() {
   const { profile } = useAuth();

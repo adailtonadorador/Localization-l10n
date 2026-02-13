@@ -11,7 +11,6 @@ import {
   Building2,
   Briefcase,
   CheckCircle2,
-  AlertCircle,
   TrendingUp,
   ChevronRight,
   Activity,

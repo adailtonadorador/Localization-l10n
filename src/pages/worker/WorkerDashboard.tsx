@@ -4,11 +4,15 @@ import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
+import { useIsMobile } from "@/hooks/useMediaQuery";
+import { WelcomeCard } from "@/components/mobile/WelcomeCard";
+import { QuickActions } from "@/components/mobile/QuickActions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton, SkeletonJobCard, SkeletonStatsCard } from "@/components/ui/skeleton";
 import { useProfileCompleteness } from "@/components/ProfileCompleteness";
+import { LocationMap } from "@/components/ui/map";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
@@ -28,7 +32,10 @@ import {
   AlertTriangle,
   Building,
   ShieldAlert,
-  XCircle
+  XCircle,
+  Eye,
+  UserPlus,
+  Map
 } from "lucide-react";
 
 interface Job {
@@ -159,6 +166,8 @@ function ProfileCompletenessAlert({ profile, workerProfile }: { profile: any; wo
 export function WorkerDashboard() {
   const location = useLocation();
   const { user, profile, workerProfile } = useAuth();
+  const isMobile = useIsMobile();
+  const { percentage: profileCompleteness } = useProfileCompleteness(profile, workerProfile);
   const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
   const [upcomingJobs, setUpcomingJobs] = useState<JobAssignment[]>([]);
   const [pendingApplications, setPendingApplications] = useState<JobApplication[]>([]);
@@ -173,6 +182,10 @@ export function WorkerDashboard() {
   const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
   const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false);
   const [selectedJobForWithdrawal, setSelectedJobForWithdrawal] = useState<{ id: string; title: string; job_id: string } | null>(null);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<JobAssignment | null>(null);
+  const [assignmentDetailsOpen, setAssignmentDetailsOpen] = useState(false);
 
   // Recarrega dados quando navega para esta página
   useEffect(() => {
@@ -499,6 +512,16 @@ export function WorkerDashboard() {
     setWithdrawalDialogOpen(true);
   }
 
+  function openJobDetails(job: Job) {
+    setSelectedJob(job);
+    setDetailsOpen(true);
+  }
+
+  function openAssignmentDetails(assignment: JobAssignment) {
+    setSelectedAssignment(assignment);
+    setAssignmentDetailsOpen(true);
+  }
+
   async function handleWithdrawalSubmit(reason: string) {
     if (!selectedJobForWithdrawal || !user?.id) return;
 
@@ -615,159 +638,245 @@ export function WorkerDashboard() {
 
   return (
     <DashboardLayout>
-      {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardDescription className="text-emerald-600 font-medium">Total de Trabalhos</CardDescription>
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <Briefcase className="h-4 w-4 text-emerald-600" />
-              </div>
-            </div>
-            <CardTitle className="text-3xl font-bold">{stats.totalJobs}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center gap-1 text-xs text-emerald-600">
-              <TrendingUp className="h-3 w-3" />
-              <span>Trabalhos realizados</span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Mobile: Welcome Card + Quick Actions */}
+      {isMobile ? (
+        <>
+          <WelcomeCard
+            userName={profile?.name || 'Usuário'}
+            role="worker"
+            profileCompleteness={profileCompleteness}
+            approvalStatus={workerProfile?.approval_status}
+            stats={{
+              totalJobs: stats.totalJobs,
+              rating: stats.rating,
+              monthlyEarnings: stats.monthlyEarnings
+            }}
+            profileLink="/worker/profile"
+          />
 
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-white">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardDescription className="text-amber-600 font-medium">Avaliação Média</CardDescription>
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <Star className="h-4 w-4 text-amber-600" />
-              </div>
-            </div>
-            <CardTitle className="text-3xl font-bold">
-              {stats.rating > 0 ? stats.rating.toFixed(1) : 'N/A'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center gap-1 text-xs text-amber-600">
-              {stats.rating > 0 ? (
-                <>
-                  <Star className="h-3 w-3 fill-current" />
-                  <span>Excelente reputação</span>
-                </>
-              ) : (
-                <span>Sem avaliações ainda</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+          {/* Approval Status Alert - Mobile */}
+          <ApprovalStatusAlert workerProfile={workerProfile} />
 
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-white">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardDescription className="text-purple-600 font-medium">Candidaturas Pendentes</CardDescription>
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Clock className="h-4 w-4 text-purple-600" />
-              </div>
-            </div>
-            <CardTitle className="text-3xl font-bold">{stats.pendingCount}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center gap-1 text-xs text-purple-600">
-              <AlertCircle className="h-3 w-3" />
-              <span>Aguardando resposta</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Quick Actions */}
+          <QuickActions
+            profileCompleteness={profileCompleteness}
+            hasUpcomingJobs={upcomingJobs.length > 0}
+          />
+        </>
+      ) : (
+        <>
+          {/* Desktop: Stats Cards */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardDescription className="text-emerald-600 font-medium">Total de Trabalhos</CardDescription>
+                  <div className="p-2 bg-emerald-100 rounded-lg">
+                    <Briefcase className="h-4 w-4 text-emerald-600" />
+                  </div>
+                </div>
+                <CardTitle className="text-3xl font-bold">{stats.totalJobs}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex items-center gap-1 text-xs text-emerald-600">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>Trabalhos realizados</span>
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Approval Status Alert */}
-      <ApprovalStatusAlert workerProfile={workerProfile} />
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-white">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardDescription className="text-amber-600 font-medium">Avaliação Média</CardDescription>
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <Star className="h-4 w-4 text-amber-600" />
+                  </div>
+                </div>
+                <CardTitle className="text-3xl font-bold">
+                  {stats.rating > 0 ? stats.rating.toFixed(1) : 'N/A'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex items-center gap-1 text-xs text-amber-600">
+                  {stats.rating > 0 ? (
+                    <>
+                      <Star className="h-3 w-3 fill-current" />
+                      <span>Excelente reputação</span>
+                    </>
+                  ) : (
+                    <span>Sem avaliações ainda</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Profile Completeness Alert */}
-      <ProfileCompletenessAlert profile={profile} workerProfile={workerProfile} />
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-white">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardDescription className="text-purple-600 font-medium">Candidaturas Pendentes</CardDescription>
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Clock className="h-4 w-4 text-purple-600" />
+                  </div>
+                </div>
+                <CardTitle className="text-3xl font-bold">{stats.pendingCount}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex items-center gap-1 text-xs text-purple-600">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>Aguardando resposta</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Próximos Trabalhos */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">Próximos Trabalhos</CardTitle>
-                <CardDescription>Trabalhos confirmados para os próximos dias</CardDescription>
-              </div>
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {upcomingJobs.length > 0 ? (
-              <div className="space-y-3">
-                {upcomingJobs.map((assignment) => (
-                  <div
-                    key={assignment.id}
-                    className="group p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
-                  >
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-slate-900 truncate">{assignment.jobs.title}</h4>
-                          <p className="text-sm text-muted-foreground">{assignment.jobs.clients?.company_name}</p>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-slate-500">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3.5 w-3.5" />
-                              {formatDate(assignment.jobs.date)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3.5 w-3.5" />
-                              {formatTime(assignment.jobs.start_time)} - {formatTime(assignment.jobs.end_time)}
-                            </span>
-                          </div>
-                          <p className="flex items-center gap-1 text-sm text-slate-500 mt-1">
-                            <MapPin className="h-3.5 w-3.5" />
-                            {assignment.jobs.location}
-                          </p>
-                        </div>
-                        <div className="text-right flex flex-col items-end gap-2">
-                          <Badge
-                            variant={assignment.status === 'confirmed' ? 'default' : 'secondary'}
-                            className={assignment.status === 'confirmed' ? 'bg-emerald-500' : ''}
-                          >
-                            {assignment.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
-                          </Badge>
-                          <p className="font-bold text-lg text-emerald-600">
-                            R$ {assignment.jobs.daily_rate}/dia
-                          </p>
-                        </div>
-                      </div>
-                      <div className="pt-3 border-t border-slate-200">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleWithdrawClick(assignment)}
-                          className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                        >
-                          <XCircle className="h-4 w-4" />
-                          Desistir da Diária
-                        </Button>
-                      </div>
+          {/* Desktop: Approval Status Alert */}
+          <ApprovalStatusAlert workerProfile={workerProfile} />
+
+          {/* Desktop: Profile Completeness Alert */}
+          <ProfileCompletenessAlert profile={profile} workerProfile={workerProfile} />
+        </>
+      )}
+
+      {/* Próximos Trabalhos - Mobile: Cards horizontais clicáveis */}
+      {isMobile && upcomingJobs.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-slate-700">Próximos Trabalhos</h3>
+            <Link to="/worker/my-jobs" className="text-xs text-emerald-600 font-medium">
+              Ver todos
+            </Link>
+          </div>
+          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+            <div className="flex gap-3 pb-2">
+              {upcomingJobs.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  onClick={() => openAssignmentDetails(assignment)}
+                  className="flex-shrink-0 w-72 bg-white border border-slate-200 rounded-xl p-4 shadow-sm
+                            active:scale-[0.98] transition-transform cursor-pointer"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-slate-900 truncate text-sm">{assignment.jobs.title}</h4>
+                      <p className="text-xs text-muted-foreground truncate">{assignment.jobs.clients?.company_name}</p>
+                    </div>
+                    <Badge
+                      variant={assignment.status === 'confirmed' ? 'default' : 'secondary'}
+                      className={`text-[10px] ${assignment.status === 'confirmed' ? 'bg-emerald-500' : ''}`}
+                    >
+                      {assignment.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1.5 text-xs text-slate-500">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-emerald-500" />
+                      <span>{formatDate(assignment.jobs.date)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-blue-500" />
+                      <span>{formatTime(assignment.jobs.start_time)} - {formatTime(assignment.jobs.end_time)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-red-500" />
+                      <span className="truncate">{assignment.jobs.location}</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Calendar className="h-6 w-6 text-slate-400" />
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="font-bold text-emerald-600">R$ {assignment.jobs.daily_rate}/dia</span>
+                    <span className="text-xs text-slate-400">Toque para detalhes</span>
+                  </div>
                 </div>
-                <p className="text-muted-foreground">Nenhum trabalho agendado</p>
-                <Link to="/worker/jobs">
-                  <Button variant="link" className="mt-2">
-                    Buscar vagas disponíveis
-                  </Button>
-                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Próximos Trabalhos - Desktop */}
+        {!isMobile && (
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Próximos Trabalhos</CardTitle>
+                  <CardDescription>Trabalhos confirmados para os próximos dias</CardDescription>
+                </div>
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              {upcomingJobs.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingJobs.map((assignment) => (
+                    <div
+                      key={assignment.id}
+                      className="group p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
+                    >
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-slate-900 truncate">{assignment.jobs.title}</h4>
+                            <p className="text-sm text-muted-foreground">{assignment.jobs.clients?.company_name}</p>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" />
+                                {formatDate(assignment.jobs.date)}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3.5 w-3.5" />
+                                {formatTime(assignment.jobs.start_time)} - {formatTime(assignment.jobs.end_time)}
+                              </span>
+                            </div>
+                            <p className="flex items-center gap-1 text-sm text-slate-500 mt-1">
+                              <MapPin className="h-3.5 w-3.5" />
+                              {assignment.jobs.location}
+                            </p>
+                          </div>
+                          <div className="text-right flex flex-col items-end gap-2">
+                            <Badge
+                              variant={assignment.status === 'confirmed' ? 'default' : 'secondary'}
+                              className={assignment.status === 'confirmed' ? 'bg-emerald-500' : ''}
+                            >
+                              {assignment.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
+                            </Badge>
+                            <p className="font-bold text-lg text-emerald-600">
+                              R$ {assignment.jobs.daily_rate}/dia
+                            </p>
+                          </div>
+                        </div>
+                        <div className="pt-3 border-t border-slate-200">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleWithdrawClick(assignment)}
+                            className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                          >
+                            <XCircle className="h-4 w-4" />
+                            Desistir da Diária
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Calendar className="h-6 w-6 text-slate-400" />
+                  </div>
+                  <p className="text-muted-foreground">Nenhum trabalho agendado</p>
+                  <Link to="/worker/jobs">
+                    <Button variant="link" className="mt-2">
+                      Buscar vagas disponíveis
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Vagas Disponíveis */}
         <Card className="border-0 shadow-sm">
@@ -819,13 +928,22 @@ export function WorkerDashboard() {
                         <p className="font-bold text-lg text-emerald-600">
                           R$ {job.daily_rate}/dia
                         </p>
-                        <Button
-                          size="sm"
-                          onClick={() => handleAcceptJob(job.id)}
-                          className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                        >
-                          Aceitar a Diária
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openJobDetails(job)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Detalhes
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleAcceptJob(job.id)}
+                          >
+                            Aceitar
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -887,6 +1005,243 @@ export function WorkerDashboard() {
           </Card>
         )}
       </div>
+
+      {/* Job Details Dialog */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
+          {selectedJob && (
+            <>
+              {/* Header */}
+              <div className="p-6 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold mb-1">{selectedJob.title}</h2>
+                    <p className="text-white/80 text-sm flex items-center gap-1">
+                      <Building className="h-3.5 w-3.5" />
+                      {selectedJob.clients?.company_name}
+                    </p>
+                  </div>
+                  <Badge className="bg-white/20 text-white border-white/30">
+                    {selectedJob.required_workers} vaga(s)
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
+                      <Calendar className="h-3 w-3" />
+                      Datas
+                    </div>
+                    <p className="font-semibold text-sm">{formatJobDates(selectedJob.dates, selectedJob.date)}</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
+                      <Clock className="h-3 w-3" />
+                      Horário
+                    </div>
+                    <p className="font-semibold text-sm">{formatTime(selectedJob.start_time)} - {formatTime(selectedJob.end_time)}</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
+                      <MapPin className="h-3 w-3" />
+                      Local
+                    </div>
+                    <p className="font-semibold text-sm truncate">{selectedJob.location}</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
+                      <Star className="h-3 w-3" />
+                      Valor
+                    </div>
+                    <p className="font-semibold text-sm">R$ {selectedJob.daily_rate}/dia</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                {/* Location with Map */}
+                <div>
+                  <h3 className="font-semibold text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                    <Map className="h-4 w-4" />
+                    Localização
+                  </h3>
+                  <p className="text-sm bg-slate-50 p-3 rounded-lg mb-3">{selectedJob.location}</p>
+                  <LocationMap
+                    address={selectedJob.location}
+                    title={selectedJob.title}
+                    showUserLocation={true}
+                    height="250px"
+                  />
+                </div>
+
+                {/* Description */}
+                {selectedJob.description && (
+                  <div>
+                    <h3 className="font-semibold text-sm text-muted-foreground mb-2">Descrição</h3>
+                    <p className="text-sm bg-slate-50 p-3 rounded-lg">{selectedJob.description}</p>
+                  </div>
+                )}
+
+                {/* Skills */}
+                {selectedJob.skills_required?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-sm text-muted-foreground mb-2">Habilidades Requeridas</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedJob.skills_required.map((skill, index) => (
+                        <Badge key={index} variant="secondary" className="bg-slate-100">{skill}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* All dates */}
+                <div>
+                  <h3 className="font-semibold text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Datas de Trabalho
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {(selectedJob.dates && selectedJob.dates.length > 0 ? selectedJob.dates : [selectedJob.date]).map((date, index) => (
+                      <Badge key={index} variant="outline" className="bg-emerald-50 border-emerald-200 text-emerald-700">
+                        {formatDate(date)}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action button */}
+                <div className="pt-4 border-t">
+                  <Button
+                    className="w-full gap-2 bg-emerald-500 hover:bg-emerald-600"
+                    onClick={() => {
+                      setDetailsOpen(false);
+                      handleAcceptJob(selectedJob.id);
+                    }}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Aceitar a Diária
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    Ao aceitar, você confirma presença nos dias agendados.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Assignment Details Dialog - Para trabalhos confirmados */}
+      <Dialog open={assignmentDetailsOpen} onOpenChange={setAssignmentDetailsOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
+          {selectedAssignment && (
+            <>
+              {/* Header */}
+              <div className="p-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className={`text-xs ${selectedAssignment.status === 'confirmed' ? 'bg-emerald-500' : 'bg-white/20'}`}>
+                        {selectedAssignment.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
+                      </Badge>
+                    </div>
+                    <h2 className="text-xl font-bold">{selectedAssignment.jobs.title}</h2>
+                    <p className="text-white/80 text-sm flex items-center gap-1 mt-1">
+                      <Building className="h-3.5 w-3.5" />
+                      {selectedAssignment.jobs.clients?.company_name}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold">R$ {selectedAssignment.jobs.daily_rate}</p>
+                    <p className="text-white/70 text-sm">por dia</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
+                      <Calendar className="h-3 w-3" />
+                      Data
+                    </div>
+                    <p className="font-semibold text-sm">{formatDate(selectedAssignment.jobs.date)}</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
+                      <Clock className="h-3 w-3" />
+                      Horário
+                    </div>
+                    <p className="font-semibold text-sm">{formatTime(selectedAssignment.jobs.start_time)} - {formatTime(selectedAssignment.jobs.end_time)}</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3 col-span-2 sm:col-span-1">
+                    <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
+                      <MapPin className="h-3 w-3" />
+                      Local
+                    </div>
+                    <p className="font-semibold text-sm truncate">{selectedAssignment.jobs.location}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                {/* Location with Map */}
+                <div>
+                  <h3 className="font-semibold text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                    <Map className="h-4 w-4" />
+                    Localização
+                  </h3>
+                  <p className="text-sm bg-slate-50 p-3 rounded-lg mb-3">{selectedAssignment.jobs.location}</p>
+                  <LocationMap
+                    address={selectedAssignment.jobs.location}
+                    title={selectedAssignment.jobs.title}
+                    showUserLocation={true}
+                    height="250px"
+                  />
+                </div>
+
+                {/* Description */}
+                {selectedAssignment.jobs.description && (
+                  <div>
+                    <h3 className="font-semibold text-sm text-muted-foreground mb-2">Descrição</h3>
+                    <p className="text-sm bg-slate-50 p-3 rounded-lg">{selectedAssignment.jobs.description}</p>
+                  </div>
+                )}
+
+                {/* Skills */}
+                {selectedAssignment.jobs.skills_required?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-sm text-muted-foreground mb-2">Habilidades</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedAssignment.jobs.skills_required.map((skill, index) => (
+                        <Badge key={index} variant="secondary" className="bg-slate-100">{skill}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action button */}
+                <div className="pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                    onClick={() => {
+                      setAssignmentDetailsOpen(false);
+                      handleWithdrawClick(selectedAssignment);
+                    }}
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Desistir da Diária
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    Informe o motivo da desistência para ajudar na gestão.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Conflict Dialog */}
       <Dialog open={conflictDialogOpen} onOpenChange={setConflictDialogOpen}>
