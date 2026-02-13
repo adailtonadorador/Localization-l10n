@@ -135,15 +135,15 @@ export function ClientHistoryPage() {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-emerald-600 font-medium">Total Gasto</p>
-                <p className="text-3xl font-bold text-emerald-700">R$ {totalSpent.toFixed(2)}</p>
+                <p className="text-sm text-blue-600 font-medium">Total Gasto</p>
+                <p className="text-3xl font-bold text-blue-700">R$ {totalSpent.toFixed(2)}</p>
               </div>
-              <div className="p-3 bg-emerald-100 rounded-xl">
-                <DollarSign className="h-6 w-6 text-emerald-600" />
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <DollarSign className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
@@ -186,7 +186,7 @@ export function ClientHistoryPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-12 w-12 ring-2 ring-white shadow">
-                      <AvatarFallback className="bg-emerald-500 text-white font-medium">
+                      <AvatarFallback className="bg-blue-500 text-white font-medium">
                         {assignment.workers?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                       </AvatarFallback>
                     </Avatar>
@@ -223,7 +223,7 @@ export function ClientHistoryPage() {
                   </div>
 
                   <div className="text-right flex flex-col items-end gap-2">
-                    <Badge className="bg-emerald-500">Concluído</Badge>
+                    <Badge className="bg-blue-500">Concluído</Badge>
                     <p className="text-xl font-bold text-slate-900">R$ {calculateCost(assignment).toFixed(2)}</p>
                     <p className="text-xs text-muted-foreground">
                       {calculateHours(assignment).toFixed(1)}h | R$ {assignment.jobs?.daily_rate}/dia

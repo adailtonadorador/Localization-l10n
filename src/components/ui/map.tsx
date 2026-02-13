@@ -399,7 +399,7 @@ export function LocationMap({
         </MapContainer>
       </div>
       <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-        <span className="inline-block w-3 h-3 bg-emerald-500 rounded-full"></span>
+        <span className="inline-block w-3 h-3 bg-blue-500 rounded-full"></span>
         Local de trabalho
         {userCoordinates && (
           <>

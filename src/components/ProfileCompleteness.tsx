@@ -94,7 +94,7 @@ export function ProfileCompleteness({
         className={cn(
           "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
           isComplete
-            ? "bg-emerald-100 text-emerald-700"
+            ? "bg-blue-100 text-blue-700"
             : hasRequiredMissing
             ? "bg-amber-100 text-amber-700"
             : "bg-blue-100 text-blue-700",
@@ -121,7 +121,7 @@ export function ProfileCompleteness({
             className={cn(
               "font-medium",
               isComplete
-                ? "text-emerald-600"
+                ? "text-blue-600"
                 : hasRequiredMissing
                 ? "text-amber-600"
                 : "text-blue-600"
@@ -135,7 +135,7 @@ export function ProfileCompleteness({
             className={cn(
               "h-full transition-all duration-500 rounded-full",
               isComplete
-                ? "bg-emerald-500"
+                ? "bg-blue-500"
                 : hasRequiredMissing
                 ? "bg-amber-500"
                 : "bg-blue-500"
@@ -163,7 +163,7 @@ export function ProfileCompleteness({
             className={cn(
               "text-2xl font-bold",
               isComplete
-                ? "text-emerald-600"
+                ? "text-blue-600"
                 : hasRequiredMissing
                 ? "text-amber-600"
                 : "text-blue-600"
@@ -177,7 +177,7 @@ export function ProfileCompleteness({
             className={cn(
               "h-full transition-all duration-500 rounded-full",
               isComplete
-                ? "bg-emerald-500"
+                ? "bg-blue-500"
                 : hasRequiredMissing
                 ? "bg-amber-500"
                 : "bg-blue-500"
@@ -189,12 +189,12 @@ export function ProfileCompleteness({
 
       {/* Status message */}
       {isComplete ? (
-        <div className="p-4 bg-emerald-50 border-b border-emerald-100">
-          <div className="flex items-center gap-2 text-emerald-700">
+        <div className="p-4 bg-blue-50 border-b border-blue-100">
+          <div className="flex items-center gap-2 text-blue-700">
             <CheckCircle2 className="h-5 w-5" />
             <span className="font-medium">Perfil completo!</span>
           </div>
-          <p className="text-sm text-emerald-600 mt-1">
+          <p className="text-sm text-blue-600 mt-1">
             Seu perfil está 100% preenchido. Você está pronto para se candidatar a vagas.
           </p>
         </div>
@@ -265,7 +265,7 @@ export function ProfileCompleteness({
                     key={field.key}
                     className="flex items-center gap-2 text-sm text-slate-500"
                   >
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <CheckCircle2 className="h-4 w-4 text-blue-500" />
                     {field.label}
                   </div>
                 ))}

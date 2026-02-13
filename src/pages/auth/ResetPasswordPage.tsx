@@ -84,10 +84,10 @@ export function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
         {/* Background decorations */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
+          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200/30 rounded-full blur-3xl" />
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl" />
         </div>
 
@@ -95,23 +95,21 @@ export function ResetPasswordPage() {
           {/* Logo */}
           <div className="text-center mb-8">
             <Link to="/" className="inline-flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-600/25">
-                <span className="text-3xl font-bold text-white">S</span>
-              </div>
+              <img src="/logo.png" alt="Sama Conecta" className="w-16 h-16 object-contain" />
             </Link>
           </div>
 
           <Card className="border-0 shadow-xl shadow-slate-200/50 backdrop-blur-sm bg-white/90">
             <CardContent className="pt-8 pb-8 text-center">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="h-8 w-8 text-blue-600" />
               </div>
               <h2 className="text-xl font-bold text-slate-900 mb-2">Senha atualizada!</h2>
               <p className="text-slate-600 mb-6">
                 Sua senha foi alterada com sucesso. Agora você pode fazer login com sua nova senha.
               </p>
               <Link to="/login">
-                <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+                <Button className="gap-2 bg-[#0A2A5A] hover:bg-[#082347]">
                   Ir para o login
                 </Button>
               </Link>
@@ -124,10 +122,10 @@ export function ResetPasswordPage() {
 
   if (!sessionReady) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
         {/* Background decorations */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
+          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200/30 rounded-full blur-3xl" />
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl" />
         </div>
 
@@ -135,9 +133,7 @@ export function ResetPasswordPage() {
           {/* Logo */}
           <div className="text-center mb-8">
             <Link to="/" className="inline-flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-600/25">
-                <span className="text-3xl font-bold text-white">S</span>
-              </div>
+              <img src="/logo.png" alt="Sama Conecta" className="w-16 h-16 object-contain" />
             </Link>
           </div>
 
@@ -152,7 +148,7 @@ export function ResetPasswordPage() {
               </p>
               <div className="flex flex-col gap-3">
                 <Link to="/forgot-password">
-                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
+                  <Button className="w-full bg-[#0A2A5A] hover:bg-[#082347]">
                     Solicitar novo link
                   </Button>
                 </Link>
@@ -171,10 +167,10 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200/30 rounded-full blur-3xl" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl" />
       </div>
 
@@ -182,12 +178,10 @@ export function ResetPasswordPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-600/25">
-              <span className="text-3xl font-bold text-white">S</span>
-            </div>
+            <img src="/logo.png" alt="Sama Conecta" className="w-16 h-16 object-contain" />
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">SAMA</h1>
-              <p className="text-sm text-slate-500">Trabalhos Temporários</p>
+              <h1 className="text-2xl font-bold text-[#0A2A5A]">Sama Conecta</h1>
+              <p className="text-sm text-slate-500">Conectando Oportunidades</p>
             </div>
           </Link>
         </div>
@@ -223,7 +217,7 @@ export function ResetPasswordPage() {
                     required
                     disabled={loading}
                     autoComplete="new-password"
-                    className="pl-10 pr-10 h-11 bg-white border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 text-base"
+                    className="pl-10 pr-10 h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500 text-base"
                   />
                   <button
                     type="button"
@@ -248,7 +242,7 @@ export function ResetPasswordPage() {
                     required
                     disabled={loading}
                     autoComplete="new-password"
-                    className="pl-10 h-11 bg-white border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 text-base"
+                    className="pl-10 h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500 text-base"
                   />
                 </div>
               </div>
@@ -257,7 +251,7 @@ export function ResetPasswordPage() {
             <CardFooter className="flex flex-col gap-4 pt-2">
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-medium bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all"
+                className="w-full h-11 text-base font-medium bg-[#0A2A5A] hover:bg-[#082347] shadow-lg shadow-[#0A2A5A]/25 hover:shadow-[#0A2A5A]/40 transition-all"
                 disabled={loading}
               >
                 {loading ? (

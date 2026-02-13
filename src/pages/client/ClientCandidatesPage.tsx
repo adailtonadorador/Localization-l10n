@@ -131,7 +131,7 @@ export function ClientCandidatesPage() {
         {/* Avatar */}
         <Avatar className="h-10 w-10 shrink-0">
           <AvatarImage src={worker?.users?.avatar_url || ''} className="object-cover" />
-          <AvatarFallback className="text-sm bg-emerald-600 text-white">
+          <AvatarFallback className="text-sm bg-[#0A2A5A] text-white">
             {initials}
           </AvatarFallback>
         </Avatar>

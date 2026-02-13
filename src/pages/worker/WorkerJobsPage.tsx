@@ -552,7 +552,7 @@ export function WorkerJobsPage() {
           {selectedJob && (
             <>
               {/* Header */}
-              <div className="p-6 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+              <div className="p-6 bg-gradient-to-r from-blue-500 to-[#0A2A5A] text-white">
                 <div className="flex items-start justify-between">
                   <div>
                     <h2 className="text-xl font-bold mb-1">{selectedJob.title}</h2>
@@ -643,7 +643,7 @@ export function WorkerJobsPage() {
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {(selectedJob.dates && selectedJob.dates.length > 0 ? selectedJob.dates : [selectedJob.date]).map((date, index) => (
-                      <Badge key={index} variant="outline" className="bg-emerald-50 border-emerald-200 text-emerald-700">
+                      <Badge key={index} variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
                         {formatDate(date)}
                       </Badge>
                     ))}
@@ -660,7 +660,7 @@ export function WorkerJobsPage() {
                 ) : (
                   <div className="pt-4 border-t">
                     <Button
-                      className="w-full gap-2 bg-emerald-500 hover:bg-emerald-600"
+                      className="w-full gap-2 bg-[#4A90E2] hover:bg-[#0A2A5A]"
                       onClick={handleAssignToMe}
                       disabled={assigning}
                     >

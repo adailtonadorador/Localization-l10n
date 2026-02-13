@@ -135,7 +135,7 @@ export function BottomNavBar() {
                          flex-1 h-full gap-0.5 relative
                          transition-colors duration-150
                          active:scale-95 transform
-                         ${isActive ? 'text-emerald-600' : 'text-slate-400'}`}
+                         ${isActive ? 'text-[#0A2A5A]' : 'text-slate-400'}`}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
             >
@@ -157,7 +157,7 @@ export function BottomNavBar() {
               </span>
               {isActive && (
                 <span className="absolute -bottom-0 left-1/2 -translate-x-1/2
-                                w-1 h-1 bg-emerald-600 rounded-full" />
+                                w-1 h-1 bg-[#0A2A5A] rounded-full" />
               )}
             </Link>
           );

@@ -206,7 +206,7 @@ export function AdminClientDetailPage() {
   function getStatusBadge(status: string) {
     switch (status) {
       case 'open':
-        return <Badge className="bg-emerald-500">Aberta</Badge>;
+        return <Badge className="bg-blue-500">Aberta</Badge>;
       case 'assigned':
         return <Badge className="bg-purple-500 text-white">Atribuída</Badge>;
       case 'in_progress':
@@ -535,15 +535,15 @@ export function AdminClientDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-emerald-600 font-medium">Abertas</p>
+                <p className="text-sm text-blue-600 font-medium">Abertas</p>
                 <p className="text-3xl font-bold">{jobStats.open}</p>
               </div>
-              <div className="p-3 bg-emerald-100 rounded-xl">
-                <Clock className="h-6 w-6 text-emerald-600" />
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <Clock className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
@@ -634,7 +634,7 @@ export function AdminClientDetailPage() {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right text-sm">
-                            <p className="font-bold text-lg text-emerald-600">R$ {job.daily_rate}/dia</p>
+                            <p className="font-bold text-lg text-[#4A90E2]">R$ {job.daily_rate}/dia</p>
                             <p className="text-muted-foreground">
                               {job.job_assignments?.length || 0}/{job.required_workers} trabalhador(es)
                             </p>
@@ -1059,7 +1059,7 @@ export function AdminClientDetailPage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Valor/Dia</p>
-                    <p className="font-medium text-emerald-600">R$ {selectedJob.daily_rate}</p>
+                    <p className="font-medium text-[#4A90E2]">R$ {selectedJob.daily_rate}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Trabalhadores</p>

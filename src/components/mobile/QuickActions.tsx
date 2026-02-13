@@ -27,8 +27,8 @@ export function QuickActions({ profileCompleteness }: QuickActionsProps) {
       label: 'Ver Vagas',
       icon: Briefcase,
       href: '/worker/jobs',
-      color: 'text-emerald-600',
-      bgColor: 'bg-emerald-100',
+      color: 'text-[#0A2A5A]',
+      bgColor: 'bg-blue-100',
       show: true
     },
     {

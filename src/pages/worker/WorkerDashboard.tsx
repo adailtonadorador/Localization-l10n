@@ -667,18 +667,18 @@ export function WorkerDashboard() {
         <>
           {/* Desktop: Stats Cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
-            <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardDescription className="text-emerald-600 font-medium">Total de Trabalhos</CardDescription>
-                  <div className="p-2 bg-emerald-100 rounded-lg">
-                    <Briefcase className="h-4 w-4 text-emerald-600" />
+                  <CardDescription className="text-[#0A2A5A] font-medium">Total de Trabalhos</CardDescription>
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Briefcase className="h-4 w-4 text-[#0A2A5A]" />
                   </div>
                 </div>
                 <CardTitle className="text-3xl font-bold">{stats.totalJobs}</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="flex items-center gap-1 text-xs text-emerald-600">
+                <div className="flex items-center gap-1 text-xs text-[#0A2A5A]">
                   <TrendingUp className="h-3 w-3" />
                   <span>Trabalhos realizados</span>
                 </div>
@@ -743,7 +743,7 @@ export function WorkerDashboard() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-slate-700">Próximos Trabalhos</h3>
-            <Link to="/worker/my-jobs" className="text-xs text-emerald-600 font-medium">
+            <Link to="/worker/my-jobs" className="text-xs text-[#0A2A5A] font-medium">
               Ver todos
             </Link>
           </div>
@@ -763,14 +763,14 @@ export function WorkerDashboard() {
                     </div>
                     <Badge
                       variant={assignment.status === 'confirmed' ? 'default' : 'secondary'}
-                      className={`text-[10px] ${assignment.status === 'confirmed' ? 'bg-emerald-500' : ''}`}
+                      className={`text-[10px] ${assignment.status === 'confirmed' ? 'bg-blue-500' : ''}`}
                     >
                       {assignment.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
                     </Badge>
                   </div>
                   <div className="space-y-1.5 text-xs text-slate-500">
                     <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-emerald-500" />
+                      <Calendar className="h-3.5 w-3.5 text-blue-500" />
                       <span>{formatDate(assignment.jobs.date)}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -783,7 +783,7 @@ export function WorkerDashboard() {
                     </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="font-bold text-emerald-600">R$ {assignment.jobs.daily_rate}/dia</span>
+                    <span className="font-bold text-[#0A2A5A]">R$ {assignment.jobs.daily_rate}/dia</span>
                     <span className="text-xs text-slate-400">Toque para detalhes</span>
                   </div>
                 </div>
@@ -803,7 +803,7 @@ export function WorkerDashboard() {
                   <CardTitle className="text-lg">Próximos Trabalhos</CardTitle>
                   <CardDescription>Trabalhos confirmados para os próximos dias</CardDescription>
                 </div>
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                <CheckCircle2 className="h-5 w-5 text-blue-500" />
               </div>
             </CardHeader>
             <CardContent>
@@ -837,11 +837,11 @@ export function WorkerDashboard() {
                           <div className="text-right flex flex-col items-end gap-2">
                             <Badge
                               variant={assignment.status === 'confirmed' ? 'default' : 'secondary'}
-                              className={assignment.status === 'confirmed' ? 'bg-emerald-500' : ''}
+                              className={assignment.status === 'confirmed' ? 'bg-blue-500' : ''}
                             >
                               {assignment.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
                             </Badge>
-                            <p className="font-bold text-lg text-emerald-600">
+                            <p className="font-bold text-lg text-[#0A2A5A]">
                               R$ {assignment.jobs.daily_rate}/dia
                             </p>
                           </div>
@@ -925,7 +925,7 @@ export function WorkerDashboard() {
                         <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
                           {job.required_workers} vaga(s)
                         </Badge>
-                        <p className="font-bold text-lg text-emerald-600">
+                        <p className="font-bold text-lg text-[#0A2A5A]">
                           R$ {job.daily_rate}/dia
                         </p>
                         <div className="flex items-center gap-2">
@@ -996,7 +996,7 @@ export function WorkerDashboard() {
                         <Clock className="h-3 w-3 mr-1" />
                         Aguardando
                       </Badge>
-                      <span className="font-bold text-emerald-600">R$ {application.jobs.daily_rate}/dia</span>
+                      <span className="font-bold text-[#0A2A5A]">R$ {application.jobs.daily_rate}/dia</span>
                     </div>
                   </div>
                 ))}
@@ -1012,7 +1012,7 @@ export function WorkerDashboard() {
           {selectedJob && (
             <>
               {/* Header */}
-              <div className="p-6 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+              <div className="p-6 bg-gradient-to-r from-blue-500 to-[#0A2A5A] text-white">
                 <div className="flex items-start justify-between">
                   <div>
                     <h2 className="text-xl font-bold mb-1">{selectedJob.title}</h2>
@@ -1103,7 +1103,7 @@ export function WorkerDashboard() {
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {(selectedJob.dates && selectedJob.dates.length > 0 ? selectedJob.dates : [selectedJob.date]).map((date, index) => (
-                      <Badge key={index} variant="outline" className="bg-emerald-50 border-emerald-200 text-emerald-700">
+                      <Badge key={index} variant="outline" className="bg-blue-50 border-blue-200 text-[#082347]">
                         {formatDate(date)}
                       </Badge>
                     ))}
@@ -1113,7 +1113,7 @@ export function WorkerDashboard() {
                 {/* Action button */}
                 <div className="pt-4 border-t">
                   <Button
-                    className="w-full gap-2 bg-emerald-500 hover:bg-emerald-600"
+                    className="w-full gap-2 bg-blue-500 hover:bg-[#0A2A5A]"
                     onClick={() => {
                       setDetailsOpen(false);
                       handleAcceptJob(selectedJob.id);
@@ -1142,7 +1142,7 @@ export function WorkerDashboard() {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge className={`text-xs ${selectedAssignment.status === 'confirmed' ? 'bg-emerald-500' : 'bg-white/20'}`}>
+                      <Badge className={`text-xs ${selectedAssignment.status === 'confirmed' ? 'bg-blue-500' : 'bg-white/20'}`}>
                         {selectedAssignment.status === 'confirmed' ? 'Confirmado' : 'Pendente'}
                       </Badge>
                     </div>

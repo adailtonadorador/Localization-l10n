@@ -136,7 +136,7 @@ export function AdminClientsPage() {
           <p className="text-muted-foreground">Gerencie empresas e suas vagas</p>
         </div>
         <Link to="/admin/clients/new">
-          <Button className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25">
+          <Button className="bg-[#0A2A5A] hover:bg-[#082347] shadow-lg shadow-[#0A2A5A]/25">
             <Plus className="h-4 w-4 mr-2" />
             Cadastrar Cliente
           </Button>
@@ -159,15 +159,15 @@ export function AdminClientsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-emerald-600 font-medium">Com Vagas Ativas</p>
+                <p className="text-sm text-blue-600 font-medium">Com Vagas Ativas</p>
                 <p className="text-3xl font-bold">{clientsWithJobs}</p>
               </div>
-              <div className="p-3 bg-emerald-100 rounded-xl">
-                <Briefcase className="h-6 w-6 text-emerald-600" />
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <Briefcase className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
@@ -266,7 +266,7 @@ export function AdminClientsPage() {
                             <p className="text-xs text-muted-foreground">Vagas</p>
                           </div>
                           {jobStats.open > 0 && (
-                            <Badge className="bg-emerald-500 gap-1">
+                            <Badge className="bg-blue-500 gap-1">
                               <Clock className="h-3 w-3" />
                               {jobStats.open} abertas
                             </Badge>
@@ -292,7 +292,7 @@ export function AdminClientsPage() {
                     <div className="flex md:hidden items-center gap-2 mt-4 pt-4 border-t">
                       <Badge variant="outline">{jobStats.total} vagas</Badge>
                       {jobStats.open > 0 && (
-                        <Badge className="bg-emerald-500">{jobStats.open} abertas</Badge>
+                        <Badge className="bg-blue-500">{jobStats.open} abertas</Badge>
                       )}
                       {jobStats.completed > 0 && (
                         <Badge variant="secondary">{jobStats.completed} concluídas</Badge>

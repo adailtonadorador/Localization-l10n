@@ -38,8 +38,8 @@ export function PWAUpdatePrompt() {
   return (
     <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-lg p-4 z-50 animate-in slide-in-from-bottom-4">
       <div className="flex items-start gap-3">
-        <div className="p-2 bg-emerald-100 rounded-lg">
-          <RefreshCw className="h-5 w-5 text-emerald-600" />
+        <div className="p-2 bg-blue-100 rounded-lg">
+          <RefreshCw className="h-5 w-5 text-[#0A2A5A]" />
         </div>
         <div className="flex-1">
           <h4 className="font-semibold text-slate-900">Nova versão disponível</h4>

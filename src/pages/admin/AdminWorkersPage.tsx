@@ -630,7 +630,7 @@ export function AdminWorkersPage() {
                       <div className="flex items-center gap-4">
                         <Avatar className={`h-12 w-12 ring-2 ring-white shadow ${worker.is_active === false ? 'opacity-60' : ''}`}>
                           <AvatarImage src={worker.users?.avatar_url || ''} />
-                          <AvatarFallback className={`${worker.is_active === false ? 'bg-slate-400' : 'bg-emerald-500'} text-white font-medium`}>
+                          <AvatarFallback className={`${worker.is_active === false ? 'bg-slate-400' : 'bg-blue-500'} text-white font-medium`}>
                             {worker.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                           </AvatarFallback>
                         </Avatar>
@@ -693,7 +693,7 @@ export function AdminWorkersPage() {
                             {worker.documents_verified && worker.approval_status === 'approved' && worker.is_active !== false && (
                               <>
                                 <span>•</span>
-                                <span className="text-emerald-600 flex items-center gap-1">
+                                <span className="text-blue-600 flex items-center gap-1">
                                   <CheckCircle2 className="h-3 w-3" />
                                   Verificado
                                 </span>
@@ -745,7 +745,7 @@ export function AdminWorkersPage() {
                           {!worker.documents_verified && worker.is_active !== false && worker.approval_status !== 'pending' && (
                             <Button
                               size="sm"
-                              className="bg-emerald-500 hover:bg-emerald-600 gap-1"
+                              className="bg-blue-500 hover:bg-blue-600 gap-1"
                               onClick={() => handleVerifyWorker(worker.id)}
                             >
                               <CheckCircle2 className="h-4 w-4" />
@@ -824,7 +824,7 @@ export function AdminWorkersPage() {
                                       ? 'bg-blue-500'
                                       : assignment.jobs?.status === 'assigned'
                                       ? 'bg-purple-500'
-                                      : 'bg-emerald-500'
+                                      : 'bg-blue-500'
                                   }`}
                                 >
                                   {assignment.jobs?.status === 'in_progress'

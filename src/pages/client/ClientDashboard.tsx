@@ -175,7 +175,7 @@ export function ClientDashboard() {
   function getStatusBadge(status: string) {
     switch (status) {
       case 'open':
-        return <Badge className="bg-emerald-500">Aberta</Badge>;
+        return <Badge className="bg-blue-500">Aberta</Badge>;
       case 'assigned':
         return <Badge className="bg-purple-500 text-white">Atribuída</Badge>;
       case 'in_progress':
@@ -249,18 +249,18 @@ export function ClientDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardDescription className="text-emerald-600 font-medium">Trabalhadores Alocados</CardDescription>
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <Users className="h-4 w-4 text-emerald-600" />
+              <CardDescription className="text-blue-600 font-medium">Trabalhadores Alocados</CardDescription>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="h-4 w-4 text-blue-600" />
               </div>
             </div>
             <CardTitle className="text-3xl font-bold">{stats.totalWorkers}</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex items-center gap-1 text-xs text-emerald-600">
+            <div className="flex items-center gap-1 text-xs text-blue-600">
               <UserCheck className="h-3 w-3" />
               <span>Total em suas vagas</span>
             </div>
@@ -323,7 +323,7 @@ export function ClientDashboard() {
                     </div>
                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all"
+                        className="h-full bg-gradient-to-r from-blue-500 to-blue-500 rounded-full transition-all"
                         style={{ width: `${Math.min((item.completed / Math.max(item.workers, 1)) * 100, 100)}%` }}
                       />
                     </div>
@@ -398,7 +398,7 @@ export function ClientDashboard() {
                           <Users className="h-3 w-3 mr-1" />
                           {job.job_assignments?.length || 0}/{job.required_workers}
                         </Badge>
-                        <p className="font-bold text-lg text-emerald-600">
+                        <p className="font-bold text-lg text-[#4A90E2]">
                           R$ {job.daily_rate}/dia
                         </p>
                         <Button

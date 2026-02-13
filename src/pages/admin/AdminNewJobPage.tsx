@@ -605,12 +605,12 @@ export function AdminNewJobPage() {
                 </div>
 
                 {dailyRate && startTime && endTime && (
-                  <div className="bg-emerald-50 rounded-lg p-3 mt-4">
-                    <p className="text-xs text-emerald-600 font-medium mb-1">Valor por trabalhador/dia:</p>
-                    <p className="text-xl font-bold text-emerald-700">
+                  <div className="bg-blue-50 rounded-lg p-3 mt-4">
+                    <p className="text-xs text-blue-600 font-medium mb-1">Valor por trabalhador/dia:</p>
+                    <p className="text-xl font-bold text-blue-700">
                       R$ {parseFloat(dailyRate).toFixed(2)}
                     </p>
-                    <p className="text-xs text-emerald-600">
+                    <p className="text-xs text-blue-600">
                       Jornada: {calculateHours(startTime, endTime).toFixed(1)}h
                     </p>
                   </div>

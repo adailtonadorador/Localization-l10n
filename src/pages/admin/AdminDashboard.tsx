@@ -200,7 +200,7 @@ export function AdminDashboard() {
   function getStatusBadge(status: string) {
     switch (status) {
       case 'open':
-        return <Badge className="bg-emerald-500">Aberta</Badge>;
+        return <Badge className="bg-blue-500">Aberta</Badge>;
       case 'assigned':
         return <Badge className="bg-purple-500 text-white">Atribuída</Badge>;
       case 'in_progress':
@@ -293,12 +293,12 @@ export function AdminDashboard() {
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
         <Link to="/admin/workers">
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white hover:shadow-md transition-shadow cursor-pointer">
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white hover:shadow-md transition-shadow cursor-pointer">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardDescription className="text-emerald-600 font-medium">Trabalhadores</CardDescription>
-                <div className="p-2 bg-emerald-100 rounded-lg">
-                  <Users className="h-4 w-4 text-emerald-600" />
+                <CardDescription className="text-blue-600 font-medium">Trabalhadores</CardDescription>
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="h-4 w-4 text-blue-600" />
                 </div>
               </div>
               <CardTitle className="text-3xl font-bold">{stats.totalWorkers}</CardTitle>
@@ -373,7 +373,7 @@ export function AdminDashboard() {
             {totalJobsForChart > 0 ? (
               <div className="space-y-4">
                 {[
-                  { label: 'Abertas', count: jobsByStatus.open, color: 'bg-emerald-500' },
+                  { label: 'Abertas', count: jobsByStatus.open, color: 'bg-blue-500' },
                   { label: 'Atribuídas', count: jobsByStatus.assigned, color: 'bg-purple-500' },
                   { label: 'Em Andamento', count: jobsByStatus.in_progress, color: 'bg-blue-500' },
                   { label: 'Concluídas', count: jobsByStatus.completed, color: 'bg-slate-500' },
@@ -570,9 +570,9 @@ export function AdminDashboard() {
             </Link>
 
             <Link to="/admin/workers">
-              <div className="flex items-center justify-between p-4 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors cursor-pointer">
+              <div className="flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors cursor-pointer">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
                     <Users className="h-5 w-5 text-white" />
                   </div>
                   <div>
@@ -585,7 +585,7 @@ export function AdminDashboard() {
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-emerald-500" />
+                <ChevronRight className="h-5 w-5 text-blue-500" />
               </div>
             </Link>
 

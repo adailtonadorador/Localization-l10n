@@ -53,9 +53,9 @@ const menuItems = {
 };
 
 const roleColors = {
-  worker: 'bg-emerald-500',
-  admin: 'bg-purple-500',
-  client: 'bg-blue-500',
+  worker: 'bg-[#0A2A5A]',
+  admin: 'bg-[#0A2A5A]',
+  client: 'bg-[#0A2A5A]',
 };
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -126,8 +126,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b px-6">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <img src="/logo.png" alt="Sama Conect" className="w-9 h-9 object-contain" />
-            <span className="text-xl font-bold text-emerald-700">Sama Conect</span>
+            <img src="/logo.png" alt="Sama Conecta" className="w-9 h-9 object-contain" />
+            <span className="text-xl font-bold text-[#0A2A5A]">Sama Conecta</span>
           </Link>
           <button
             className="md:hidden p-2 hover:bg-slate-100 rounded-lg"
@@ -192,8 +192,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             // Mobile Header - Simplified
             <>
               <Link to="/" className="flex items-center gap-2">
-                <img src="/logo.png" alt="Sama Conect" className="w-8 h-8 object-contain" />
-                <span className="text-lg font-bold text-emerald-700">Sama Conect</span>
+                <img src="/logo.png" alt="Sama Conecta" className="w-8 h-8 object-contain" />
+                <span className="text-lg font-bold text-[#0A2A5A]">Sama Conecta</span>
               </Link>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" className="relative h-9 w-9">

@@ -11,10 +11,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'logo.png', 'apple-touch-icon-180x180.png'],
       manifest: {
-        name: 'Sama Conect',
-        short_name: 'Sama Conect',
+        name: 'Sama Conecta',
+        short_name: 'Sama Conecta',
         description: 'Conectando trabalhadores e empresas',
-        theme_color: '#10b981',
+        theme_color: '#0A2A5A',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',

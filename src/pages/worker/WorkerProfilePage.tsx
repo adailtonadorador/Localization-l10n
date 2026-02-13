@@ -256,7 +256,7 @@ export function WorkerProfilePage() {
               <p className="text-muted-foreground">{profile?.email}</p>
               <div className="mt-2">
                 {workerProfile?.documents_verified ? (
-                  <Badge className="bg-emerald-500 gap-1">
+                  <Badge className="bg-blue-500 gap-1">
                     <Shield className="h-3 w-3" />
                     Verificado
                   </Badge>
@@ -274,14 +274,14 @@ export function WorkerProfilePage() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-100 rounded-xl">
-                <Briefcase className="h-6 w-6 text-emerald-600" />
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <Briefcase className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-emerald-600">{workerProfile?.total_jobs || 0}</p>
+                <p className="text-3xl font-bold text-blue-600">{workerProfile?.total_jobs || 0}</p>
                 <p className="text-sm text-muted-foreground">Trabalhos Realizados</p>
               </div>
             </div>
@@ -503,7 +503,7 @@ export function WorkerProfilePage() {
                     variant={skills.includes(skill) ? 'default' : 'outline'}
                     className={`cursor-pointer transition-all ${
                       skills.includes(skill)
-                        ? 'bg-emerald-500 hover:bg-emerald-600'
+                        ? 'bg-blue-500 hover:bg-blue-600'
                         : 'hover:bg-slate-100'
                     }`}
                     onClick={() => toggleSkill(skill)}
@@ -517,7 +517,7 @@ export function WorkerProfilePage() {
               <div className="flex flex-wrap gap-2">
                 {workerProfile?.skills && workerProfile.skills.length > 0 ? (
                   workerProfile.skills.map((skill) => (
-                    <Badge key={skill} className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                    <Badge key={skill} className="bg-blue-100 text-blue-700 hover:bg-blue-100">
                       {skill}
                     </Badge>
                   ))

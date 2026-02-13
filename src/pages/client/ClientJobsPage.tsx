@@ -132,7 +132,7 @@ export function ClientJobsPage() {
   function getStatusBadge(status: string) {
     switch (status) {
       case 'open':
-        return <Badge className="bg-emerald-500">Aberta</Badge>;
+        return <Badge className="bg-blue-500">Aberta</Badge>;
       case 'assigned':
         return <Badge className="bg-purple-500 text-white">Atribuída</Badge>;
       case 'in_progress':

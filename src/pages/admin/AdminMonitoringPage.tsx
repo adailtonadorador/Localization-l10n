@@ -581,7 +581,7 @@ export function AdminMonitoringPage() {
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-4 min-w-0">
                         <Avatar className="h-12 w-12 ring-2 ring-white shadow flex-shrink-0">
-                          <AvatarFallback className="bg-emerald-500 text-white font-medium">
+                          <AvatarFallback className="bg-blue-500 text-white font-medium">
                             {record.workers?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                           </AvatarFallback>
                         </Avatar>

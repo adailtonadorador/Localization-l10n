@@ -151,14 +151,14 @@ export function WorkerHistoryPage() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4 mb-8">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-100 rounded-xl">
-                <Briefcase className="h-6 w-6 text-emerald-600" />
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <Briefcase className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-emerald-600">{completedRecords.length}</p>
+                <p className="text-3xl font-bold text-blue-600">{completedRecords.length}</p>
                 <p className="text-sm text-muted-foreground">Trabalhos Concluídos</p>
               </div>
             </div>

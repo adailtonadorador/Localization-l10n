@@ -67,20 +67,20 @@ export function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50 flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center p-4 relative overflow-hidden">
         {/* Background decorations */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
+          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200/30 rounded-full blur-3xl" />
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-green-200/20 rounded-full blur-3xl" />
         </div>
 
         <div className="w-full max-w-md relative z-10">
           <Card className="border-0 shadow-xl shadow-slate-200/50 backdrop-blur-sm bg-white/90">
             <CardHeader className="text-center pb-2">
-              <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+              <div className="mx-auto w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-8 h-8 text-[#0A2A5A]" />
               </div>
-              <CardTitle className="text-2xl font-bold text-emerald-600">Conta criada com sucesso!</CardTitle>
+              <CardTitle className="text-2xl font-bold text-[#0A2A5A]">Conta criada com sucesso!</CardTitle>
               <CardDescription className="text-base mt-2">
                 Enviamos um e-mail de confirmação para você. Por favor, verifique sua caixa de entrada e clique no link para ativar sua conta.
               </CardDescription>
@@ -92,7 +92,7 @@ export function RegisterPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={() => navigate('/login')} className="w-full h-11 font-medium bg-emerald-600 hover:bg-emerald-700">
+              <Button onClick={() => navigate('/login')} className="w-full h-11 font-medium bg-[#0A2A5A] hover:bg-[#082347]">
                 <span className="flex items-center gap-2">
                   Ir para Login
                   <ArrowRight className="h-4 w-4" />
@@ -106,10 +106,10 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4 py-8 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4 py-8 relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200/30 rounded-full blur-3xl" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl" />
       </div>
 
@@ -117,12 +117,10 @@ export function RegisterPage() {
         {/* Logo */}
         <div className="text-center mb-6">
           <Link to="/" className="inline-flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-600/25">
-              <span className="text-2xl font-bold text-white">S</span>
-            </div>
+            <img src="/logo.png" alt="Sama Conecta" className="w-16 h-16 object-contain" />
             <div>
-              <h1 className="text-xl font-bold text-slate-900">SAMA</h1>
-              <p className="text-xs text-slate-500">Trabalhos Temporários</p>
+              <h1 className="text-xl font-bold text-[#0A2A5A]">Sama Conecta</h1>
+              <p className="text-xs text-slate-500">Conectando Oportunidades</p>
             </div>
           </Link>
         </div>
@@ -217,13 +215,13 @@ export function RegisterPage() {
                 </div>
               </div>
 
-              <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-sm text-emerald-700">
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-[#082347]">
                 <p>Após o cadastro, você completará seu perfil com telefone, CPF, PIX e endereço.</p>
               </div>
 
               <Button
                 type="submit"
-                className="w-full h-11 font-medium bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all"
+                className="w-full h-11 font-medium bg-[#0A2A5A] hover:bg-[#082347] shadow-lg shadow-[#0A2A5A]/25 hover:shadow-[#0A2A5A]/40 transition-all"
                 disabled={loading}
               >
                 {loading ? (
@@ -251,7 +249,7 @@ export function RegisterPage() {
             </div>
             <p className="text-sm text-slate-600 text-center">
               Já tem uma conta?{" "}
-              <Link to="/login" className="text-emerald-600 hover:text-emerald-700 font-semibold">
+              <Link to="/login" className="text-[#0A2A5A] hover:text-[#082347] font-semibold">
                 Entrar
               </Link>
             </p>

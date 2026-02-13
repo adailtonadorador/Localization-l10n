@@ -23,7 +23,7 @@ interface StatusConfig {
 const jobStatusConfig: Record<JobStatus, StatusConfig> = {
   open: {
     label: 'Aberta',
-    className: 'bg-emerald-500 text-white',
+    className: 'bg-blue-500 text-white',
   },
   assigned: {
     label: 'Atribuída',
@@ -50,7 +50,7 @@ const assignmentStatusConfig: Record<AssignmentStatus, StatusConfig> = {
   },
   confirmed: {
     label: 'Confirmado',
-    className: 'bg-emerald-500 text-white',
+    className: 'bg-blue-500 text-white',
   },
   completed: {
     label: 'Concluído',
@@ -73,7 +73,7 @@ const workRecordStatusConfig: Record<WorkRecordStatus, StatusConfig> = {
   },
   completed: {
     label: 'Concluído',
-    className: 'bg-emerald-500 text-white',
+    className: 'bg-blue-500 text-white',
   },
   absent: {
     label: 'Ausente',
@@ -88,7 +88,7 @@ const applicationStatusConfig: Record<ApplicationStatus, StatusConfig> = {
   },
   approved: {
     label: 'Aprovado',
-    className: 'bg-emerald-500 text-white',
+    className: 'bg-blue-500 text-white',
   },
   rejected: {
     label: 'Rejeitado',

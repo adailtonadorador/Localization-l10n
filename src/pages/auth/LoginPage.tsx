@@ -64,23 +64,21 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200/30 rounded-full blur-3xl" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-600/25">
-              <span className="text-3xl font-bold text-white">S</span>
-            </div>
+          <Link to="/" className="inline-flex flex-col items-center gap-3 hover:opacity-80 transition-opacity">
+            <img src="/logo.png" alt="Sama Conecta" className="w-20 h-20 object-contain" />
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">SAMA</h1>
-              <p className="text-sm text-slate-500">Trabalhos Temporários</p>
+              <h1 className="text-2xl font-bold text-[#0A2A5A]">Sama Conecta</h1>
+              <p className="text-sm text-slate-500">Conectando Oportunidades</p>
             </div>
           </Link>
         </div>
@@ -116,7 +114,7 @@ export function LoginPage() {
                     required
                     disabled={loading}
                     autoComplete="email"
-                    className="pl-10 h-11 bg-white border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 text-base"
+                    className="pl-10 h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500 text-base"
                   />
                 </div>
               </div>
@@ -124,7 +122,7 @@ export function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-sm font-medium text-slate-700">Senha</Label>
-                  <Link to="/forgot-password" className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">
+                  <Link to="/forgot-password" className="text-xs text-[#0A2A5A] hover:text-[#082347] font-medium">
                     Esqueceu a senha?
                   </Link>
                 </div>
@@ -139,7 +137,7 @@ export function LoginPage() {
                     required
                     disabled={loading}
                     autoComplete="current-password"
-                    className="pl-10 h-11 bg-white border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 text-base"
+                    className="pl-10 h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500 text-base"
                   />
                 </div>
               </div>
@@ -148,7 +146,7 @@ export function LoginPage() {
             <CardFooter className="flex flex-col gap-4 pt-2">
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-medium bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all"
+                className="w-full h-11 text-base font-medium bg-[#0A2A5A] hover:bg-[#082347] shadow-lg shadow-[#0A2A5A]/25 hover:shadow-[#0A2A5A]/40 transition-all"
                 disabled={loading}
               >
                 {loading ? (
@@ -175,7 +173,7 @@ export function LoginPage() {
 
               <p className="text-sm text-slate-600 text-center">
                 Não tem uma conta?{" "}
-                <Link to="/register" className="text-emerald-600 hover:text-emerald-700 font-semibold">
+                <Link to="/register" className="text-[#0A2A5A] hover:text-[#082347] font-semibold">
                   Cadastre-se grátis
                 </Link>
               </p>
