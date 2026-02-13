@@ -42,8 +42,8 @@ interface Withdrawal {
   job_id: string;
   workers: {
     id: string;
-    profiles: {
-      full_name: string;
+    users: {
+      name: string;
       email: string;
       phone: string | null;
     };
@@ -77,7 +77,7 @@ export function AdminWithdrawalsPage() {
     setLoading(true);
     try {
       const { data, error } = await supabaseUntyped
-        .from('job_assignments')
+        .from('withdrawal_history')
         .select(`
           id,
           withdrawal_reason,
@@ -86,8 +86,8 @@ export function AdminWithdrawalsPage() {
           job_id,
           workers (
             id,
-            profiles (
-              full_name,
+            users (
+              name,
               email,
               phone
             )
@@ -104,8 +104,6 @@ export function AdminWithdrawalsPage() {
             )
           )
         `)
-        .eq('status', 'withdrawn')
-        .not('withdrawn_at', 'is', null)
         .order('withdrawn_at', { ascending: false });
 
       if (error) throw error;
@@ -168,7 +166,7 @@ export function AdminWithdrawalsPage() {
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(w =>
-        w.workers?.profiles?.full_name?.toLowerCase().includes(search) ||
+        w.workers?.users?.name?.toLowerCase().includes(search) ||
         w.jobs?.title?.toLowerCase().includes(search) ||
         w.jobs?.clients?.company_name?.toLowerCase().includes(search) ||
         w.withdrawal_reason?.toLowerCase().includes(search)
@@ -307,10 +305,10 @@ export function AdminWithdrawalsPage() {
                       </div>
                       <div>
                         <p className="font-semibold text-slate-900">
-                          {withdrawal.workers?.profiles?.full_name || 'Trabalhador'}
+                          {withdrawal.workers?.users?.name || 'Trabalhador'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {withdrawal.workers?.profiles?.email}
+                          {withdrawal.workers?.users?.email}
                         </p>
                       </div>
                     </div>
@@ -400,10 +398,10 @@ export function AdminWithdrawalsPage() {
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Trabalhador</h4>
                 <div className="bg-slate-50 rounded-lg p-4">
-                  <p className="font-semibold">{selectedWithdrawal.workers?.profiles?.full_name}</p>
-                  <p className="text-sm text-muted-foreground">{selectedWithdrawal.workers?.profiles?.email}</p>
-                  {selectedWithdrawal.workers?.profiles?.phone && (
-                    <p className="text-sm text-muted-foreground">{selectedWithdrawal.workers?.profiles?.phone}</p>
+                  <p className="font-semibold">{selectedWithdrawal.workers?.users?.name}</p>
+                  <p className="text-sm text-muted-foreground">{selectedWithdrawal.workers?.users?.email}</p>
+                  {selectedWithdrawal.workers?.users?.phone && (
+                    <p className="text-sm text-muted-foreground">{selectedWithdrawal.workers?.users?.phone}</p>
                   )}
                 </div>
               </div>

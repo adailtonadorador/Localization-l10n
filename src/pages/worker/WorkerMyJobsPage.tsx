@@ -161,28 +161,38 @@ export function WorkerMyJobsPage() {
       }
 
       const assignment = assignments[0];
+      const withdrawnAt = new Date().toISOString();
 
-      // 2. Se ainda não foi marcado como withdrawn, atualizar
-      if (assignment.status !== 'withdrawn') {
-        const { error: assignmentError } = await supabaseUntyped
-          .from('job_assignments')
-          .update({
-            status: 'withdrawn',
-            withdrawal_reason: reason,
-            withdrawn_at: new Date().toISOString()
-          })
-          .eq('id', assignment.id)
-          .select();
+      // 2. Salvar no histórico de desistências
+      await supabaseUntyped
+        .from('withdrawal_history')
+        .insert({
+          job_assignment_id: assignment.id,
+          job_id: selectedJobForWithdrawal.job_id,
+          worker_id: profile.id,
+          withdrawal_reason: reason,
+          withdrawn_at: withdrawnAt
+        });
 
-        if (assignmentError) {
-          if (assignmentError.message?.includes('invalid input value') || assignmentError.code === '22P02') {
-            toast.error('Erro: Status de desistência não configurado no banco de dados.', {
-              description: 'Entre em contato com o administrador.'
-            });
-            return;
-          }
-          throw assignmentError;
+      // 3. Atualizar o assignment para status 'withdrawn'
+      const { error: assignmentError } = await supabaseUntyped
+        .from('job_assignments')
+        .update({
+          status: 'withdrawn',
+          withdrawal_reason: reason,
+          withdrawn_at: withdrawnAt
+        })
+        .eq('id', assignment.id)
+        .select();
+
+      if (assignmentError) {
+        if (assignmentError.message?.includes('invalid input value') || assignmentError.code === '22P02') {
+          toast.error('Erro: Status de desistência não configurado no banco de dados.', {
+            description: 'Entre em contato com o administrador.'
+          });
+          return;
         }
+        throw assignmentError;
       }
 
       // 3. Deletar todos os work_records associados a este job_id e worker_id

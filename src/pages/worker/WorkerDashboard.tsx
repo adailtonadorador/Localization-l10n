@@ -388,20 +388,46 @@ export function WorkerDashboard() {
         }
       }
 
-      // Criar assignment diretamente (atribuir vaga ao trabalhador)
-      const { error: assignError } = await supabaseUntyped.from('job_assignments').insert({
-        job_id: jobId,
-        worker_id: user?.id,
-        status: 'confirmed',
-      });
+      // Verificar se já existe um assignment (pode estar withdrawn)
+      const { data: existingAssignment } = await supabaseUntyped
+        .from('job_assignments')
+        .select('id, status')
+        .eq('job_id', jobId)
+        .eq('worker_id', user?.id)
+        .limit(1);
 
-      if (assignError) {
-        if (assignError.message.includes('duplicate')) {
-          toast.warning('Você já está atribuído a esta vaga.');
-        } else {
+      if (existingAssignment && existingAssignment.length > 0) {
+        // Atualizar assignment existente
+        const { error: updateError } = await supabaseUntyped
+          .from('job_assignments')
+          .update({
+            status: 'confirmed',
+            withdrawal_reason: null,
+            withdrawn_at: null
+          })
+          .eq('id', existingAssignment[0].id);
+
+        if (updateError) {
+          console.error('Update assignment error:', updateError);
           toast.error('Erro ao aceitar vaga. Tente novamente.');
+          return;
         }
-        return;
+      } else {
+        // Criar novo assignment
+        const { error: assignError } = await supabaseUntyped.from('job_assignments').insert({
+          job_id: jobId,
+          worker_id: user?.id,
+          status: 'confirmed',
+        });
+
+        if (assignError) {
+          if (assignError.message.includes('duplicate')) {
+            toast.warning('Você já está atribuído a esta vaga.');
+          } else {
+            toast.error('Erro ao aceitar vaga. Tente novamente.');
+          }
+          return;
+        }
       }
 
       // Criar work_records para cada dia da vaga
@@ -477,13 +503,26 @@ export function WorkerDashboard() {
     if (!selectedJobForWithdrawal || !user?.id) return;
 
     try {
-      // 1. Atualizar o assignment para status 'withdrawn'
+      const withdrawnAt = new Date().toISOString();
+
+      // 1. Salvar no histórico de desistências
+      await supabaseUntyped
+        .from('withdrawal_history')
+        .insert({
+          job_assignment_id: selectedJobForWithdrawal.id,
+          job_id: selectedJobForWithdrawal.job_id,
+          worker_id: user.id,
+          withdrawal_reason: reason,
+          withdrawn_at: withdrawnAt
+        });
+
+      // 2. Atualizar o assignment para status 'withdrawn'
       const { error: assignmentError } = await supabaseUntyped
         .from('job_assignments')
         .update({
           status: 'withdrawn',
           withdrawal_reason: reason,
-          withdrawn_at: new Date().toISOString()
+          withdrawn_at: withdrawnAt
         })
         .eq('id', selectedJobForWithdrawal.id)
         .select();
@@ -499,14 +538,14 @@ export function WorkerDashboard() {
         throw assignmentError;
       }
 
-      // 2. Deletar todos os work_records associados a este job_id e worker_id
+      // 3. Deletar todos os work_records associados a este job_id e worker_id
       await supabaseUntyped
         .from('work_records')
         .delete()
         .eq('job_id', selectedJobForWithdrawal.job_id)
         .eq('worker_id', user.id);
 
-      // 3. Verificar se ainda há outros trabalhadores atribuídos
+      // 4. Verificar se ainda há outros trabalhadores atribuídos
       const { count } = await supabaseUntyped
         .from('job_assignments')
         .select('*', { count: 'exact', head: true })

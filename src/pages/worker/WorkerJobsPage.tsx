@@ -219,17 +219,43 @@ export function WorkerJobsPage() {
         }
       }
 
-      // Criar assignment
-      const { error: assignError } = await supabaseUntyped.from('job_assignments').insert({
-        job_id: selectedJob.id,
-        worker_id: profile.id,
-        status: 'confirmed',
-      });
+      // Verificar se já existe um assignment (pode estar withdrawn)
+      const { data: existingAssignment } = await supabaseUntyped
+        .from('job_assignments')
+        .select('id, status')
+        .eq('job_id', selectedJob.id)
+        .eq('worker_id', profile.id)
+        .limit(1);
 
-      if (assignError) {
-        console.error('Assignment error:', assignError);
-        toast.error('Erro ao se atribuir à vaga. Tente novamente.');
-        return;
+      if (existingAssignment && existingAssignment.length > 0) {
+        // Atualizar assignment existente
+        const { error: updateError } = await supabaseUntyped
+          .from('job_assignments')
+          .update({
+            status: 'confirmed',
+            withdrawal_reason: null,
+            withdrawn_at: null
+          })
+          .eq('id', existingAssignment[0].id);
+
+        if (updateError) {
+          console.error('Update assignment error:', updateError);
+          toast.error('Erro ao se atribuir à vaga. Tente novamente.');
+          return;
+        }
+      } else {
+        // Criar novo assignment
+        const { error: assignError } = await supabaseUntyped.from('job_assignments').insert({
+          job_id: selectedJob.id,
+          worker_id: profile.id,
+          status: 'confirmed',
+        });
+
+        if (assignError) {
+          console.error('Assignment error:', assignError);
+          toast.error('Erro ao se atribuir à vaga. Tente novamente.');
+          return;
+        }
       }
 
       // Criar work_records para cada dia da vaga

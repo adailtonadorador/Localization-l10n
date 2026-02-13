@@ -62,8 +62,8 @@ interface RecentWithdrawal {
   withdrawal_reason: string;
   withdrawn_at: string;
   workers: {
-    profiles: {
-      full_name: string;
+    users: {
+      name: string;
     };
   };
   jobs: {
@@ -167,16 +167,16 @@ export function AdminDashboard() {
 
       setRecentClients(clientsData || []);
 
-      // Load recent withdrawals
+      // Load recent withdrawals from history
       const { data: withdrawalsData } = await supabaseUntyped
-        .from('job_assignments')
+        .from('withdrawal_history')
         .select(`
           id,
           withdrawal_reason,
           withdrawn_at,
           workers (
-            profiles (
-              full_name
+            users (
+              name
             )
           ),
           jobs (
@@ -186,8 +186,6 @@ export function AdminDashboard() {
             )
           )
         `)
-        .eq('status', 'withdrawn')
-        .not('withdrawn_at', 'is', null)
         .order('withdrawn_at', { ascending: false })
         .limit(5);
 
@@ -243,8 +241,8 @@ export function AdminDashboard() {
         </div>
 
         {/* Stats Cards Skeleton */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6 mb-8">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
+          {Array.from({ length: 5 }).map((_, i) => (
             <SkeletonStatsCard key={i} />
           ))}
         </div>
@@ -294,7 +292,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6 mb-8">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
         <Link to="/admin/workers">
           <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-white hover:shadow-md transition-shadow cursor-pointer">
             <CardHeader className="pb-2">
@@ -359,19 +357,6 @@ export function AdminDashboard() {
           </CardHeader>
         </Card>
 
-        <Link to="/admin/workers">
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-white hover:shadow-md transition-shadow cursor-pointer">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardDescription className="text-amber-600 font-medium">Pendentes</CardDescription>
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <AlertCircle className="h-4 w-4 text-amber-600" />
-                </div>
-              </div>
-              <CardTitle className="text-3xl font-bold">{stats.pendingVerifications}</CardTitle>
-            </CardHeader>
-          </Card>
-        </Link>
       </div>
 
       {/* Charts and Recent Activity */}
@@ -483,7 +468,7 @@ export function AdminDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-slate-900">
-                      {withdrawal.workers?.profiles?.full_name || 'Trabalhador'}
+                      {withdrawal.workers?.users?.name || 'Trabalhador'}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {withdrawal.jobs?.title} - {withdrawal.jobs?.clients?.company_name}
