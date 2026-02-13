@@ -643,6 +643,7 @@ export function WorkerDashboard() {
         <>
           <WelcomeCard
             userName={profile?.name || 'Usuário'}
+            avatarUrl={profile?.avatar_url}
             role="worker"
             profileCompleteness={profileCompleteness}
             approvalStatus={workerProfile?.approval_status}

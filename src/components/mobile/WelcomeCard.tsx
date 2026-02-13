@@ -9,6 +9,7 @@ import {
 
 interface WelcomeCardProps {
   userName: string;
+  avatarUrl?: string | null;
   role: 'worker' | 'admin' | 'client';
   profileCompleteness: number;
   approvalStatus?: 'approved' | 'pending' | 'rejected';
@@ -45,6 +46,7 @@ function formatCurrency(value: number): string {
 
 export function WelcomeCard({
   userName,
+  avatarUrl,
   role,
   profileCompleteness,
   approvalStatus,
@@ -83,10 +85,18 @@ export function WelcomeCard({
           </div>
           <div className="w-14 h-14 rounded-full bg-white/20
                           flex items-center justify-center
-                          ring-2 ring-white/30">
-            <span className="text-xl font-bold text-white">
-              {getInitials(userName)}
-            </span>
+                          ring-2 ring-white/30 overflow-hidden">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={userName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-xl font-bold text-white">
+                {getInitials(userName)}
+              </span>
+            )}
           </div>
         </div>
 
