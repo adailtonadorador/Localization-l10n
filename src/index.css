@@ -1,25 +1,43 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(216 80% 20%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(216 80% 20%);
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(216 80% 20%);
-  --color-primary: hsl(216 80% 20%);
+  /* Azul Primário - Mais vibrante */
+  --color-primary: hsl(216 92% 48%);
   --color-primary-foreground: hsl(0 0% 100%);
-  --color-secondary: hsl(212 72% 95%);
-  --color-secondary-foreground: hsl(216 80% 20%);
-  --color-muted: hsl(210 40% 96.1%);
-  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
-  --color-accent: hsl(212 72% 59%);
+
+  /* Backgrounds */
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(220 60% 20%);
+
+  /* Cards */
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(220 60% 20%);
+
+  /* Popovers */
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(220 60% 20%);
+
+  /* Secundário - Azul cyan vibrante */
+  --color-secondary: hsl(204 100% 95%);
+  --color-secondary-foreground: hsl(216 92% 35%);
+
+  /* Muted */
+  --color-muted: hsl(216 33% 94%);
+  --color-muted-foreground: hsl(220 16% 46%);
+
+  /* Acento - Laranja vibrante */
+  --color-accent: hsl(32 100% 55%);
   --color-accent-foreground: hsl(0 0% 100%);
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(210 40% 98%);
-  --color-border: hsl(214.3 31.8% 91.4%);
-  --color-input: hsl(214.3 31.8% 91.4%);
-  --color-ring: hsl(216 80% 20%);
+
+  /* Destructive */
+  --color-destructive: hsl(4 90% 58%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  /* Borders */
+  --color-border: hsl(216 30% 90%);
+  --color-input: hsl(216 30% 90%);
+  --color-ring: hsl(216 92% 48%);
+
   --radius: 0.5rem;
 }
 

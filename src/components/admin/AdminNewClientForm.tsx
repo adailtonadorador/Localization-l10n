@@ -663,7 +663,7 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
         <Button
           type="submit"
           disabled={loading || fetchingCnpj || fetchingCep}
-          className="flex-1 bg-[#0A2A5A] hover:bg-[#082347]"
+          className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
         >
           {loading ? (
             <span className="flex items-center gap-2">

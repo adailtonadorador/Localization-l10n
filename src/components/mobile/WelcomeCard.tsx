@@ -57,9 +57,9 @@ export function WelcomeCard({
   const firstName = userName?.split(' ')[0] || 'Usuário';
 
   const roleColors = {
-    worker: 'from-[#0A2A5A] to-[#4A90E2]',
-    admin: 'from-[#0A2A5A] to-[#4A90E2]',
-    client: 'from-[#0A2A5A] to-[#4A90E2]',
+    worker: 'from-blue-600 via-blue-700 to-cyan-600',
+    admin: 'from-purple-600 via-purple-700 to-indigo-600',
+    client: 'from-blue-700 via-indigo-700 to-purple-700',
   };
 
   const showProfileProgress = profileCompleteness < 100 && role === 'worker';
@@ -128,7 +128,7 @@ export function WelcomeCard({
           <div className="flex items-center justify-around text-center">
             <div className="flex-1">
               <div className="flex items-center justify-center gap-1.5 text-slate-900">
-                <Briefcase className="w-4 h-4 text-[#0A2A5A]" />
+                <Briefcase className="w-4 h-4 text-blue-700" />
                 <span className="font-bold text-lg">{stats.totalJobs}</span>
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">Trabalhos</p>

@@ -16,16 +16,16 @@ export function LandingPage() {
 
         <div className="container relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 bg-blue-100 text-[#082347] px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-medium mb-6">
               <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
               Mais de 5.000 trabalhadores cadastrados
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 mb-6">
               Conectamos{" "}
-              <span className="text-[#0A2A5A]">Talentos</span>{" "}
+              <span className="text-blue-700">Talentos</span>{" "}
               a{" "}
-              <span className="text-[#0A2A5A]">Oportunidades</span>
+              <span className="text-blue-700">Oportunidades</span>
             </h1>
 
             <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
@@ -35,7 +35,7 @@ export function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/register">
-                <Button size="lg" className="w-full sm:w-auto text-base px-8 h-12 rounded-xl bg-[#0A2A5A] hover:bg-[#082347] shadow-lg shadow-[#0A2A5A]/25 hover:shadow-xl hover:shadow-[#0A2A5A]/30 transition-all" >
+                <Button size="lg" className="w-full sm:w-auto text-base px-8 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-600/30 transition-all" >
                   <Users className="w-5 h-5 mr-2" />
                   Cadastre-se como Trabalhador
                 </Button>
@@ -65,7 +65,7 @@ export function LandingPage() {
       <section id="como-funciona" className="py-16 md:py-24 bg-white">
         <div className="container">
           <div className="text-center mb-12 md:mb-16">
-            <span className="text-[#0A2A5A] font-semibold text-sm uppercase tracking-wider">Simples e rápido</span>
+            <span className="text-blue-700 font-semibold text-sm uppercase tracking-wider">Simples e rápido</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-2 text-slate-900">Como Funciona</h2>
             <p className="text-slate-600 mt-4 max-w-2xl mx-auto">
               Em apenas 3 passos você começa a trabalhar ou contratar
@@ -100,7 +100,7 @@ export function LandingPage() {
                 <CardContent className="pt-10 pb-6 px-6">
                   <div className="absolute -top-5 left-6">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg ${
-                      item.color === 'blue' ? 'bg-[#0A2A5A] shadow-[#0A2A5A]/30' :
+                      item.color === 'blue' ? 'bg-gradient-to-r from-blue-600 to-blue-700 shadow-blue-600/30' :
                       item.color === 'blue' ? 'bg-blue-600 shadow-blue-600/30' :
                       'bg-purple-600 shadow-purple-600/30'
                     }`}>
@@ -122,7 +122,7 @@ export function LandingPage() {
         <div className="container">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center max-w-6xl mx-auto">
             <div>
-              <span className="text-[#0A2A5A] font-semibold text-sm uppercase tracking-wider">Para Trabalhadores</span>
+              <span className="text-blue-700 font-semibold text-sm uppercase tracking-wider">Para Trabalhadores</span>
               <h2 className="text-3xl md:text-4xl font-bold mt-2 mb-6 text-slate-900">
                 Encontre trabalhos que se encaixam na sua rotina
               </h2>
@@ -138,7 +138,7 @@ export function LandingPage() {
                   { icon: <MapPin className="w-5 h-5" />, title: "Trabalhos na sua região", desc: "Encontre oportunidades perto de você" },
                 ].map((item, index) => (
                   <div key={index} className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-200 hover:border-blue-200 hover:shadow-sm transition-all">
-                    <div className="p-2 bg-blue-100 rounded-lg text-[#0A2A5A]">
+                    <div className="p-2 bg-blue-100 rounded-lg text-blue-700">
                       {item.icon}
                     </div>
                     <div>
@@ -150,7 +150,7 @@ export function LandingPage() {
               </div>
 
               <Link to="/register" className="inline-block mt-8">
-                <Button size="lg" className="rounded-xl bg-[#0A2A5A] hover:bg-[#082347]">
+                <Button size="lg" className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
                   Cadastrar como Trabalhador
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
@@ -160,7 +160,7 @@ export function LandingPage() {
             <div className="relative order-first lg:order-last">
               <div className="aspect-square bg-gradient-to-br from-blue-100 to-blue-50 rounded-3xl flex items-center justify-center p-8">
                 <div className="text-center">
-                  <div className="w-28 h-28 mx-auto mb-6 bg-[#0A2A5A] rounded-full flex items-center justify-center shadow-xl shadow-[#0A2A5A]/30">
+                  <div className="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center shadow-xl shadow-blue-600/30">
                     <Users className="w-14 h-14 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold text-slate-900 mb-2">Milhares de vagas</h3>
@@ -227,7 +227,7 @@ export function LandingPage() {
       </section>
 
       {/* Stats */}
-      <section className="py-16 md:py-20 bg-[#0A2A5A] text-white relative overflow-hidden">
+      <section className="py-16 md:py-20 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-800 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIyIi8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
         <div className="container relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto text-center">
@@ -258,7 +258,7 @@ export function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/register">
-                <Button size="lg" className="w-full sm:w-auto text-base px-10 h-12 rounded-xl bg-[#0A2A5A] hover:bg-[#082347] shadow-lg shadow-[#0A2A5A]/25">
+                <Button size="lg" className="w-full sm:w-auto text-base px-10 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/25">
                   Cadastrar como Trabalhador
                 </Button>
               </Link>

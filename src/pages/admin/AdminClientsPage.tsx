@@ -136,7 +136,7 @@ export function AdminClientsPage() {
           <p className="text-muted-foreground">Gerencie empresas e suas vagas</p>
         </div>
         <Link to="/admin/clients/new">
-          <Button className="bg-[#0A2A5A] hover:bg-[#082347] shadow-lg shadow-[#0A2A5A]/25">
+          <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/25">
             <Plus className="h-4 w-4 mr-2" />
             Cadastrar Cliente
           </Button>

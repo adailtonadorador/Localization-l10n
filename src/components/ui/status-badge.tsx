@@ -23,76 +23,76 @@ interface StatusConfig {
 const jobStatusConfig: Record<JobStatus, StatusConfig> = {
   open: {
     label: 'Aberta',
-    className: 'bg-blue-500 text-white',
+    className: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/30',
   },
   assigned: {
     label: 'Atribuída',
-    className: 'bg-purple-500 text-white',
+    className: 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-sm shadow-purple-500/30',
   },
   in_progress: {
     label: 'Em Andamento',
-    className: 'bg-blue-500 text-white',
+    className: 'bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-sm shadow-cyan-500/30',
   },
   completed: {
     label: 'Concluída',
-    className: 'bg-slate-500 text-white',
+    className: 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-sm shadow-green-500/30',
   },
   cancelled: {
     label: 'Cancelada',
-    className: 'bg-red-500 text-white',
+    className: 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-sm shadow-red-500/30',
   },
 };
 
 const assignmentStatusConfig: Record<AssignmentStatus, StatusConfig> = {
   pending: {
     label: 'Pendente',
-    className: 'bg-amber-500 text-white',
+    className: 'bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-sm shadow-amber-400/30',
   },
   confirmed: {
     label: 'Confirmado',
-    className: 'bg-blue-500 text-white',
+    className: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/30',
   },
   completed: {
     label: 'Concluído',
-    className: 'bg-slate-500 text-white',
+    className: 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-sm shadow-green-500/30',
   },
   no_show: {
     label: 'Faltou',
-    className: 'bg-red-500 text-white',
+    className: 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-sm shadow-red-500/30',
   },
 };
 
 const workRecordStatusConfig: Record<WorkRecordStatus, StatusConfig> = {
   pending: {
     label: 'Pendente',
-    className: 'bg-amber-500 text-white',
+    className: 'bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-sm shadow-amber-400/30',
   },
   in_progress: {
     label: 'Em Andamento',
-    className: 'bg-blue-500 text-white',
+    className: 'bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-sm shadow-cyan-500/30',
   },
   completed: {
     label: 'Concluído',
-    className: 'bg-blue-500 text-white',
+    className: 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-sm shadow-green-500/30',
   },
   absent: {
     label: 'Ausente',
-    className: 'bg-red-500 text-white',
+    className: 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-sm shadow-red-500/30',
   },
 };
 
 const applicationStatusConfig: Record<ApplicationStatus, StatusConfig> = {
   pending: {
     label: 'Pendente',
-    className: 'bg-amber-500 text-white',
+    className: 'bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-sm shadow-amber-400/30',
   },
   approved: {
     label: 'Aprovado',
-    className: 'bg-blue-500 text-white',
+    className: 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-sm shadow-green-500/30',
   },
   rejected: {
     label: 'Rejeitado',
-    className: 'bg-red-500 text-white',
+    className: 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-sm shadow-red-500/30',
   },
 };
 

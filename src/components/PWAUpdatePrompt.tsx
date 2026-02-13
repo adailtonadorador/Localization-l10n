@@ -94,7 +94,7 @@ export function PWAUpdatePrompt() {
       {showInstallPrompt && deferredPrompt && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-lg p-4 z-50 animate-in slide-in-from-bottom-4">
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-[#0A2A5A] rounded-lg">
+            <div className="p-2 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg">
               <Smartphone className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1">
@@ -103,7 +103,7 @@ export function PWAUpdatePrompt() {
                 Instale o app para acesso rápido e receber notificações de novas vagas.
               </p>
               <div className="flex items-center gap-2 mt-3">
-                <Button size="sm" onClick={handleInstall} className="gap-2 bg-[#0A2A5A] hover:bg-[#082347]">
+                <Button size="sm" onClick={handleInstall} className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
                   <Download className="h-4 w-4" />
                   Instalar
                 </Button>
@@ -127,7 +127,7 @@ export function PWAUpdatePrompt() {
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-lg p-4 z-50 animate-in slide-in-from-bottom-4">
           <div className="flex items-start gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
-              <RefreshCw className="h-5 w-5 text-[#0A2A5A]" />
+              <RefreshCw className="h-5 w-5 text-blue-700" />
             </div>
             <div className="flex-1">
               <h4 className="font-semibold text-slate-900">Nova versão disponível</h4>

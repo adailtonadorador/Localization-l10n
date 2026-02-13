@@ -552,7 +552,7 @@ export function WorkerJobsPage() {
           {selectedJob && (
             <>
               {/* Header */}
-              <div className="p-6 bg-gradient-to-r from-blue-500 to-[#0A2A5A] text-white">
+              <div className="p-6 bg-gradient-to-r from-blue-500 to-blue-700 text-white">
                 <div className="flex items-start justify-between">
                   <div>
                     <h2 className="text-xl font-bold mb-1">{selectedJob.title}</h2>
@@ -660,7 +660,7 @@ export function WorkerJobsPage() {
                 ) : (
                   <div className="pt-4 border-t">
                     <Button
-                      className="w-full gap-2 bg-[#4A90E2] hover:bg-[#0A2A5A]"
+                      className="w-full gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
                       onClick={handleAssignToMe}
                       disabled={assigning}
                     >

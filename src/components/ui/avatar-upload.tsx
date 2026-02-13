@@ -130,7 +130,7 @@ export function AvatarUpload({
       <div className="relative group">
         <Avatar className={cn(sizeClasses[size], "ring-4 ring-slate-100 shadow-lg")}>
           <AvatarImage src={previewUrl || ""} className="object-cover" />
-          <AvatarFallback className="bg-[#0A2A5A] text-white text-xl font-bold">
+          <AvatarFallback className="bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xl font-bold">
             {uploading ? (
               <Loader2 className={cn(iconSizeClasses[size], "animate-spin")} />
             ) : (

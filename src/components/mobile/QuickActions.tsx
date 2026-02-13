@@ -27,32 +27,32 @@ export function QuickActions({ profileCompleteness }: QuickActionsProps) {
       label: 'Ver Vagas',
       icon: Briefcase,
       href: '/worker/jobs',
-      color: 'text-[#0A2A5A]',
-      bgColor: 'bg-blue-100',
+      color: 'text-blue-700',
+      bgColor: 'bg-gradient-to-br from-blue-100 to-blue-200 shadow-lg shadow-blue-200/50',
       show: true
     },
     {
       label: 'Meus Trabalhos',
       icon: Calendar,
       href: '/worker/my-jobs',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
+      color: 'text-cyan-700',
+      bgColor: 'bg-gradient-to-br from-cyan-100 to-sky-200 shadow-lg shadow-cyan-200/50',
       show: true
     },
     {
       label: 'Completar Perfil',
       icon: UserPlus,
       href: '/worker/profile',
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-100',
+      color: 'text-orange-700',
+      bgColor: 'bg-gradient-to-br from-orange-100 to-amber-200 shadow-lg shadow-orange-200/50',
       show: profileCompleteness < 100
     },
     {
       label: 'Meus Ganhos',
       icon: TrendingUp,
       href: '/worker/history',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100',
+      color: 'text-purple-700',
+      bgColor: 'bg-gradient-to-br from-purple-100 to-purple-200 shadow-lg shadow-purple-200/50',
       show: true
     },
   ].filter(action => action.show);

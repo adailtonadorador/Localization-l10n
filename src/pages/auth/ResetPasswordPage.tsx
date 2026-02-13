@@ -109,7 +109,7 @@ export function ResetPasswordPage() {
                 Sua senha foi alterada com sucesso. Agora você pode fazer login com sua nova senha.
               </p>
               <Link to="/login">
-                <Button className="gap-2 bg-[#0A2A5A] hover:bg-[#082347]">
+                <Button className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
                   Ir para o login
                 </Button>
               </Link>
@@ -148,7 +148,7 @@ export function ResetPasswordPage() {
               </p>
               <div className="flex flex-col gap-3">
                 <Link to="/forgot-password">
-                  <Button className="w-full bg-[#0A2A5A] hover:bg-[#082347]">
+                  <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
                     Solicitar novo link
                   </Button>
                 </Link>
@@ -180,7 +180,7 @@ export function ResetPasswordPage() {
           <Link to="/" className="inline-flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
             <img src="/logo.png" alt="Sama Conecta" className="w-16 h-16 object-contain" />
             <div>
-              <h1 className="text-2xl font-bold text-[#0A2A5A]">Sama Conecta</h1>
+              <h1 className="text-2xl font-bold text-blue-700">Sama Conecta</h1>
               <p className="text-sm text-slate-500">Conectando Oportunidades</p>
             </div>
           </Link>
@@ -251,7 +251,7 @@ export function ResetPasswordPage() {
             <CardFooter className="flex flex-col gap-4 pt-2">
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-medium bg-[#0A2A5A] hover:bg-[#082347] shadow-lg shadow-[#0A2A5A]/25 hover:shadow-[#0A2A5A]/40 transition-all"
+                className="w-full h-11 text-base font-medium bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 transition-all"
                 disabled={loading}
               >
                 {loading ? (
