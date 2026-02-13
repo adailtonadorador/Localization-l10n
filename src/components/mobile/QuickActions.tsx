@@ -64,30 +64,24 @@ export function QuickActions({ profileCompleteness }: QuickActionsProps) {
           Acesso Rápido
         </h3>
       </div>
-      <div className="flex justify-center">
-        <div className="flex gap-6">
-          {actions.map((action, index) => {
-            const Icon = action.icon;
-            return (
-              <Link
-                key={index}
-                to={action.href}
-                className="flex flex-col items-center justify-center
-                          cursor-pointer
-                          active:scale-95 transition-transform"
-              >
-                <div className={`w-16 h-16 rounded-2xl ${action.bgColor}
-                              flex items-center justify-center`}>
-                  <Icon className={`w-7 h-7 ${action.color}`} />
-                </div>
-                <span className="mt-2 text-xs font-medium text-slate-600
-                               text-center leading-tight max-w-[72px]">
-                  {action.label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+      <div className="flex gap-5">
+        {actions.map((action, index) => {
+          const Icon = action.icon;
+          return (
+            <Link
+              key={index}
+              to={action.href}
+              className="flex flex-col items-center cursor-pointer active:scale-95 transition-transform w-16"
+            >
+              <div className={`w-16 h-16 rounded-2xl ${action.bgColor} flex items-center justify-center flex-shrink-0`}>
+                <Icon className={`w-7 h-7 ${action.color}`} />
+              </div>
+              <span className="mt-2 text-xs font-medium text-slate-600 text-center leading-tight h-8 flex items-start justify-center">
+                {action.label}
+              </span>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
