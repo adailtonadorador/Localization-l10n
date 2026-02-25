@@ -271,17 +271,32 @@ export async function promptForPushPermission(): Promise<boolean> {
       console.log('[OneSignal] PushSubscription.id:', os.User.PushSubscription.id);
       console.log('[OneSignal] PushSubscription.token:', os.User.PushSubscription.token);
 
+      // Verifica se o Service Worker está registrado
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        console.log('[OneSignal] Service Workers registrados:', registrations.length);
+        registrations.forEach((reg, i) => {
+          console.log(`[OneSignal] SW ${i}:`, reg.scope, reg.active?.scriptURL);
+        });
+      }
+
       try {
-        // Adiciona timeout de 5 segundos
+        // Aumenta timeout para 15 segundos e adiciona mais diagnóstico
+        console.log('[OneSignal] Iniciando optIn...');
+        const startTime = Date.now();
         const optInPromise = os.User.PushSubscription.optIn();
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('optIn timeout após 5s')), 5000)
+          setTimeout(() => reject(new Error('optIn timeout após 15s')), 15000)
         );
 
         await Promise.race([optInPromise, timeoutPromise]);
-        console.log('[OneSignal] optIn concluído com sucesso!');
+        console.log('[OneSignal] optIn concluído com sucesso em', Date.now() - startTime, 'ms');
+        console.log('[OneSignal] PushSubscription.id após optIn:', os.User.PushSubscription.id);
+        console.log('[OneSignal] PushSubscription.token após optIn:', os.User.PushSubscription.token);
       } catch (optInError: any) {
         console.error('[OneSignal] Erro no optIn:', optInError?.message || optInError);
+        console.log('[OneSignal] PushSubscription.id após erro:', os.User.PushSubscription.id);
+        console.log('[OneSignal] PushSubscription.token após erro:', os.User.PushSubscription.token);
         // Mesmo com erro no optIn, a permissão foi concedida
         console.log('[OneSignal] Continuando mesmo com erro no optIn...');
       }
