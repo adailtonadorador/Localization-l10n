@@ -267,11 +267,23 @@ export async function promptForPushPermission(): Promise<boolean> {
     // Se a permissão foi concedida, faz opt-in no OneSignal
     if (Notification.permission === 'granted') {
       console.log('[OneSignal] Permissão concedida, chamando optIn...');
+      console.log('[OneSignal] PushSubscription object:', os.User.PushSubscription);
+      console.log('[OneSignal] PushSubscription.id:', os.User.PushSubscription.id);
+      console.log('[OneSignal] PushSubscription.token:', os.User.PushSubscription.token);
+
       try {
-        await os.User.PushSubscription.optIn();
+        // Adiciona timeout de 5 segundos
+        const optInPromise = os.User.PushSubscription.optIn();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('optIn timeout após 5s')), 5000)
+        );
+
+        await Promise.race([optInPromise, timeoutPromise]);
         console.log('[OneSignal] optIn concluído com sucesso!');
-      } catch (optInError) {
-        console.error('[OneSignal] Erro no optIn:', optInError);
+      } catch (optInError: any) {
+        console.error('[OneSignal] Erro no optIn:', optInError?.message || optInError);
+        // Mesmo com erro no optIn, a permissão foi concedida
+        console.log('[OneSignal] Continuando mesmo com erro no optIn...');
       }
       return true;
     }
