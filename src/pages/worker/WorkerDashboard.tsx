@@ -19,6 +19,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { WithdrawalDialog } from "@/components/WithdrawalDialog";
+import { NotificationPrompt } from "@/components/NotificationPrompt";
 import {
   Briefcase,
   Star,
@@ -658,6 +659,13 @@ export function WorkerDashboard() {
           {/* Approval Status Alert - Mobile */}
           <ApprovalStatusAlert workerProfile={workerProfile} />
 
+          {/* Notification Prompt - Mobile */}
+          {workerProfile?.approval_status === 'approved' && (
+            <div className="mb-4">
+              <NotificationPrompt variant="card" />
+            </div>
+          )}
+
           {/* Quick Actions */}
           <QuickActions
             profileCompleteness={profileCompleteness}
@@ -733,6 +741,13 @@ export function WorkerDashboard() {
 
           {/* Desktop: Approval Status Alert */}
           <ApprovalStatusAlert workerProfile={workerProfile} />
+
+          {/* Desktop: Notification Prompt */}
+          {workerProfile?.approval_status === 'approved' && (
+            <div className="mb-6">
+              <NotificationPrompt variant="card" />
+            </div>
+          )}
 
           {/* Desktop: Profile Completeness Alert */}
           <ProfileCompletenessAlert profile={profile} workerProfile={workerProfile} />

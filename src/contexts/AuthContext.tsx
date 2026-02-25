@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase, supabaseUntyped } from '@/lib/supabase'
+import { unregisterUser } from '@/lib/onesignal'
 import type { Database } from '@/types/database'
 
 type UserRole = Database['public']['Enums']['user_role']
@@ -451,6 +452,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Clear cached profiles
     clearAllCache()
+
+    // Desregistrar do OneSignal
+    try {
+      await unregisterUser()
+    } catch (error) {
+      console.error('Erro ao desregistrar do OneSignal:', error)
+    }
 
     // Sign out from Supabase
     await supabase.auth.signOut({ scope: 'local' })

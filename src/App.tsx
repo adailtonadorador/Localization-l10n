@@ -1,7 +1,10 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
+import { initOneSignal } from "@/lib/onesignal";
+import { useNotifications, useRealtimeSubscription } from "@/hooks/useNotifications";
 import { LandingPage } from "@/pages/LandingPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
@@ -70,6 +73,15 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+// Componente para gerenciar notificações (inicialização e realtime)
+function NotificationManager() {
+  // Hook que gerencia o estado das notificações e registra o usuário
+  useNotifications();
+  // Hook que inscreve em eventos realtime do Supabase
+  useRealtimeSubscription();
+  return null;
 }
 
 function AppRoutes() {
@@ -266,10 +278,18 @@ function AppRoutes() {
 }
 
 function App() {
+  // Inicializa o OneSignal uma vez quando o app carrega
+  useEffect(() => {
+    initOneSignal().catch((error) => {
+      console.error('[App] Erro ao inicializar OneSignal:', error);
+    });
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
+        <NotificationManager />
         <PWAUpdatePrompt />
       </AuthProvider>
     </BrowserRouter>
