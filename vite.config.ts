@@ -9,9 +9,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      strategies: 'injectManifest',
-      srcDir: 'src',
-      filename: 'sw.ts',
+      // TEMPORÁRIO: Desabilitar PWA para testar OneSignal isoladamente
+      selfDestroying: true,
       devOptions: {
         enabled: false
       },
@@ -49,9 +48,6 @@ export default defineConfig({
             purpose: 'maskable'
           }
         ]
-      },
-      injectManifest: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
       }
     })
   ],
