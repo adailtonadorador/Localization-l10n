@@ -48,10 +48,15 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // PWA service worker - escopo /
-        // OneSignal usa escopo separado /push/onesignal/
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        navigateFallbackDenylist: [/^\/push\//],
+        // Excluir Service Worker do OneSignal do cache do Workbox
+        navigateFallbackDenylist: [/^\/OneSignalSDKWorker\.js$/],
+        globIgnores: ['**/OneSignalSDKWorker.js'],
+        // Garante que o SW ative imediatamente e assuma controle
+        skipWaiting: true,
+        clientsClaim: true,
+        // Limpa caches antigos automaticamente
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
