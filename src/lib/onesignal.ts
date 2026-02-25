@@ -249,6 +249,15 @@ export async function promptForPushPermission(): Promise<boolean> {
 
   try {
     console.log('[OneSignal] Chamando requestPermission...');
+    console.log('[OneSignal] Notifications object:', os.Notifications);
+
+    // Tenta usar a API nativa primeiro como fallback
+    if ('Notification' in window && Notification.permission === 'default') {
+      console.log('[OneSignal] Tentando API nativa primeiro...');
+      const nativePermission = await Notification.requestPermission();
+      console.log('[OneSignal] Permissão nativa:', nativePermission);
+    }
+
     await os.Notifications.requestPermission();
     console.log('[OneSignal] requestPermission concluído');
 

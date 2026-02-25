@@ -21,7 +21,8 @@
       "Bash(grep:*)",
       "Bash(vercel --prod:*)",
       "Bash(npx supabase:*)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "Bash(curl:*)"
     ]
   }
 }
