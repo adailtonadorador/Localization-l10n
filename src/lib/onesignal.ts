@@ -119,17 +119,26 @@ export async function initOneSignal(): Promise<void> {
     try {
       const OneSignal = await waitForOneSignal();
 
-      await OneSignal.init({
-        appId,
-        allowLocalhostAsSecureOrigin: import.meta.env.DEV,
-        serviceWorkerPath: '/OneSignalSDKWorker.js',
-        notifyButton: {
-          enable: false, // Usamos nosso próprio UI
-        },
-        welcomeNotification: {
-          disable: true, // Desativamos notificação de boas-vindas
-        },
-      });
+      try {
+        await OneSignal.init({
+          appId,
+          allowLocalhostAsSecureOrigin: import.meta.env.DEV,
+          serviceWorkerPath: '/OneSignalSDKWorker.js',
+          notifyButton: {
+            enable: false, // Usamos nosso próprio UI
+          },
+          welcomeNotification: {
+            disable: true, // Desativamos notificação de boas-vindas
+          },
+        });
+      } catch (initError: any) {
+        // Se o SDK já foi inicializado, não é um erro fatal
+        if (initError?.message?.includes('already initialized')) {
+          console.log('[OneSignal] SDK já estava inicializado, continuando...');
+        } else {
+          throw initError;
+        }
+      }
 
       isInitialized = true;
       console.log('[OneSignal] Inicializado com sucesso');
