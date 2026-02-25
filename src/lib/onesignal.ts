@@ -110,6 +110,8 @@ export async function initOneSignal(): Promise<void> {
 
   const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
 
+  console.log('[OneSignal] App ID sendo usado:', appId);
+
   if (!appId || appId === 'seu-app-id-aqui') {
     console.warn('[OneSignal] App ID não configurado. Configure VITE_ONESIGNAL_APP_ID no .env');
     return;
