@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import {
   Briefcase,
   Star,
-  TrendingUp,
+  CalendarCheck,
   ChevronRight
 } from 'lucide-react';
 
@@ -16,7 +16,7 @@ interface WelcomeCardProps {
   stats: {
     totalJobs: number;
     rating: number;
-    monthlyEarnings: number;
+    upcomingJobs: number;
   };
   profileLink: string;
 }
@@ -35,13 +35,6 @@ function getInitials(name: string): string {
     .join('')
     .toUpperCase()
     .slice(0, 2);
-}
-
-function formatCurrency(value: number): string {
-  if (value >= 1000) {
-    return `R$ ${(value / 1000).toFixed(1)}k`;
-  }
-  return `R$ ${value}`;
 }
 
 export function WelcomeCard({
@@ -150,12 +143,10 @@ export function WelcomeCard({
 
             <div className="flex-1">
               <div className="flex items-center justify-center gap-1.5 text-slate-900">
-                <TrendingUp className="w-4 h-4 text-purple-600" />
-                <span className="font-bold text-lg">
-                  {formatCurrency(stats.monthlyEarnings)}
-                </span>
+                <CalendarCheck className="w-4 h-4 text-green-600" />
+                <span className="font-bold text-lg">{stats.upcomingJobs}</span>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Este mês</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Próximos</p>
             </div>
           </div>
         </CardContent>

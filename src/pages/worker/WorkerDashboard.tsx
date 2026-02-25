@@ -650,7 +650,7 @@ export function WorkerDashboard() {
             stats={{
               totalJobs: stats.totalJobs,
               rating: stats.rating,
-              monthlyEarnings: stats.monthlyEarnings
+              upcomingJobs: upcomingJobs.length
             }}
             profileLink="/worker/profile"
           />
