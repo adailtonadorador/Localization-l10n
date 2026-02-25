@@ -129,12 +129,22 @@ export async function unregisterUser(): Promise<void> {
  * Solicita permissão para push notifications
  */
 export async function promptForPushPermission(): Promise<boolean> {
+  console.log('[OneSignal] promptForPushPermission chamado');
+  console.log('[OneSignal] isInitialized:', isInitialized);
+
   if (!isInitialized) {
     console.warn('[OneSignal] Não inicializado. Chame initOneSignal primeiro.');
-    return false;
+    // Tenta inicializar se ainda não foi
+    console.log('[OneSignal] Tentando inicializar...');
+    const initResult = await initOneSignal();
+    console.log('[OneSignal] Resultado da inicialização:', initResult);
+    if (!initResult) {
+      return false;
+    }
   }
 
   try {
+    console.log('[OneSignal] Chamando OneSignal.Notifications.requestPermission()...');
     // API v16: usa OneSignal.Notifications.requestPermission()
     const permission = await OneSignal.Notifications.requestPermission();
     console.log('[OneSignal] Resultado do prompt:', permission);
