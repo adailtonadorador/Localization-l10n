@@ -72,7 +72,7 @@ function getOneSignal(): OneSignalInstance | null {
 }
 
 /**
- * Aguarda o OneSignal estar pronto
+ * Aguarda o OneSignal estar pronto (inicializado pelo HTML)
  */
 async function waitForOneSignal(): Promise<OneSignalInstance> {
   return new Promise((resolve, reject) => {
@@ -80,12 +80,14 @@ async function waitForOneSignal(): Promise<OneSignalInstance> {
       reject(new Error('OneSignal não carregou após 10 segundos'));
     }, 10000);
 
+    // Se já existe e está inicializado
     if (window.OneSignal) {
       clearTimeout(timeout);
       resolve(window.OneSignal);
       return;
     }
 
+    // Aguarda a inicialização via OneSignalDeferred (feita no HTML)
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push((OneSignal) => {
       clearTimeout(timeout);
@@ -95,7 +97,7 @@ async function waitForOneSignal(): Promise<OneSignalInstance> {
 }
 
 /**
- * Inicializa o OneSignal SDK
+ * Inicializa o OneSignal SDK (aguarda inicialização feita no HTML)
  */
 export async function initOneSignal(): Promise<void> {
   // Evita inicialização duplicada
@@ -108,44 +110,14 @@ export async function initOneSignal(): Promise<void> {
     return initPromise;
   }
 
-  const appId = import.meta.env.VITE_ONESIGNAL_APP_ID;
-
-  console.log('[OneSignal] App ID sendo usado:', appId);
-
-  if (!appId || appId === 'seu-app-id-aqui') {
-    console.warn('[OneSignal] App ID não configurado. Configure VITE_ONESIGNAL_APP_ID no .env');
-    return;
-  }
-
   initPromise = (async () => {
     try {
-      const OneSignal = await waitForOneSignal();
-
-      try {
-        await OneSignal.init({
-          appId,
-          allowLocalhostAsSecureOrigin: import.meta.env.DEV,
-          serviceWorkerPath: '/OneSignalSDKWorker.js',
-          notifyButton: {
-            enable: false, // Usamos nosso próprio UI
-          },
-          welcomeNotification: {
-            disable: true, // Desativamos notificação de boas-vindas
-          },
-        });
-      } catch (initError: any) {
-        // Se o SDK já foi inicializado, não é um erro fatal
-        if (initError?.message?.includes('already initialized')) {
-          console.log('[OneSignal] SDK já estava inicializado, continuando...');
-        } else {
-          throw initError;
-        }
-      }
-
+      // Aguarda o OneSignal estar pronto (inicializado pelo script no HTML)
+      await waitForOneSignal();
       isInitialized = true;
-      console.log('[OneSignal] Inicializado com sucesso');
+      console.log('[OneSignal] Pronto para uso');
     } catch (error) {
-      console.error('[OneSignal] Erro ao inicializar:', error);
+      console.error('[OneSignal] Erro ao aguardar inicialização:', error);
       initPromise = null;
       throw error;
     }

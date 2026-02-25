@@ -21,6 +21,14 @@
 
     <!-- OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "f7b23e25-addf-4e94-b821-98a6b348ed78",
+        });
+      });
+    </script>
 
     <title>Sama Conecta</title>
   </head>
