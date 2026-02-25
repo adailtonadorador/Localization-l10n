@@ -108,7 +108,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   async function handleLogout() {
     await signOut();
-    navigate('/');
+    navigate('/login');
   }
 
   return (
