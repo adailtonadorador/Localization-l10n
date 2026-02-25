@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import {
   Calendar,
   UserPlus,
-  TrendingUp,
+  Clock,
   Briefcase,
   type LucideIcon
 } from 'lucide-react';
@@ -48,8 +48,8 @@ export function QuickActions({ profileCompleteness }: QuickActionsProps) {
       show: profileCompleteness < 100
     },
     {
-      label: 'Meus Ganhos',
-      icon: TrendingUp,
+      label: 'Histórico',
+      icon: Clock,
       href: '/worker/history',
       color: 'text-purple-700',
       bgColor: 'bg-gradient-to-br from-purple-100 to-purple-200 shadow-lg shadow-purple-200/50',

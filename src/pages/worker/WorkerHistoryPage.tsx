@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, DollarSign, Star, MapPin, Clock, Calendar, TrendingUp, Award } from "lucide-react";
+import { Briefcase, Star, MapPin, Clock, Calendar, Award } from "lucide-react";
 
 interface WorkRecord {
   id: string;
@@ -112,23 +112,8 @@ export function WorkerHistoryPage() {
     }
   }
 
-  function calculateEarnings(record: WorkRecord) {
-    if (!record.check_in || !record.check_out) {
-      // Estimate based on job hours
-      const start = new Date(`2000-01-01T${record.jobs.start_time}`);
-      const end = new Date(`2000-01-01T${record.jobs.end_time}`);
-      const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      return hours * record.jobs.daily_rate;
-    }
-    const checkIn = new Date(record.check_in);
-    const checkOut = new Date(record.check_out);
-    const hours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
-    return hours * record.jobs.daily_rate;
-  }
-
   // Calculate stats
   const completedRecords = records.filter(r => r.status === 'completed');
-  const totalEarnings = completedRecords.reduce((sum, r) => sum + calculateEarnings(r), 0);
   const avgRating = completedRecords.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating || 0) / arr.length, 0);
 
   if (loading) {
@@ -146,11 +131,11 @@ export function WorkerHistoryPage() {
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Histórico de Trabalhos</h2>
-        <p className="text-muted-foreground">Acompanhe seu desempenho e ganhos na plataforma</p>
+        <p className="text-muted-foreground">Acompanhe seu desempenho na plataforma</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4 mb-8">
+      <div className="grid gap-4 grid-cols-2 mb-8">
         <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -160,20 +145,6 @@ export function WorkerHistoryPage() {
               <div>
                 <p className="text-3xl font-bold text-blue-600">{completedRecords.length}</p>
                 <p className="text-sm text-muted-foreground">Trabalhos Concluídos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-white">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-green-100 rounded-xl">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-green-600">R$ {totalEarnings.toFixed(0)}</p>
-                <p className="text-sm text-muted-foreground">Total Ganho</p>
               </div>
             </div>
           </CardContent>
@@ -190,22 +161,6 @@ export function WorkerHistoryPage() {
                   {avgRating > 0 ? avgRating.toFixed(1) : '-'}
                 </p>
                 <p className="text-sm text-muted-foreground">Avaliação Média</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <TrendingUp className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-blue-600">
-                  R$ {completedRecords.length > 0 ? (totalEarnings / completedRecords.length).toFixed(0) : '0'}
-                </p>
-                <p className="text-sm text-muted-foreground">Média por Trabalho</p>
               </div>
             </div>
           </CardContent>
@@ -240,36 +195,33 @@ export function WorkerHistoryPage() {
                       {getStatusBadge(record.status)}
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Data</p>
-                          <p className="font-medium text-sm">{formatDate(record.work_date)}</p>
+                    <div className="space-y-3 mt-4">
+                      {/* Data, Horário e Valor */}
+                      <div className="flex flex-wrap gap-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm">
+                            <span className="text-muted-foreground">Data: </span>
+                            <span className="font-medium">{formatDate(record.work_date)}</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm">
+                            <span className="text-muted-foreground">Horário: </span>
+                            <span className="font-medium">
+                              {formatTime(record.jobs.start_time)} - {formatTime(record.jobs.end_time)}
+                            </span>
+                          </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Horário</p>
-                          <p className="font-medium text-sm">
-                            {formatTime(record.jobs.start_time)} - {formatTime(record.jobs.end_time)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Local</p>
-                          <p className="font-medium text-sm truncate">{record.jobs.location}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Valor/hora</p>
-                          <p className="font-medium text-sm">R$ {record.jobs.daily_rate}</p>
-                        </div>
+                      {/* Local em linha separada */}
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                        <span className="text-sm">
+                          <span className="text-muted-foreground">Local: </span>
+                          <span className="font-medium">{record.jobs.location}</span>
+                        </span>
                       </div>
                     </div>
 
@@ -281,7 +233,7 @@ export function WorkerHistoryPage() {
                     )}
                   </div>
 
-                  {/* Rating & Earnings */}
+                  {/* Rating */}
                   <div className="flex lg:flex-col items-center gap-4 p-4 bg-slate-50 rounded-xl min-w-[140px]">
                     {record.rating ? (
                       <div className="text-center">
@@ -295,15 +247,6 @@ export function WorkerHistoryPage() {
                       <div className="text-center">
                         <Award className="h-6 w-6 text-slate-300 mx-auto mb-1" />
                         <p className="text-xs text-muted-foreground">Sem avaliação</p>
-                      </div>
-                    )}
-
-                    {record.status === 'completed' && (
-                      <div className="text-center lg:border-t lg:pt-4 lg:mt-2">
-                        <p className="text-xl font-bold text-green-600">
-                          +R$ {calculateEarnings(record).toFixed(0)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Ganho</p>
                       </div>
                     )}
                   </div>
