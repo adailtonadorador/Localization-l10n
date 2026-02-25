@@ -188,16 +188,32 @@ export function useNotifications(): UseNotificationsReturn {
       const granted = await promptForPushPermission();
       const permission = getPermissionStatus();
 
+      // Se a permissão do navegador foi concedida, consideramos sucesso
+      const browserGranted = Notification.permission === 'granted';
+
       setState((prev) => ({
         ...prev,
-        isSubscribed: granted,
+        isSubscribed: granted || browserGranted,
         permissionStatus: permission === 'unsupported' ? 'default' : permission,
         isLoading: false,
       }));
 
-      return granted;
+      return granted || browserGranted;
     } catch (error) {
       console.error('[useNotifications] Erro ao solicitar permissão:', error);
+
+      // Mesmo com erro, verifica se permissão do navegador foi concedida
+      const browserGranted = Notification.permission === 'granted';
+      if (browserGranted) {
+        setState((prev) => ({
+          ...prev,
+          isSubscribed: true,
+          permissionStatus: 'granted',
+          isLoading: false,
+        }));
+        return true;
+      }
+
       setState((prev) => ({
         ...prev,
         isLoading: false,
