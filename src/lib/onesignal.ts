@@ -250,25 +250,34 @@ export async function promptForPushPermission(): Promise<boolean> {
   try {
     console.log('[OneSignal] Chamando requestPermission...');
     console.log('[OneSignal] Notifications object:', os.Notifications);
+    console.log('[OneSignal] Permissão atual do navegador:', Notification.permission);
 
-    // Tenta usar a API nativa primeiro como fallback
+    // Se ainda não tem permissão, solicita via API nativa
     if ('Notification' in window && Notification.permission === 'default') {
-      console.log('[OneSignal] Tentando API nativa primeiro...');
+      console.log('[OneSignal] Solicitando permissão via API nativa...');
       const nativePermission = await Notification.requestPermission();
-      console.log('[OneSignal] Permissão nativa:', nativePermission);
+      console.log('[OneSignal] Resultado permissão nativa:', nativePermission);
+
+      if (nativePermission !== 'granted') {
+        console.log('[OneSignal] Permissão negada pelo usuário');
+        return false;
+      }
     }
 
-    await os.Notifications.requestPermission();
-    console.log('[OneSignal] requestPermission concluído');
+    // Se a permissão foi concedida, faz opt-in no OneSignal
+    if (Notification.permission === 'granted') {
+      console.log('[OneSignal] Permissão concedida, chamando optIn...');
+      try {
+        await os.User.PushSubscription.optIn();
+        console.log('[OneSignal] optIn concluído com sucesso!');
+      } catch (optInError) {
+        console.error('[OneSignal] Erro no optIn:', optInError);
+      }
+      return true;
+    }
 
-    console.log('[OneSignal] Chamando optIn...');
-    await os.User.PushSubscription.optIn();
-    console.log('[OneSignal] optIn concluído');
-
-    const permission = os.Notifications.permission;
-    console.log('[OneSignal] Permissão final:', permission);
-
-    return permission;
+    console.log('[OneSignal] Permissão não concedida:', Notification.permission);
+    return false;
   } catch (error) {
     console.error('[OneSignal] Erro ao solicitar permissão:', error);
     return false;
