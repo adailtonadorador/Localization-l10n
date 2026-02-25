@@ -22,7 +22,9 @@
       "Bash(vercel --prod:*)",
       "Bash(npx supabase:*)",
       "Bash(npx vercel:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(findstr:*)",
+      "Bash(dir:*)"
     ]
   }
 }
