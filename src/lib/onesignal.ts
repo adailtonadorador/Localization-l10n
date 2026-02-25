@@ -214,19 +214,39 @@ export async function unregisterUser(): Promise<void> {
  * Solicita permissão para push notifications
  */
 export async function promptForPushPermission(): Promise<boolean> {
+  console.log('[OneSignal] promptForPushPermission chamado');
+  console.log('[OneSignal] isInitialized:', isInitialized);
+  console.log('[OneSignal] window.OneSignal:', !!window.OneSignal);
+
   const OneSignal = getOneSignal();
 
   if (!OneSignal || !isInitialized) {
-    console.warn('[OneSignal] SDK não inicializado');
+    console.warn('[OneSignal] SDK não inicializado, tentando inicializar...');
+    try {
+      await initOneSignal();
+    } catch (e) {
+      console.error('[OneSignal] Falha ao inicializar:', e);
+      return false;
+    }
+  }
+
+  const os = getOneSignal();
+  if (!os) {
+    console.error('[OneSignal] SDK não disponível após tentativa de inicialização');
     return false;
   }
 
   try {
-    await OneSignal.Notifications.requestPermission();
-    await OneSignal.User.PushSubscription.optIn();
+    console.log('[OneSignal] Chamando requestPermission...');
+    await os.Notifications.requestPermission();
+    console.log('[OneSignal] requestPermission concluído');
 
-    const permission = OneSignal.Notifications.permission;
-    console.log('[OneSignal] Permissão solicitada:', permission);
+    console.log('[OneSignal] Chamando optIn...');
+    await os.User.PushSubscription.optIn();
+    console.log('[OneSignal] optIn concluído');
+
+    const permission = os.Notifications.permission;
+    console.log('[OneSignal] Permissão final:', permission);
 
     return permission;
   } catch (error) {

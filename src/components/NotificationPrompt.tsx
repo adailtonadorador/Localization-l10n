@@ -33,8 +33,14 @@ export function NotificationPrompt({
   }
 
   const handleRequestPermission = async () => {
+    console.log('[NotificationPrompt] Botão clicado, solicitando permissão...');
     setIsRequesting(true);
-    await requestPermission();
+    try {
+      const result = await requestPermission();
+      console.log('[NotificationPrompt] Resultado da permissão:', result);
+    } catch (error) {
+      console.error('[NotificationPrompt] Erro ao solicitar permissão:', error);
+    }
     setIsRequesting(false);
   };
 

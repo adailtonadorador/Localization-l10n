@@ -16,7 +16,12 @@
       "Bash(pm2 logs:*)",
       "Bash(npx tsc:*)",
       "Bash(ping:*)",
-      "Bash(npx vercel --prod)"
+      "Bash(npx vercel --prod)",
+      "Bash(vercel env add:*)",
+      "Bash(grep:*)",
+      "Bash(vercel --prod:*)",
+      "Bash(npx supabase:*)",
+      "Bash(npx vercel:*)"
     ]
   }
 }
