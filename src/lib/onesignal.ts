@@ -48,11 +48,21 @@ export async function initOneSignal(): Promise<boolean> {
     console.log('[OneSignal] Inicializado com sucesso');
     return true;
   } catch (error) {
+    const errorMessage = String(error);
+
+    // Se o SDK já foi inicializado, consideramos sucesso
+    if (errorMessage.includes('already initialized')) {
+      isInitialized = true;
+      console.log('[OneSignal] SDK já estava inicializado, continuando...');
+      return true;
+    }
+
     // Em desenvolvimento, ignorar erro de domínio não configurado
-    if (import.meta.env.DEV && String(error).includes('Can only be used on')) {
+    if (import.meta.env.DEV && errorMessage.includes('Can only be used on')) {
       console.warn('[OneSignal] Domínio localhost não configurado no OneSignal. Push desabilitado em dev.');
       return false;
     }
+
     console.error('[OneSignal] Erro ao inicializar:', error);
     return false;
   }
