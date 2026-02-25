@@ -9,7 +9,6 @@ import { supabaseUntyped } from '@/lib/supabase';
 import {
   initOneSignal,
   registerUser,
-  unregisterUser,
   promptForPushPermission,
   updateUserTags,
   isSubscribed,
@@ -19,6 +18,7 @@ import {
   type UserRole,
   type UserTags,
 } from '@/lib/onesignal';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export interface NotificationState {
   isInitialized: boolean;
@@ -250,7 +250,7 @@ export function useRealtimeSubscription() {
           schema: 'public',
           table: 'jobs',
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           console.log('[Realtime] Nova vaga criada:', payload.new);
           // Aqui você pode disparar uma notificação local ou atualizar o estado
         }
@@ -268,7 +268,7 @@ export function useRealtimeSubscription() {
           table: 'job_assignments',
           filter: `worker_id=eq.${profile.id}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           console.log('[Realtime] Nova atribuição:', payload.new);
         }
       )
