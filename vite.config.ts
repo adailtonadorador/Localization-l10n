@@ -9,6 +9,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true
+      },
       includeAssets: ['favicon.ico', 'logo.png', 'apple-touch-icon-180x180.png'],
       manifest: {
         name: 'Sama Conecta',

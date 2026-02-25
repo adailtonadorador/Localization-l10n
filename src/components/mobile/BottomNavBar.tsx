@@ -60,8 +60,8 @@ const CLIENT_NAV_ITEMS: NavItem[] = [
     icon: Briefcase,
   },
   {
-    label: 'Candidatos',
-    href: '/client/candidates',
+    label: 'Trabalhadores',
+    href: '/client/workers',
     icon: Users,
   },
   {

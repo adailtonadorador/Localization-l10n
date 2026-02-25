@@ -5,7 +5,13 @@ import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar, Star, Briefcase, Phone, Mail, Users } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Calendar, Star, Briefcase, Phone, Mail, Users, MapPin, Clock } from "lucide-react";
 
 interface JobApplication {
   id: string;
@@ -30,13 +36,18 @@ interface JobApplication {
     title: string;
     date: string;
     daily_rate: number;
+    location?: string;
+    start_time?: string;
+    end_time?: string;
   };
 }
 
-export function ClientCandidatesPage() {
+export function ClientWorkersPage() {
   const { profile } = useAuth();
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedWorker, setSelectedWorker] = useState<JobApplication | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     if (profile?.id) {
@@ -74,7 +85,7 @@ export function ClientCandidatesPage() {
             skills,
             users (name, email, phone, avatar_url)
           ),
-          jobs (id, title, date, daily_rate)
+          jobs (id, title, date, daily_rate, location, start_time, end_time)
         `)
         .in('job_id', jobIds)
         .order('applied_at', { ascending: false });
@@ -92,6 +103,15 @@ export function ClientCandidatesPage() {
     const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' });
     const formattedDate = date.toLocaleDateString('pt-BR');
     return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${formattedDate}`;
+  }
+
+  function formatTime(timeStr: string) {
+    return timeStr?.slice(0, 5) || '';
+  }
+
+  function openWorkerDialog(application: JobApplication) {
+    setSelectedWorker(application);
+    setDialogOpen(true);
   }
 
   // Agrupar trabalhadores por data
@@ -127,7 +147,10 @@ export function ClientCandidatesPage() {
     const initials = worker?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??';
 
     return (
-      <div className="flex items-center gap-4 p-4 bg-card border rounded-lg hover:bg-muted/50 transition-colors">
+      <div
+        className="flex items-center gap-4 p-4 bg-card border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+        onClick={() => openWorkerDialog(application)}
+      >
         {/* Avatar */}
         <Avatar className="h-10 w-10 shrink-0">
           <AvatarImage src={worker?.users?.avatar_url || ''} className="object-cover" />
@@ -197,6 +220,119 @@ export function ClientCandidatesPage() {
     );
   }
 
+  // Worker Detail Dialog
+  function WorkerDialog() {
+    if (!selectedWorker) return null;
+
+    const worker = selectedWorker.workers;
+    const job = selectedWorker.jobs;
+    const initials = worker?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??';
+
+    return (
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md mx-4">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Trabalhador</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 mt-4">
+            {/* Worker Info */}
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={worker?.users?.avatar_url || ''} className="object-cover" />
+                <AvatarFallback className="text-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="text-lg font-semibold">{worker?.users?.name}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                  <span className="font-medium">{worker?.rating?.toFixed(1) || 'N/A'}</span>
+                  <span className="text-muted-foreground">
+                    ({worker?.total_jobs || 0} trabalhos)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Info */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                Contato
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">{worker?.users?.email}</span>
+                </div>
+                {worker?.users?.phone && (
+                  <a
+                    href={`tel:${worker.users.phone}`}
+                    className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <Phone className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">{worker.users.phone}</span>
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Skills */}
+            {worker?.skills && worker.skills.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                  Habilidades
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {worker.skills.map((skill, index) => (
+                    <Badge key={index} variant="secondary">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Job Info */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                Vaga Atribuída
+              </h4>
+              <div className="p-4 bg-blue-50 rounded-lg space-y-2">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium text-blue-900">{job?.title}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <Calendar className="w-4 h-4" />
+                  <span>{job?.date ? formatDateWithWeekday(job.date) : 'Data não definida'}</span>
+                </div>
+                {job?.start_time && job?.end_time && (
+                  <div className="flex items-center gap-2 text-sm text-blue-700">
+                    <Clock className="w-4 h-4" />
+                    <span>{formatTime(job.start_time)} - {formatTime(job.end_time)}</span>
+                  </div>
+                )}
+                {job?.location && (
+                  <div className="flex items-center gap-2 text-sm text-blue-700">
+                    <MapPin className="w-4 h-4" />
+                    <span>{job.location}</span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-blue-200 mt-2">
+                  <span className="text-lg font-bold text-blue-900">
+                    R$ {job?.daily_rate}/dia
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -250,6 +386,9 @@ export function ClientCandidatesPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Worker Dialog */}
+      <WorkerDialog />
     </DashboardLayout>
   );
 }

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RatingDialog, RatingDisplay } from "@/components/RatingDialog";
-import { Calendar, MapPin, Clock, DollarSign, Users, Briefcase } from "lucide-react";
+import { Calendar, MapPin, Clock, Users, Briefcase } from "lucide-react";
 
 interface JobAssignment {
   id: string;
@@ -112,7 +112,6 @@ export function ClientHistoryPage() {
   }
 
   // Calculate totals
-  const totalSpent = assignments.reduce((sum, a) => sum + calculateCost(a), 0);
   const totalWorkers = new Set(assignments.map(a => a.workers?.id)).size;
   const totalJobs = new Set(assignments.map(a => a.jobs?.id)).size;
 
@@ -134,21 +133,7 @@ export function ClientHistoryPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-blue-600 font-medium">Total Gasto</p>
-                <p className="text-3xl font-bold text-blue-700">R$ {totalSpent.toFixed(2)}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <DollarSign className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-4 md:grid-cols-2 mb-6">
         <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">

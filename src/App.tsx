@@ -20,7 +20,7 @@ import { WorkerHistoryPage } from "@/pages/worker/WorkerHistoryPage";
 import { ClientDashboard } from "@/pages/client/ClientDashboard";
 import { ClientJobsPage } from "@/pages/client/ClientJobsPage";
 // ClientNewJobPage removido - somente admin cria vagas
-import { ClientCandidatesPage } from "@/pages/client/ClientCandidatesPage";
+import { ClientWorkersPage } from "@/pages/client/ClientWorkersPage";
 import { ClientHistoryPage } from "@/pages/client/ClientHistoryPage";
 
 // Admin pages
@@ -177,10 +177,10 @@ function AppRoutes() {
       />
 {/* Rota de criação de vagas removida - somente admin cria vagas */}
       <Route
-        path="/client/candidates"
+        path="/client/workers"
         element={
           <ProtectedRoute allowedRoles={['client']}>
-            <ClientCandidatesPage />
+            <ClientWorkersPage />
           </ProtectedRoute>
         }
       />
