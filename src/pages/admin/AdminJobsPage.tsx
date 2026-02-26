@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +19,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Briefcase,
   Search,
@@ -31,6 +43,8 @@ import {
   Plus,
   Eye,
   CheckCircle,
+  UserMinus,
+  AlertTriangle,
 } from "lucide-react";
 
 interface Job {
@@ -71,6 +85,11 @@ export function AdminJobsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+
+  // Unassign dialog state
+  const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<Job['job_assignments'][0] | null>(null);
+  const [unassignLoading, setUnassignLoading] = useState(false);
 
   useEffect(() => {
     loadJobs();
@@ -154,6 +173,68 @@ export function AdminJobsPage() {
   function openDetails(job: Job) {
     setSelectedJob(job);
     setDetailsOpen(true);
+  }
+
+  function openUnassignDialog(assignment: Job['job_assignments'][0]) {
+    setSelectedAssignment(assignment);
+    setUnassignDialogOpen(true);
+  }
+
+  async function handleUnassignWorker() {
+    if (!selectedAssignment || !selectedJob) return;
+
+    setUnassignLoading(true);
+    try {
+      // 1. Atualizar o status do assignment para 'unassigned_by_admin'
+      const { error: assignmentError } = await supabaseUntyped
+        .from('job_assignments')
+        .update({ status: 'unassigned_by_admin' })
+        .eq('id', selectedAssignment.id);
+
+      if (assignmentError) {
+        console.error('[AdminJobs] Error updating assignment:', assignmentError);
+        toast.error('Erro ao desatribuir trabalhador');
+        return;
+      }
+
+      // 2. Deletar work_records associados a este assignment
+      const { error: workRecordsError } = await supabaseUntyped
+        .from('work_records')
+        .delete()
+        .eq('job_assignment_id', selectedAssignment.id);
+
+      if (workRecordsError) {
+        console.error('[AdminJobs] Error deleting work_records:', workRecordsError);
+        // Continua mesmo com erro pois o assignment já foi atualizado
+      }
+
+      // 3. Verificar se a vaga deve ser reaberta
+      const { count: activeCount } = await supabaseUntyped
+        .from('job_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('job_id', selectedJob.id)
+        .in('status', ['pending', 'confirmed']);
+
+      const requiredWorkers = selectedJob.required_workers || 1;
+
+      // Se trabalhadores ativos < requeridos, reabrir a vaga
+      if ((activeCount || 0) < requiredWorkers && selectedJob.status !== 'open') {
+        await supabaseUntyped
+          .from('jobs')
+          .update({ status: 'open' })
+          .eq('id', selectedJob.id);
+      }
+
+      toast.success('Trabalhador desatribuído com sucesso! A vaga está disponível novamente.');
+      setUnassignDialogOpen(false);
+      setDetailsOpen(false);
+      loadJobs();
+    } catch (error) {
+      console.error('[AdminJobs] Error unassigning worker:', error);
+      toast.error('Erro ao desatribuir trabalhador');
+    } finally {
+      setUnassignLoading(false);
+    }
   }
 
   // Filtros
@@ -452,38 +533,55 @@ export function AdminJobsPage() {
 
                   {selectedJob.job_assignments && selectedJob.job_assignments.length > 0 ? (
                     <div className="space-y-2">
-                      {selectedJob.job_assignments.map((assignment) => (
-                        <div
-                          key={assignment.id}
-                          className={`flex items-center justify-between p-3 rounded-lg border ${
-                            assignment.status === 'withdrawn'
-                              ? 'bg-red-50 border-red-200'
-                              : assignment.status === 'completed'
-                              ? 'bg-green-50 border-green-200'
-                              : 'bg-blue-50 border-blue-200'
-                          }`}
-                        >
-                          <span className="font-medium">
-                            {assignment.workers?.users?.name || 'Trabalhador'}
-                          </span>
-                          <Badge
-                            variant={
-                              assignment.status === 'withdrawn' ? 'destructive' :
-                              assignment.status === 'completed' ? 'default' : 'secondary'
-                            }
-                            className={
-                              assignment.status === 'completed' ? 'bg-green-500' :
-                              assignment.status === 'confirmed' ? 'bg-blue-500' : ''
-                            }
+                      {selectedJob.job_assignments.map((assignment) => {
+                        const canUnassign = ['pending', 'confirmed'].includes(assignment.status);
+                        return (
+                          <div
+                            key={assignment.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border ${
+                              assignment.status === 'withdrawn' || assignment.status === 'unassigned_by_admin'
+                                ? 'bg-red-50 border-red-200'
+                                : assignment.status === 'completed'
+                                ? 'bg-green-50 border-green-200'
+                                : 'bg-blue-50 border-blue-200'
+                            }`}
                           >
-                            {assignment.status === 'pending' && 'Pendente'}
-                            {assignment.status === 'confirmed' && 'Confirmado'}
-                            {assignment.status === 'completed' && 'Concluído'}
-                            {assignment.status === 'withdrawn' && 'Desistiu'}
-                            {assignment.status === 'no_show' && 'Faltou'}
-                          </Badge>
-                        </div>
-                      ))}
+                            <span className="font-medium">
+                              {assignment.workers?.users?.name || 'Trabalhador'}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={
+                                  assignment.status === 'withdrawn' || assignment.status === 'unassigned_by_admin' ? 'destructive' :
+                                  assignment.status === 'completed' ? 'default' : 'secondary'
+                                }
+                                className={
+                                  assignment.status === 'completed' ? 'bg-green-500' :
+                                  assignment.status === 'confirmed' ? 'bg-blue-500' : ''
+                                }
+                              >
+                                {assignment.status === 'pending' && 'Pendente'}
+                                {assignment.status === 'confirmed' && 'Confirmado'}
+                                {assignment.status === 'completed' && 'Concluído'}
+                                {assignment.status === 'withdrawn' && 'Desistiu'}
+                                {assignment.status === 'unassigned_by_admin' && 'Removido'}
+                                {assignment.status === 'no_show' && 'Faltou'}
+                              </Badge>
+                              {canUnassign && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => openUnassignDialog(assignment)}
+                                  title="Desatribuir trabalhador"
+                                >
+                                  <UserMinus className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-6 bg-slate-50 rounded-lg">
@@ -497,6 +595,44 @@ export function AdminJobsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Unassign Confirmation Dialog */}
+      <AlertDialog open={unassignDialogOpen} onOpenChange={setUnassignDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Desatribuir Trabalhador
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Você está prestes a remover <strong>{selectedAssignment?.workers?.users?.name}</strong> desta vaga.
+              </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm">
+                <p className="font-medium mb-1">Isso irá:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Remover o trabalhador da vaga</li>
+                  <li>Excluir os registros de trabalho pendentes</li>
+                  <li>Reabrir a vaga para outros trabalhadores</li>
+                </ul>
+              </div>
+              <p className="text-sm">
+                Tem certeza que deseja continuar?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={unassignLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUnassignWorker}
+              disabled={unassignLoading}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {unassignLoading ? 'Removendo...' : 'Confirmar Remoção'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
