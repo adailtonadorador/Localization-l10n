@@ -425,6 +425,7 @@ export function AdminMonitoringPage() {
           {filteredJobs.map((job) => {
             const stats = getJobStats(job);
             const isAssigned = job.status === 'assigned';
+            const todayRecords = job.work_records.filter(r => r.work_date === filterDate);
             return (
               <Card key={job.id} className={`transition-all ${
                 isAssigned
@@ -448,7 +449,8 @@ export function AdminMonitoringPage() {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* Info e Stats */}
                   <div className="flex flex-wrap gap-4">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
@@ -474,6 +476,85 @@ export function AdminMonitoringPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Barra de progresso */}
+                  {stats.total > 0 && (
+                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                      <div className="h-full flex">
+                        <div
+                          className="bg-green-500 transition-all"
+                          style={{ width: `${(stats.completed / stats.total) * 100}%` }}
+                        />
+                        <div
+                          className="bg-blue-500 transition-all"
+                          style={{ width: `${((stats.checkedIn - stats.completed) / stats.total) * 100}%` }}
+                        />
+                        <div
+                          className="bg-red-400 transition-all"
+                          style={{ width: `${(stats.absent / stats.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Lista de trabalhadores do dia */}
+                  {todayRecords.length > 0 && (
+                    <div className="border-t pt-4">
+                      <p className="text-xs font-medium text-muted-foreground mb-3">TRABALHADORES DO DIA</p>
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        {todayRecords.map((record) => (
+                          <div
+                            key={record.id}
+                            className={`flex items-center gap-3 p-2 rounded-lg border ${
+                              record.status === 'completed'
+                                ? 'bg-green-50 border-green-200'
+                                : record.status === 'absent'
+                                ? 'bg-red-50 border-red-200'
+                                : record.check_in
+                                ? 'bg-blue-50 border-blue-200'
+                                : 'bg-slate-50 border-slate-200'
+                            }`}
+                          >
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className={`text-xs font-medium ${
+                                record.status === 'completed'
+                                  ? 'bg-green-500 text-white'
+                                  : record.status === 'absent'
+                                  ? 'bg-red-500 text-white'
+                                  : record.check_in
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-slate-400 text-white'
+                              }`}>
+                                {record.workers?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{record.workers?.users?.name}</p>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                {record.status === 'completed' ? (
+                                  <span className="text-green-600 flex items-center gap-1">
+                                    <CheckCircle className="h-3 w-3" />
+                                    Concluído
+                                  </span>
+                                ) : record.status === 'absent' ? (
+                                  <span className="text-red-600 flex items-center gap-1">
+                                    <AlertCircle className="h-3 w-3" />
+                                    Falta
+                                  </span>
+                                ) : record.check_in ? (
+                                  <span className="text-blue-600">
+                                    Check-in: {formatTime(record.check_in)}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-500">Aguardando</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
