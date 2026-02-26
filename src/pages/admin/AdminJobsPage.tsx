@@ -31,8 +31,6 @@ import {
   Plus,
   Eye,
   CheckCircle,
-  AlertCircle,
-  XCircle,
 } from "lucide-react";
 
 interface Job {
