@@ -399,9 +399,12 @@ export function AdminMonitoringPage() {
   function getJobStats(job: JobWithRecords) {
     const todayRecords = job.work_records.filter(r => r.work_date === filterDate);
     const total = todayRecords.length;
-    const checkedIn = todayRecords.filter(r => r.check_in).length;
+    // Conta como "trabalhando" se tem check_in OU status indica que está trabalhando
+    const checkedIn = todayRecords.filter(r =>
+      r.check_in || r.status === 'checked_in' || r.status === 'in_progress'
+    ).length;
     const completed = todayRecords.filter(r => r.status === 'completed').length;
-    const absent = todayRecords.filter(r => r.status === 'absent').length;
+    const absent = todayRecords.filter(r => r.status === 'absent' || r.status === 'no_show').length;
 
     return { total, checkedIn, completed, absent };
   }
@@ -643,22 +646,22 @@ export function AdminMonitoringPage() {
                             className={`flex items-center gap-3 p-2 rounded-lg border ${
                               record.status === 'completed'
                                 ? 'bg-green-50 border-green-200'
-                                : record.status === 'absent'
+                                : record.status === 'absent' || record.status === 'no_show'
                                 ? 'bg-red-50 border-red-200'
-                                : record.check_in
+                                : record.status === 'checked_in' || record.status === 'in_progress' || record.check_in
                                 ? 'bg-blue-50 border-blue-200'
-                                : 'bg-slate-50 border-slate-200'
+                                : 'bg-amber-50 border-amber-200'
                             }`}
                           >
                             <Avatar className="h-8 w-8">
                               <AvatarFallback className={`text-xs font-medium ${
                                 record.status === 'completed'
                                   ? 'bg-green-500 text-white'
-                                  : record.status === 'absent'
+                                  : record.status === 'absent' || record.status === 'no_show'
                                   ? 'bg-red-500 text-white'
-                                  : record.check_in
+                                  : record.status === 'checked_in' || record.status === 'in_progress' || record.check_in
                                   ? 'bg-blue-500 text-white'
-                                  : 'bg-slate-400 text-white'
+                                  : 'bg-amber-500 text-white'
                               }`}>
                                 {record.workers?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                               </AvatarFallback>
@@ -669,19 +672,23 @@ export function AdminMonitoringPage() {
                                 {record.status === 'completed' ? (
                                   <span className="text-green-600 flex items-center gap-1">
                                     <CheckCircle className="h-3 w-3" />
-                                    Concluído
+                                    Concluído {record.check_out && `às ${formatTime(record.check_out)}`}
                                   </span>
-                                ) : record.status === 'absent' ? (
+                                ) : record.status === 'absent' || record.status === 'no_show' ? (
                                   <span className="text-red-600 flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
                                     Falta
                                   </span>
-                                ) : record.check_in ? (
-                                  <span className="text-blue-600">
-                                    Check-in: {formatTime(record.check_in)}
+                                ) : record.status === 'checked_in' || record.status === 'in_progress' || record.check_in ? (
+                                  <span className="text-blue-600 flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    Trabalhando {record.check_in && `desde ${formatTime(record.check_in)}`}
                                   </span>
                                 ) : (
-                                  <span className="text-slate-500">Aguardando</span>
+                                  <span className="text-amber-600 flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    Aguardando check-in
+                                  </span>
                                 )}
                               </div>
                             </div>
