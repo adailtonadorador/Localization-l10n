@@ -50,8 +50,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Excluir Service Worker do OneSignal do cache do Workbox
-        navigateFallbackDenylist: [/^\/OneSignalSDKWorker\.js$/],
-        globIgnores: ['**/OneSignalSDKWorker.js'],
+        navigateFallbackDenylist: [/^\/push\/onesignal\//],
+        globIgnores: ['**/push/onesignal/**'],
         // Garante que o SW ative imediatamente e assuma controle
         skipWaiting: true,
         clientsClaim: true,
