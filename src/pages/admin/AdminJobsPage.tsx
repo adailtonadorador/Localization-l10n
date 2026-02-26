@@ -19,18 +19,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Briefcase,
   Search,
@@ -597,42 +586,48 @@ export function AdminJobsPage() {
       </Dialog>
 
       {/* Unassign Confirmation Dialog */}
-      <AlertDialog open={unassignDialogOpen} onOpenChange={setUnassignDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+      <Dialog open={unassignDialogOpen} onOpenChange={setUnassignDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="h-5 w-5" />
               Desatribuir Trabalhador
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <p>
-                Você está prestes a remover <strong>{selectedAssignment?.workers?.users?.name}</strong> desta vaga.
-              </p>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm">
-                <p className="font-medium mb-1">Isso irá:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Remover o trabalhador da vaga</li>
-                  <li>Excluir os registros de trabalho pendentes</li>
-                  <li>Reabrir a vaga para outros trabalhadores</li>
-                </ul>
-              </div>
-              <p className="text-sm">
-                Tem certeza que deseja continuar?
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={unassignLoading}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Você está prestes a remover <strong className="text-foreground">{selectedAssignment?.workers?.users?.name}</strong> desta vaga.
+            </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm">
+              <p className="font-medium mb-1">Isso irá:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Remover o trabalhador da vaga</li>
+                <li>Excluir os registros de trabalho pendentes</li>
+                <li>Reabrir a vaga para outros trabalhadores</li>
+              </ul>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja continuar?
+            </p>
+          </div>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setUnassignDialogOpen(false)}
+              disabled={unassignLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
               onClick={handleUnassignWorker}
               disabled={unassignLoading}
               className="bg-red-500 hover:bg-red-600"
             >
               {unassignLoading ? 'Removendo...' : 'Confirmar Remoção'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
