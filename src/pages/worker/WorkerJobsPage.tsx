@@ -274,10 +274,12 @@ export function WorkerJobsPage() {
       }
 
       // Verificar se todas as vagas foram preenchidas e atualizar status
+      // Conta apenas assignments ativos (pending/confirmed), excluindo withdrawn
       const { count: totalAssigned } = await supabaseUntyped
         .from('job_assignments')
         .select('*', { count: 'exact', head: true })
-        .eq('job_id', selectedJob.id);
+        .eq('job_id', selectedJob.id)
+        .in('status', ['pending', 'confirmed']);
 
       if ((totalAssigned || 0) >= selectedJob.required_workers) {
         await supabaseUntyped

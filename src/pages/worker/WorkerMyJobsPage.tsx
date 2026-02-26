@@ -200,15 +200,23 @@ export function WorkerMyJobsPage() {
         console.error('Erro ao deletar work_records:', deleteError);
       }
 
-      // 4. Verificar se ainda há outros trabalhadores atribuídos
-      const { count } = await supabaseUntyped
+      // 4. Buscar informações do job (required_workers)
+      const { data: jobData } = await supabaseUntyped
+        .from('jobs')
+        .select('required_workers, status')
+        .eq('id', selectedJobForWithdrawal.job_id)
+        .single();
+
+      // 5. Contar trabalhadores ativos restantes
+      const { count: activeCount } = await supabaseUntyped
         .from('job_assignments')
         .select('*', { count: 'exact', head: true })
         .eq('job_id', selectedJobForWithdrawal.job_id)
         .in('status', ['pending', 'confirmed']);
 
-      // 5. Se não houver mais trabalhadores, retornar a vaga para status 'open'
-      if (count === 0) {
+      // 6. Se o número de trabalhadores ativos for menor que o requerido, reabrir a vaga
+      const requiredWorkers = jobData?.required_workers || 1;
+      if ((activeCount || 0) < requiredWorkers && jobData?.status !== 'open') {
         await supabaseUntyped
           .from('jobs')
           .update({ status: 'open' })
