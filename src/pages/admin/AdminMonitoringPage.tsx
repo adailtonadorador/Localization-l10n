@@ -123,39 +123,99 @@ export function AdminMonitoringPage() {
   async function loadJobs() {
     setLoading(true);
     try {
-      const { data } = await supabaseUntyped
+      console.log('[AdminMonitoring] Loading jobs for date:', filterDate);
+
+      // Primeiro, buscar jobs que têm a data específica OU contêm a data no array dates
+      const { data: jobsData, error: jobsError } = await supabaseUntyped
         .from('jobs')
         .select(`
           *,
-          clients (company_name),
-          work_records (
-            id,
-            work_date,
-            check_in,
-            check_out,
-            signature_data,
-            signed_at,
-            status,
-            job_assignment_id,
-            workers (
-              id,
-              rating,
-              total_jobs,
-              users (name, email, phone)
-            ),
-            job_assignments (
-              id,
-              rating,
-              feedback
-            )
-          )
+          clients (company_name)
         `)
-        .or(`date.eq.${filterDate},dates.cs.{${filterDate}}`)
+        .or(`date.eq.${filterDate},dates.cs.{"${filterDate}"}`)
         .order('date', { ascending: true });
 
-      setJobs(data || []);
+      if (jobsError) {
+        console.error('[AdminMonitoring] Error loading jobs:', jobsError);
+        setJobs([]);
+        return;
+      }
+
+      console.log('[AdminMonitoring] Jobs found:', jobsData?.length || 0);
+
+      if (!jobsData || jobsData.length === 0) {
+        setJobs([]);
+        return;
+      }
+
+      // Agora buscar work_records para esses jobs
+      const jobIds = jobsData.map((j: { id: string }) => j.id);
+      const { data: workRecordsData, error: workRecordsError } = await supabaseUntyped
+        .from('work_records')
+        .select(`
+          id,
+          job_id,
+          work_date,
+          check_in,
+          check_out,
+          signature_data,
+          signed_at,
+          status,
+          job_assignment_id,
+          worker_id,
+          workers (
+            id,
+            rating,
+            total_jobs,
+            users (name, email, phone)
+          )
+        `)
+        .in('job_id', jobIds)
+        .eq('work_date', filterDate);
+
+      if (workRecordsError) {
+        console.error('[AdminMonitoring] Error loading work_records:', workRecordsError);
+      }
+
+      console.log('[AdminMonitoring] Work records found:', workRecordsData?.length || 0);
+
+      // Buscar job_assignments para obter ratings
+      const { data: assignmentsData } = await supabaseUntyped
+        .from('job_assignments')
+        .select('id, job_id, worker_id, rating, feedback')
+        .in('job_id', jobIds);
+
+      // Mapear work_records para cada job
+      const jobsWithRecords = jobsData.map((job: JobWithRecords) => {
+        const jobWorkRecords = (workRecordsData || [])
+          .filter((wr: { job_id: string }) => wr.job_id === job.id)
+          .map((wr: WorkRecord & { worker_id: string }) => {
+            // Encontrar o assignment correspondente
+            const assignment = (assignmentsData || []).find(
+              (a: { job_id: string; worker_id: string }) =>
+                a.job_id === job.id && a.worker_id === wr.worker_id
+            );
+            return {
+              ...wr,
+              job_assignments: assignment ? {
+                id: assignment.id,
+                rating: assignment.rating,
+                feedback: assignment.feedback
+              } : null
+            };
+          });
+
+        return {
+          ...job,
+          work_records: jobWorkRecords
+        };
+      });
+
+      console.log('[AdminMonitoring] Jobs with records:', jobsWithRecords);
+      setJobs(jobsWithRecords);
     } catch (error) {
-      console.error('Error loading jobs:', error);
+      console.error('[AdminMonitoring] Error loading jobs:', error);
+      setJobs([]);
     } finally {
       setLoading(false);
     }
