@@ -87,11 +87,24 @@ export function useNotifications(): UseNotificationsReturn {
 
   // Registra o usuário quando o perfil está disponível
   useEffect(() => {
-    if (!state.isInitialized || !profile?.id || hasRegisteredRef.current) {
+    if (!state.isInitialized || !profile?.id) {
+      return;
+    }
+
+    // Para workers, aguarda workerProfile estar disponível
+    if (profile.role === 'worker' && !workerProfile) {
+      return;
+    }
+
+    // Evita registro duplicado
+    if (hasRegisteredRef.current) {
       return;
     }
 
     async function register() {
+      // Marca como registrando antes da chamada async para evitar race conditions
+      hasRegisteredRef.current = true;
+
       try {
         const role = profile!.role as UserRole;
         const tags: Partial<UserTags> = {};
@@ -103,7 +116,11 @@ export function useNotifications(): UseNotificationsReturn {
         }
 
         await registerUser(profile!.id, role, tags);
-        hasRegisteredRef.current = true;
+
+        // Salva estado do workerProfile para comparação futura
+        if (workerProfile) {
+          previousWorkerProfileRef.current = workerProfile;
+        }
 
         // Atualiza status de inscrição após registrar
         const subscribed = await isSubscribed();
@@ -113,15 +130,22 @@ export function useNotifications(): UseNotificationsReturn {
         }));
       } catch (error) {
         console.error('[useNotifications] Erro ao registrar usuário:', error);
+        // Em caso de erro, permite nova tentativa
+        hasRegisteredRef.current = false;
       }
     }
 
     register();
   }, [state.isInitialized, profile?.id, profile?.role, workerProfile]);
 
-  // Atualiza tags quando workerProfile muda
+  // Atualiza tags APENAS quando workerProfile muda APÓS registro inicial
   useEffect(() => {
-    if (!state.isInitialized || !profile?.id || profile.role !== 'worker') {
+    // Só atualiza se já foi registrado anteriormente
+    if (!hasRegisteredRef.current) {
+      return;
+    }
+
+    if (!state.isInitialized || !profile?.id || profile.role !== 'worker' || !workerProfile) {
       return;
     }
 
@@ -129,7 +153,6 @@ export function useNotifications(): UseNotificationsReturn {
     const prev = previousWorkerProfileRef.current;
     if (
       prev &&
-      workerProfile &&
       prev.approval_status === workerProfile.approval_status &&
       prev.is_active === workerProfile.is_active
     ) {
@@ -137,8 +160,6 @@ export function useNotifications(): UseNotificationsReturn {
     }
 
     previousWorkerProfileRef.current = workerProfile;
-
-    if (!workerProfile) return;
 
     async function updateTags() {
       try {
