@@ -125,31 +125,10 @@ export function AdminMonitoringPage() {
     try {
       console.log('[AdminMonitoring] Loading jobs for date:', filterDate);
 
-      // Primeiro, buscar jobs que têm a data específica OU contêm a data no array dates
-      const { data: jobsData, error: jobsError } = await supabaseUntyped
-        .from('jobs')
-        .select(`
-          *,
-          clients (company_name)
-        `)
-        .or(`date.eq.${filterDate},dates.cs.{"${filterDate}"}`)
-        .order('date', { ascending: true });
+      // Estratégia: buscar work_records do dia e depois os jobs relacionados
+      // Isso garante que encontramos todos os trabalhadores escalados para o dia
 
-      if (jobsError) {
-        console.error('[AdminMonitoring] Error loading jobs:', jobsError);
-        setJobs([]);
-        return;
-      }
-
-      console.log('[AdminMonitoring] Jobs found:', jobsData?.length || 0);
-
-      if (!jobsData || jobsData.length === 0) {
-        setJobs([]);
-        return;
-      }
-
-      // Agora buscar work_records para esses jobs
-      const jobIds = jobsData.map((j: { id: string }) => j.id);
+      // 1. Buscar todos os work_records do dia selecionado
       const { data: workRecordsData, error: workRecordsError } = await supabaseUntyped
         .from('work_records')
         .select(`
@@ -170,23 +149,87 @@ export function AdminMonitoringPage() {
             users (name, email, phone)
           )
         `)
-        .in('job_id', jobIds)
         .eq('work_date', filterDate);
 
       if (workRecordsError) {
         console.error('[AdminMonitoring] Error loading work_records:', workRecordsError);
       }
 
-      console.log('[AdminMonitoring] Work records found:', workRecordsData?.length || 0);
+      console.log('[AdminMonitoring] Work records found for date:', workRecordsData?.length || 0, workRecordsData);
 
-      // Buscar job_assignments para obter ratings
-      const { data: assignmentsData } = await supabaseUntyped
+      // 2. Pegar os job_ids únicos dos work_records
+      const jobIdsFromRecords = [...new Set((workRecordsData || []).map((wr: { job_id: string }) => wr.job_id))];
+
+      // 3. Buscar também jobs que têm a data mas podem não ter work_records ainda
+      const { data: jobsByDate, error: jobsByDateError } = await supabaseUntyped
+        .from('jobs')
+        .select('id')
+        .or(`date.eq.${filterDate},dates.cs.{"${filterDate}"}`);
+
+      if (jobsByDateError) {
+        console.error('[AdminMonitoring] Error loading jobs by date:', jobsByDateError);
+      }
+
+      // Combinar os IDs
+      const allJobIds = [...new Set([
+        ...jobIdsFromRecords,
+        ...(jobsByDate || []).map((j: { id: string }) => j.id)
+      ])];
+
+      console.log('[AdminMonitoring] All job IDs:', allJobIds);
+
+      if (allJobIds.length === 0) {
+        setJobs([]);
+        return;
+      }
+
+      // 4. Buscar detalhes completos dos jobs
+      const { data: jobsData, error: jobsError } = await supabaseUntyped
+        .from('jobs')
+        .select(`
+          *,
+          clients (company_name)
+        `)
+        .in('id', allJobIds)
+        .order('start_time', { ascending: true });
+
+      if (jobsError) {
+        console.error('[AdminMonitoring] Error loading jobs:', jobsError);
+        setJobs([]);
+        return;
+      }
+
+      console.log('[AdminMonitoring] Jobs found:', jobsData?.length || 0, jobsData);
+
+      // 5. Buscar job_assignments para obter ratings e workers atribuídos
+      const { data: assignmentsData, error: assignmentsError } = await supabaseUntyped
         .from('job_assignments')
-        .select('id, job_id, worker_id, rating, feedback')
-        .in('job_id', jobIds);
+        .select(`
+          id,
+          job_id,
+          worker_id,
+          status,
+          rating,
+          feedback,
+          workers (
+            id,
+            rating,
+            total_jobs,
+            users (name, email, phone)
+          )
+        `)
+        .in('job_id', allJobIds)
+        .in('status', ['pending', 'confirmed', 'completed']);
 
-      // Mapear work_records para cada job
-      const jobsWithRecords = jobsData.map((job: JobWithRecords) => {
+      if (assignmentsError) {
+        console.error('[AdminMonitoring] Error loading assignments:', assignmentsError);
+      }
+
+      console.log('[AdminMonitoring] Assignments found:', assignmentsData?.length || 0, assignmentsData);
+
+      // 6. Mapear work_records para cada job
+      const jobsWithRecords = (jobsData || []).map((job: JobWithRecords) => {
+        // Work records do dia para este job
         const jobWorkRecords = (workRecordsData || [])
           .filter((wr: { job_id: string }) => wr.job_id === job.id)
           .map((wr: WorkRecord & { worker_id: string }) => {
@@ -205,13 +248,45 @@ export function AdminMonitoringPage() {
             };
           });
 
+        // Se não há work_records mas há assignments, criar registros "virtuais" para mostrar os trabalhadores
+        if (jobWorkRecords.length === 0) {
+          const jobAssignments = (assignmentsData || []).filter(
+            (a: { job_id: string }) => a.job_id === job.id
+          );
+
+          jobAssignments.forEach((assignment: {
+            id: string;
+            worker_id: string;
+            workers: WorkRecord['workers'];
+            rating: number | null;
+            feedback: string | null;
+          }) => {
+            jobWorkRecords.push({
+              id: `virtual-${assignment.id}`,
+              work_date: filterDate,
+              check_in: null,
+              check_out: null,
+              signature_data: null,
+              signed_at: null,
+              status: 'pending',
+              job_assignment_id: assignment.id,
+              workers: assignment.workers,
+              job_assignments: {
+                id: assignment.id,
+                rating: assignment.rating,
+                feedback: assignment.feedback
+              }
+            } as WorkRecord);
+          });
+        }
+
         return {
           ...job,
           work_records: jobWorkRecords
         };
       });
 
-      console.log('[AdminMonitoring] Jobs with records:', jobsWithRecords);
+      console.log('[AdminMonitoring] Final jobs with records:', jobsWithRecords);
       setJobs(jobsWithRecords);
     } catch (error) {
       console.error('[AdminMonitoring] Error loading jobs:', error);
