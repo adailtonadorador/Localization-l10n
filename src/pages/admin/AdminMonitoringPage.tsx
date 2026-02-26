@@ -155,7 +155,13 @@ export function AdminMonitoringPage() {
         console.error('[AdminMonitoring] Error loading work_records:', workRecordsError);
       }
 
-      console.log('[AdminMonitoring] Work records found for date:', workRecordsData?.length || 0, workRecordsData);
+      console.log('[AdminMonitoring] Work records found for date:', workRecordsData?.length || 0);
+      console.log('[AdminMonitoring] Work records status values:', workRecordsData?.map((wr: { id: string; status: string; check_in: string | null; check_out: string | null }) => ({
+        id: wr.id,
+        status: wr.status,
+        check_in: wr.check_in,
+        check_out: wr.check_out
+      })));
 
       // 2. Pegar os job_ids únicos dos work_records
       const jobIdsFromRecords = [...new Set((workRecordsData || []).map((wr: { job_id: string }) => wr.job_id))];
@@ -280,13 +286,22 @@ export function AdminMonitoringPage() {
           });
         }
 
+        // Log status values for each job's work records
+        console.log(`[AdminMonitoring] Job ${job.id} (${job.title}) work records:`, jobWorkRecords.map((r: WorkRecord) => ({
+          id: r.id,
+          status: r.status,
+          check_in: r.check_in,
+          check_out: r.check_out,
+          isVirtual: r.id.startsWith('virtual-')
+        })));
+
         return {
           ...job,
           work_records: jobWorkRecords
         };
       });
 
-      console.log('[AdminMonitoring] Final jobs with records:', jobsWithRecords);
+      console.log('[AdminMonitoring] Final jobs with records:', jobsWithRecords.length);
       setJobs(jobsWithRecords);
     } catch (error) {
       console.error('[AdminMonitoring] Error loading jobs:', error);
@@ -383,27 +398,32 @@ export function AdminMonitoringPage() {
     return timeStr.slice(0, 5);
   }
 
-  function getRecordStatusBadge(status: string) {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-500">Concluído</Badge>;
-      case 'in_progress':
-        return <Badge className="bg-blue-500">Trabalhando</Badge>;
-      case 'absent':
-        return <Badge variant="destructive">Falta</Badge>;
-      default:
-        return <Badge variant="secondary">Pendente</Badge>;
+  function getRecordStatusBadge(record: WorkRecord) {
+    // Check completed first - by status OR by having both check_in and check_out
+    if (record.status === 'completed' || (record.check_in && record.check_out)) {
+      return <Badge className="bg-green-500">Concluído</Badge>;
     }
+    if (record.status === 'absent' || record.status === 'no_show') {
+      return <Badge variant="destructive">Falta</Badge>;
+    }
+    if (record.status === 'in_progress' || record.status === 'checked_in' || record.check_in) {
+      return <Badge className="bg-blue-500">Trabalhando</Badge>;
+    }
+    return <Badge variant="secondary">Pendente</Badge>;
   }
 
   function getJobStats(job: JobWithRecords) {
     const todayRecords = job.work_records.filter(r => r.work_date === filterDate);
     const total = todayRecords.length;
-    // Conta como "trabalhando" se tem check_in OU status indica que está trabalhando
-    const checkedIn = todayRecords.filter(r =>
-      r.check_in || r.status === 'checked_in' || r.status === 'in_progress'
+    // Conta como "concluído" se status é completed OU se tem check_in E check_out
+    const completed = todayRecords.filter(r =>
+      r.status === 'completed' || (r.check_in && r.check_out)
     ).length;
-    const completed = todayRecords.filter(r => r.status === 'completed').length;
+    // Conta como "trabalhando" se tem check_in mas não check_out (e não está marcado como concluído)
+    const checkedIn = todayRecords.filter(r =>
+      (r.check_in || r.status === 'checked_in' || r.status === 'in_progress') &&
+      !(r.status === 'completed' || (r.check_in && r.check_out))
+    ).length + completed; // Include completed in checkedIn for the progress bar
     const absent = todayRecords.filter(r => r.status === 'absent' || r.status === 'no_show').length;
 
     return { total, checkedIn, completed, absent };
@@ -644,7 +664,7 @@ export function AdminMonitoringPage() {
                           <div
                             key={record.id}
                             className={`flex items-center gap-3 p-2 rounded-lg border ${
-                              record.status === 'completed'
+                              record.status === 'completed' || (record.check_in && record.check_out)
                                 ? 'bg-green-50 border-green-200'
                                 : record.status === 'absent' || record.status === 'no_show'
                                 ? 'bg-red-50 border-red-200'
@@ -655,7 +675,7 @@ export function AdminMonitoringPage() {
                           >
                             <Avatar className="h-8 w-8">
                               <AvatarFallback className={`text-xs font-medium ${
-                                record.status === 'completed'
+                                record.status === 'completed' || (record.check_in && record.check_out)
                                   ? 'bg-green-500 text-white'
                                   : record.status === 'absent' || record.status === 'no_show'
                                   ? 'bg-red-500 text-white'
@@ -669,7 +689,8 @@ export function AdminMonitoringPage() {
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">{record.workers?.users?.name}</p>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                {record.status === 'completed' ? (
+                                {/* Check completed first - by status OR by having both check_in and check_out */}
+                                {record.status === 'completed' || (record.check_in && record.check_out) ? (
                                   <span className="text-green-600 flex items-center gap-1">
                                     <CheckCircle className="h-3 w-3" />
                                     Concluído {record.check_out && `às ${formatTime(record.check_out)}`}
@@ -969,20 +990,20 @@ export function AdminMonitoringPage() {
                         <div key={record.id} className="border rounded-xl overflow-hidden">
                           {/* Info do trabalhador */}
                           <div className={`p-4 ${
-                            record.status === 'completed'
+                            record.status === 'completed' || (record.check_in && record.check_out)
                               ? 'bg-gradient-to-r from-green-50 to-green-100'
-                              : record.status === 'in_progress'
+                              : record.status === 'in_progress' || record.status === 'checked_in' || record.check_in
                               ? 'bg-gradient-to-r from-blue-50 to-blue-100'
-                              : record.status === 'absent'
+                              : record.status === 'absent' || record.status === 'no_show'
                               ? 'bg-gradient-to-r from-red-50 to-red-100'
                               : 'bg-gradient-to-r from-slate-50 to-slate-100'
                           }`}>
                             <div className="flex items-center gap-4">
                               <Avatar className="h-12 w-12 ring-2 ring-white shadow-lg">
                                 <AvatarFallback className={`text-white text-lg font-bold ${
-                                  record.status === 'completed' ? 'bg-green-500' :
-                                  record.status === 'in_progress' ? 'bg-blue-500' :
-                                  record.status === 'absent' ? 'bg-red-500' : 'bg-purple-500'
+                                  record.status === 'completed' || (record.check_in && record.check_out) ? 'bg-green-500' :
+                                  record.status === 'in_progress' || record.status === 'checked_in' || record.check_in ? 'bg-blue-500' :
+                                  record.status === 'absent' || record.status === 'no_show' ? 'bg-red-500' : 'bg-purple-500'
                                 }`}>
                                   {record.workers?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                                 </AvatarFallback>
@@ -1005,7 +1026,7 @@ export function AdminMonitoringPage() {
                                 </div>
                               </div>
                               <div className="text-right flex flex-col items-end gap-2">
-                                {getRecordStatusBadge(record.status)}
+                                {getRecordStatusBadge(record)}
                                 <div className="flex items-center gap-1">
                                   <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
                                   <span className="font-bold text-sm">{record.workers?.rating?.toFixed(1) || '0.0'}</span>
@@ -1060,7 +1081,7 @@ export function AdminMonitoringPage() {
                             )}
 
                             {/* Rating Section - only for completed records */}
-                            {record.status === 'completed' && record.job_assignments && (
+                            {(record.status === 'completed' || (record.check_in && record.check_out)) && record.job_assignments && (
                               <div className="pt-3 border-t">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
