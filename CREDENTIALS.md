@@ -4,11 +4,11 @@ Este projeto utiliza a conta **adailtonadorador**.
 
 ## Serviços e Contas
 
-| Serviço  | Conta/Username      | Email                      |
-|----------|---------------------|----------------------------|
-| GitHub   | adailtonadorador    | adailtonadorador@gmail.com |
-| Vercel   | adailtonadorador    | adailtonadorador@gmail.com |
-| Supabase | adailtonadorador    | adailtonadorador@gmail.com |
+| Serviço  | Conta/Username      | Email                      | Project Ref              |
+|----------|---------------------|----------------------------|--------------------------|
+| GitHub   | adailtonadorador    | adailtonadorador@gmail.com | -                        |
+| Vercel   | adailtonadorador    | adailtonadorador@gmail.com | plataforma-sama          |
+| Supabase | adailtonadorador    | adailtonadorador@gmail.com | axznhbmdaqhpjpkvrghq     |
 
 ## Setup Rápido
 
@@ -41,7 +41,7 @@ vercel link
 ```bash
 supabase logout
 supabase login
-supabase link --project-ref <project-ref>
+supabase link --project-ref axznhbmdaqhpjpkvrghq
 ```
 
 ## Verificar Configuração Atual

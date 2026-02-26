@@ -39,21 +39,21 @@ fi
 # -----------------------------------------------------------------------------
 # SUPABASE - Requer login manual
 # -----------------------------------------------------------------------------
+SUPABASE_PROJECT_REF="axznhbmdaqhpjpkvrghq"
+
 echo ""
 echo "[Supabase] Para configurar o Supabase CLI:"
 echo "  1. supabase logout"
 echo "  2. supabase login  (use a conta adailtonadorador)"
-echo "  3. supabase link --project-ref <project-ref>"
+echo "  3. supabase link --project-ref $SUPABASE_PROJECT_REF"
 echo ""
 read -p "Deseja fazer login no Supabase agora? (s/n): " supabase_login
 if [ "$supabase_login" = "s" ]; then
-    supabase logout 2>/dev/null
+    echo "y" | supabase logout 2>/dev/null
     supabase login
     echo ""
-    read -p "Digite o project-ref do Supabase (ou Enter para pular): " project_ref
-    if [ -n "$project_ref" ]; then
-        supabase link --project-ref "$project_ref"
-    fi
+    echo "[Supabase] Vinculando ao projeto Plataforma Sama..."
+    supabase link --project-ref "$SUPABASE_PROJECT_REF"
 fi
 
 echo ""
