@@ -42,7 +42,13 @@ import {
   ThumbsDown,
   ChevronDown,
   ChevronUp,
-  X
+  X,
+  Mail,
+  Phone,
+  MapPin,
+  Eye,
+  FileText,
+  History
 } from "lucide-react";
 
 interface JobAssignment {
@@ -102,6 +108,7 @@ export function AdminWorkersPage() {
   const [disableWorkerDialogOpen, setDisableWorkerDialogOpen] = useState(false);
   const [approveWorkerDialogOpen, setApproveWorkerDialogOpen] = useState(false);
   const [rejectWorkerDialogOpen, setRejectWorkerDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [disableReason, setDisableReason] = useState("");
   const [approvalNotes, setApprovalNotes] = useState("");
@@ -264,6 +271,11 @@ export function AdminWorkersPage() {
     setSelectedWorker(worker);
     setRejectionReason("");
     setRejectWorkerDialogOpen(true);
+  }
+
+  function openDetailsDialog(worker: Worker) {
+    setSelectedWorker(worker);
+    setDetailsDialogOpen(true);
   }
 
   async function handleRejectWorker() {
@@ -627,8 +639,11 @@ export function AdminWorkersPage() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <Avatar className={`h-12 w-12 ring-2 ring-white shadow ${worker.is_active === false ? 'opacity-60' : ''}`}>
+                      <div
+                        className="flex items-center gap-4 cursor-pointer group/worker"
+                        onClick={() => openDetailsDialog(worker)}
+                      >
+                        <Avatar className={`h-12 w-12 ring-2 ring-white shadow ${worker.is_active === false ? 'opacity-60' : ''} group-hover/worker:ring-blue-300 transition-all`}>
                           <AvatarImage src={worker.users?.avatar_url || ''} />
                           <AvatarFallback className={`${worker.is_active === false ? 'bg-slate-400' : 'bg-blue-500'} text-white font-medium`}>
                             {worker.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
@@ -636,9 +651,10 @@ export function AdminWorkersPage() {
                         </Avatar>
                         <div>
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h4 className={`font-semibold ${worker.is_active === false ? 'text-slate-500' : 'text-slate-900'}`}>
+                            <h4 className={`font-semibold ${worker.is_active === false ? 'text-slate-500' : 'text-slate-900'} group-hover/worker:text-blue-600 transition-colors`}>
                               {worker.users?.name}
                             </h4>
+                            <Eye className="h-4 w-4 text-slate-400 opacity-0 group-hover/worker:opacity-100 transition-opacity" />
 
                             {/* Primary Badge: Approval Status OR Blocked */}
                             {worker.is_active === false ? (
@@ -982,6 +998,241 @@ export function AdminWorkersPage() {
               {actionLoading ? 'Bloqueando...' : 'Confirmar Bloqueio'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Worker Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {selectedWorker && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start gap-4">
+                  <Avatar className={`h-16 w-16 ring-2 ${selectedWorker.is_active === false ? 'ring-red-200' : 'ring-blue-200'} shadow-lg`}>
+                    <AvatarImage src={selectedWorker.users?.avatar_url || ''} />
+                    <AvatarFallback className={`${selectedWorker.is_active === false ? 'bg-slate-400' : 'bg-blue-500'} text-white text-xl font-medium`}>
+                      {selectedWorker.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <DialogTitle className="text-xl">{selectedWorker.users?.name}</DialogTitle>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {/* Status badges */}
+                      {selectedWorker.is_active === false ? (
+                        <Badge variant="outline" className="border-slate-400 text-slate-600 bg-slate-100 gap-1">
+                          <Ban className="h-3 w-3" />
+                          Bloqueado
+                        </Badge>
+                      ) : selectedWorker.approval_status === 'pending' ? (
+                        <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50 gap-1">
+                          <Clock className="h-3 w-3" />
+                          Aguardando Aprovação
+                        </Badge>
+                      ) : selectedWorker.approval_status === 'rejected' ? (
+                        <Badge variant="destructive" className="gap-1">
+                          <ThumbsDown className="h-3 w-3" />
+                          Rejeitado
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-green-500 gap-1">
+                          <ThumbsUp className="h-3 w-3" />
+                          Aprovado
+                        </Badge>
+                      )}
+                      {selectedWorker.documents_verified && selectedWorker.is_active !== false && (
+                        <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50 gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Verificado
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-6 mt-4">
+                {/* Contact Info */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="p-4 bg-slate-50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Mail className="h-3 w-3" /> Email
+                    </p>
+                    <p className="font-medium text-sm">{selectedWorker.users?.email}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Phone className="h-3 w-3" /> Telefone
+                    </p>
+                    <p className="font-medium text-sm">{selectedWorker.users?.phone || 'Não informado'}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <FileText className="h-3 w-3" /> CPF
+                    </p>
+                    <p className="font-medium text-sm">{formatCpf(selectedWorker.cpf)}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <MapPin className="h-3 w-3" /> Estado
+                    </p>
+                    <p className="font-medium text-sm">{selectedWorker.uf || 'Não informado'}</p>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid gap-4 grid-cols-3">
+                  <div className="p-4 bg-amber-50 rounded-lg text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+                      <span className="text-2xl font-bold text-amber-600">{selectedWorker.rating?.toFixed(1) || '0.0'}</span>
+                    </div>
+                    <p className="text-xs text-amber-600">Avaliação</p>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-blue-600">{selectedWorker.total_jobs}</p>
+                    <p className="text-xs text-blue-600">Trabalhos</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-slate-600">
+                      {selectedWorker.job_assignments?.filter(a => ['pending', 'confirmed'].includes(a.status)).length || 0}
+                    </p>
+                    <p className="text-xs text-slate-600">Vagas Ativas</p>
+                  </div>
+                </div>
+
+                {/* Dates */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="p-4 bg-slate-50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" /> Cadastro
+                    </p>
+                    <p className="font-medium text-sm">{formatDateTime(selectedWorker.created_at)}</p>
+                  </div>
+                  {selectedWorker.approval_date && (
+                    <div className="p-4 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {selectedWorker.approval_status === 'approved' ? 'Aprovado em' : 'Rejeitado em'}
+                      </p>
+                      <p className="font-medium text-sm">{formatDateTime(selectedWorker.approval_date)}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes/Reasons */}
+                {selectedWorker.approval_notes && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-xs text-green-600 mb-1 font-medium">Notas de aprovação:</p>
+                    <p className="text-sm text-green-700">{selectedWorker.approval_notes}</p>
+                  </div>
+                )}
+
+                {selectedWorker.rejected_reason && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-xs text-red-600 mb-1 font-medium">Motivo da rejeição:</p>
+                    <p className="text-sm text-red-700">{selectedWorker.rejected_reason}</p>
+                  </div>
+                )}
+
+                {selectedWorker.is_active === false && selectedWorker.deactivation_reason && (
+                  <div className="p-4 bg-slate-100 border border-slate-300 rounded-lg">
+                    <p className="text-xs text-slate-600 mb-1 font-medium">Motivo do bloqueio:</p>
+                    <p className="text-sm text-slate-700">{selectedWorker.deactivation_reason}</p>
+                    {selectedWorker.deactivated_at && (
+                      <p className="text-xs text-slate-500 mt-2">
+                        Bloqueado em: {formatDateTime(selectedWorker.deactivated_at)}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Job History */}
+                <div>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    Histórico de Vagas ({selectedWorker.job_assignments?.length || 0})
+                  </h4>
+
+                  {selectedWorker.job_assignments && selectedWorker.job_assignments.length > 0 ? (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {selectedWorker.job_assignments.map((assignment) => (
+                        <div
+                          key={assignment.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border ${
+                            assignment.status === 'withdrawn'
+                              ? 'bg-red-50 border-red-200'
+                              : assignment.status === 'completed'
+                              ? 'bg-green-50 border-green-200'
+                              : ['pending', 'confirmed'].includes(assignment.status)
+                              ? 'bg-blue-50 border-blue-200'
+                              : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                              assignment.status === 'withdrawn'
+                                ? 'bg-red-100'
+                                : assignment.status === 'completed'
+                                ? 'bg-green-100'
+                                : 'bg-blue-100'
+                            }`}>
+                              <Building2 className={`h-5 w-5 ${
+                                assignment.status === 'withdrawn'
+                                  ? 'text-red-600'
+                                  : assignment.status === 'completed'
+                                  ? 'text-green-600'
+                                  : 'text-blue-600'
+                              }`} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">{assignment.jobs?.title}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {assignment.jobs?.clients?.company_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {new Date(assignment.jobs?.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                </span>
+                                <span>•</span>
+                                <span>R$ {assignment.jobs?.daily_rate}</span>
+                              </p>
+                            </div>
+                          </div>
+                          <Badge
+                            className={`text-xs flex-shrink-0 ${
+                              assignment.status === 'completed' ? 'bg-green-500' :
+                              assignment.status === 'confirmed' ? 'bg-blue-500' :
+                              assignment.status === 'pending' ? 'bg-amber-500' :
+                              assignment.status === 'withdrawn' ? 'bg-red-500' :
+                              'bg-slate-500'
+                            }`}
+                          >
+                            {assignment.status === 'pending' && 'Pendente'}
+                            {assignment.status === 'confirmed' && 'Confirmado'}
+                            {assignment.status === 'completed' && 'Concluído'}
+                            {assignment.status === 'withdrawn' && 'Desistiu'}
+                            {assignment.status === 'no_show' && 'Faltou'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 bg-slate-50 rounded-lg">
+                      <Briefcase className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Nenhuma vaga no histórico</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <DialogFooter className="mt-6">
+                <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>
+                  Fechar
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>
