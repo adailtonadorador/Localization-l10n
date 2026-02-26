@@ -24,7 +24,22 @@
       "Bash(npx vercel:*)",
       "Bash(curl:*)",
       "Bash(findstr:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git config:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(cmdkey:*)",
+      "Bash(gh auth login:*)",
+      "Bash(vercel logout:*)",
+      "Bash(vercel login)",
+      "Bash(vercel whoami:*)",
+      "Bash(vercel link:*)",
+      "Bash(supabase logout:*)",
+      "Bash(supabase login:*)",
+      "Bash(supabase projects:*)",
+      "Bash(supabase link:*)",
+      "Bash(ls -la \"C:\\\\Users\\\\Adailton\\\\Documents\\\\plataforma-sama\\\\public\"\" 2>/dev/null || echo \"Directory check \")",
+      "Bash(vercel env:*)",
+      "Bash(printf:*)"
     ]
   }
 }

@@ -26,6 +26,7 @@ import { ClientHistoryPage } from "@/pages/client/ClientHistoryPage";
 
 // Admin pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
+import { AdminJobsPage } from "@/pages/admin/AdminJobsPage";
 import { AdminNewJobPage } from "@/pages/admin/AdminNewJobPage";
 import { AdminMonitoringPage } from "@/pages/admin/AdminMonitoringPage";
 import { AdminClientsPage } from "@/pages/admin/AdminClientsPage";
@@ -241,6 +242,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminWorkersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/jobs"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminJobsPage />
           </ProtectedRoute>
         }
       />

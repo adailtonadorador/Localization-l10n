@@ -39,6 +39,7 @@ const menuItems = {
   ],
   admin: [
     { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { label: 'Vagas', href: '/admin/jobs', icon: Briefcase },
     { label: 'Clientes', href: '/admin/clients', icon: Building2 },
     { label: 'Trabalhadores', href: '/admin/workers', icon: Users },
     { label: 'Monitoramento', href: '/admin/monitoring', icon: Activity },
