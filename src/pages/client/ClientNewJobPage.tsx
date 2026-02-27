@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
+import { notifyNewJob } from "@/lib/notifications";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,6 +101,9 @@ export function ClientNewJobPage() {
         setLoading(false);
         return;
       }
+
+      // Notifica workers sobre a nova vaga
+      notifyNewJob(title.trim(), location.trim());
 
       toast.success("Vaga criada com sucesso!");
       navigate("/client/jobs");

@@ -39,7 +39,13 @@
       "Bash(supabase link:*)",
       "Bash(ls -la \"C:\\\\Users\\\\Adailton\\\\Documents\\\\plataforma-sama\\\\public\"\" 2>/dev/null || echo \"Directory check \")",
       "Bash(vercel env:*)",
-      "Bash(printf:*)"
+      "Bash(printf:*)",
+      "Bash(ls -la \"C:\\\\Users\\\\Adailton\\\\Documents\\\\plataforma-sama\\\\public\"\" | grep -E \"^- \")",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:documentation.onesignal.com)",
+      "Bash(git restore:*)",
+      "Bash(npx web-push:*)"
     ]
   }
 }

@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
+import { notifyNewJob } from "@/lib/notifications";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -305,6 +306,9 @@ export function AdminNewJobPage() {
         setLoading(false);
         return;
       }
+
+      // Notifica workers sobre a nova vaga
+      notifyNewJob(title.trim(), selectedClient?.cidade || undefined);
 
       toast.success("Vaga criada com sucesso!");
       navigate("/admin");
