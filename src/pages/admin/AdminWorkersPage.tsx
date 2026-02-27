@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
+import { notifyWorkerApproved } from "@/lib/notifications";
 import { BRAZILIAN_STATES } from "@/lib/brazil-locations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -255,6 +256,9 @@ export function AdminWorkersPage() {
           approval_notes: approvalNotes.trim() || null
         })
         .eq('id', selectedWorker.id);
+
+      // Notifica o trabalhador sobre a aprovação
+      notifyWorkerApproved(selectedWorker.id);
 
       setApproveWorkerDialogOpen(false);
       loadWorkers();
