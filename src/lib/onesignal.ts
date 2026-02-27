@@ -128,12 +128,13 @@ export async function initOneSignal(): Promise<boolean> {
 }
 
 /**
- * Registra o usuário no OneSignal com external_id e tags
+ * Registra o usuário no OneSignal com external_id
+ * Nota: Tags removidas devido ao limite do plano gratuito
  */
 export async function registerUser(
   userId: string,
   role: UserRole,
-  additionalTags?: Partial<UserTags>
+  _additionalTags?: Partial<UserTags>
 ): Promise<void> {
   if (!isInitialized) {
     console.warn('[OneSignal] Não inicializado. Chame initOneSignal primeiro.');
@@ -141,26 +142,9 @@ export async function registerUser(
   }
 
   try {
-    // Login com external_id
+    // Login com external_id - funciona no plano gratuito
     await OneSignal.login(userId);
-
-    // Configurar tags
-    const tags: Record<string, string> = {
-      role,
-      user_id: userId,
-    };
-
-    if (additionalTags) {
-      Object.entries(additionalTags).forEach(([key, value]) => {
-        if (value !== undefined) {
-          tags[key] = value;
-        }
-      });
-    }
-
-    await OneSignal.User.addTags(tags);
-
-    console.log('[OneSignal] Usuário registrado:', { userId, role, tags });
+    console.log('[OneSignal] Usuário registrado:', { userId, role });
   } catch (error) {
     console.error('[OneSignal] Erro ao registrar usuário:', error);
     throw error;
@@ -216,45 +200,20 @@ export async function promptForPushPermission(): Promise<boolean> {
 
 /**
  * Atualiza as tags do usuário
+ * Nota: Desabilitado no plano gratuito do OneSignal
  */
-export async function updateUserTags(tags: Partial<UserTags>): Promise<void> {
-  if (!isInitialized) {
-    console.warn('[OneSignal] SDK não inicializado');
-    return;
-  }
-
-  try {
-    const cleanTags: Record<string, string> = {};
-    Object.entries(tags).forEach(([key, value]) => {
-      if (value !== undefined) {
-        cleanTags[key] = value;
-      }
-    });
-
-    await OneSignal.User.addTags(cleanTags);
-    console.log('[OneSignal] Tags atualizadas:', cleanTags);
-  } catch (error) {
-    console.error('[OneSignal] Erro ao atualizar tags:', error);
-    throw error;
-  }
+export async function updateUserTags(_tags: Partial<UserTags>): Promise<void> {
+  // Tags não disponíveis no plano gratuito do OneSignal
+  console.log('[OneSignal] updateUserTags ignorado (plano gratuito não suporta tags)');
 }
 
 /**
  * Remove tags específicas do usuário
+ * Nota: Desabilitado no plano gratuito do OneSignal
  */
-export async function removeUserTags(tagKeys: string[]): Promise<void> {
-  if (!isInitialized) {
-    console.warn('[OneSignal] SDK não inicializado');
-    return;
-  }
-
-  try {
-    await OneSignal.User.removeTags(tagKeys);
-    console.log('[OneSignal] Tags removidas:', tagKeys);
-  } catch (error) {
-    console.error('[OneSignal] Erro ao remover tags:', error);
-    throw error;
-  }
+export async function removeUserTags(_tagKeys: string[]): Promise<void> {
+  // Tags não disponíveis no plano gratuito do OneSignal
+  console.log('[OneSignal] removeUserTags ignorado (plano gratuito não suporta tags)');
 }
 
 /**
