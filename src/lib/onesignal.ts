@@ -2,19 +2,12 @@
  * Serviço OneSignal
  * Integração com OneSignal para Push Notifications
  * Usando API v16 do OneSignal SDK via react-onesignal
- *
- * IMPORTANTE: Usa escopo separado (/push/onesignal/) para evitar
- * conflito com o Service Worker do PWA (Workbox)
  */
 
 import OneSignal from 'react-onesignal';
 
 // Configurações
 const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID;
-
-// Caminho do Service Worker do OneSignal (escopo separado do PWA)
-const ONESIGNAL_SW_PATH = '/push/onesignal/OneSignalSDKWorker.js';
-const ONESIGNAL_SW_SCOPE = '/push/onesignal/';
 
 // Estado de inicialização
 let isInitialized = false;
@@ -57,19 +50,11 @@ export async function initOneSignal(): Promise<boolean> {
   initializationPromise = (async () => {
     try {
       console.log('[OneSignal] Iniciando inicialização...');
-      console.log('[OneSignal] Service Worker Path:', ONESIGNAL_SW_PATH);
-      console.log('[OneSignal] Service Worker Scope:', ONESIGNAL_SW_SCOPE);
 
+      // Usa configuração mínima - deixa o OneSignal usar as configurações do painel
       await OneSignal.init({
         appId: ONESIGNAL_APP_ID,
         allowLocalhostAsSecureOrigin: true,
-        // Usa escopo separado para não conflitar com PWA
-        serviceWorkerPath: ONESIGNAL_SW_PATH,
-        serviceWorkerParam: { scope: ONESIGNAL_SW_SCOPE },
-        // Configurações adicionais
-        autoResubscribe: true,
-        notificationClickHandlerMatch: 'origin',
-        notificationClickHandlerAction: 'focus',
       });
 
       isInitialized = true;
