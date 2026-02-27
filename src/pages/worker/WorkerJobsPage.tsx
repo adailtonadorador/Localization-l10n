@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
+import { notifyJobAssignment } from "@/lib/notifications";
 import { BRAZILIAN_STATES } from "@/lib/brazil-locations";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -293,6 +294,10 @@ export function WorkerJobsPage() {
       toast.success('Vaga atribuída com sucesso!', {
         description: 'Acesse "Meus Trabalhos" para ver seus dias de trabalho.',
       });
+
+      // Envia notificação de confirmação
+      notifyJobAssignment(profile.id, selectedJob.title, selectedJob.date);
+
       loadJobs();
     } catch (error) {
       console.error('Error:', error);
