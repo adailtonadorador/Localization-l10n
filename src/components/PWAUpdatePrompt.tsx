@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, X, Download, Smartphone, Zap, Bell, Wifi, Sparkles, Share, PlusSquare } from 'lucide-react';
 
@@ -25,10 +26,14 @@ function isMobile() {
 }
 
 export function PWAUpdatePrompt() {
+  const { profile } = useAuth();
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIOSDevice, setIsIOSDevice] = useState(false);
+
+  // Só mostra prompt de instalação para usuários logados
+  const isLoggedIn = !!profile;
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -142,8 +147,8 @@ export function PWAUpdatePrompt() {
 
   return (
     <>
-      {/* Install Prompt - Redesigned */}
-      {showInstallPrompt && (deferredPrompt || isIOSDevice) && (
+      {/* Install Prompt - Redesigned (apenas para usuários logados) */}
+      {isLoggedIn && showInstallPrompt && (deferredPrompt || isIOSDevice) && (
         <>
           {/* Backdrop */}
           <div
