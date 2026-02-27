@@ -23,6 +23,54 @@ export interface UserTags {
 }
 
 /**
+ * Aguarda o Service Worker estar pronto e ativo
+ */
+async function waitForServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (!('serviceWorker' in navigator)) {
+    console.warn('[OneSignal] Service Worker não suportado');
+    return null;
+  }
+
+  try {
+    // Primeiro, tenta obter o registration existente
+    const registration = await navigator.serviceWorker.getRegistration('/');
+
+    if (registration) {
+      // Se já tem um SW ativo, retorna
+      if (registration.active) {
+        console.log('[OneSignal] Service Worker já está ativo');
+        return registration;
+      }
+
+      // Se tem um SW instalando ou esperando, aguarda ficar ativo
+      const sw = registration.installing || registration.waiting;
+      if (sw) {
+        console.log('[OneSignal] Aguardando Service Worker ativar...');
+        await new Promise<void>((resolve) => {
+          sw.addEventListener('statechange', function handler() {
+            if (sw.state === 'activated') {
+              sw.removeEventListener('statechange', handler);
+              resolve();
+            }
+          });
+          // Timeout de 10 segundos
+          setTimeout(resolve, 10000);
+        });
+        return registration;
+      }
+    }
+
+    // Se não tem registration, aguarda o ready
+    console.log('[OneSignal] Aguardando Service Worker ready...');
+    const readyRegistration = await navigator.serviceWorker.ready;
+    return readyRegistration;
+  } catch (error) {
+    console.warn('[OneSignal] Erro ao aguardar Service Worker:', error);
+    return null;
+  }
+}
+
+/**
  * Inicializa o OneSignal SDK
  * Deve ser chamado uma única vez
  */
@@ -38,11 +86,20 @@ export async function initOneSignal(): Promise<boolean> {
   }
 
   try {
+    // Aguarda o Service Worker estar pronto antes de inicializar
+    const swRegistration = await waitForServiceWorker();
+    console.log('[OneSignal] Service Worker status:', swRegistration ? 'pronto' : 'não disponível');
+
+    // Em desenvolvimento, o SW do PWA está desabilitado, então usa o SW do OneSignal diretamente
+    // Em produção, usa o SW unificado (PWA + OneSignal)
+    const isDev = import.meta.env.DEV;
+    const serviceWorkerPath = isDev ? '/OneSignalSDKWorker.js' : '/sw.js';
+    console.log('[OneSignal] Usando Service Worker:', serviceWorkerPath);
+
     await OneSignal.init({
       appId: ONESIGNAL_APP_ID,
       allowLocalhostAsSecureOrigin: true,
-      // Usa o service worker unificado (PWA + OneSignal)
-      serviceWorkerPath: '/sw.js',
+      serviceWorkerPath,
       serviceWorkerParam: { scope: '/' },
     });
 
