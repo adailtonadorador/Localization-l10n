@@ -101,6 +101,8 @@ export async function initOneSignal(): Promise<boolean> {
       allowLocalhostAsSecureOrigin: true,
       serviceWorkerPath,
       serviceWorkerParam: { scope: '/' },
+      // Desabilita prompts automáticos - usamos botão customizado no dashboard
+      autoResubscribe: true,
     });
 
     isInitialized = true;
