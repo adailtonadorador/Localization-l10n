@@ -37,6 +37,8 @@ interface RequestBody {
   icon?: string
   userIds?: string[]
   tag?: string
+  type?: string // 'new_job', 'assignment', 'approval', 'general'
+  saveToHistory?: boolean // Se deve salvar no histórico (default: true)
 }
 
 serve(async (req) => {
@@ -99,6 +101,33 @@ serve(async (req) => {
         JSON.stringify({ message: 'Nenhuma subscription encontrada', sent: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // Salva notificações no histórico (se não for explicitamente desabilitado)
+    if (body.saveToHistory !== false) {
+      // Pega os user_ids únicos das subscriptions
+      const userIds = [...new Set(subscriptions.map((s: PushSubscription) => s.user_id))]
+
+      // Cria uma notificação para cada usuário
+      const notificationsToInsert = userIds.map(userId => ({
+        user_id: userId,
+        title: body.title,
+        body: body.body,
+        url: body.url || null,
+        type: body.type || 'general',
+        read: false,
+      }))
+
+      const { error: insertError } = await supabase
+        .from('notifications')
+        .insert(notificationsToInsert)
+
+      if (insertError) {
+        console.error('Erro ao salvar notificações no histórico:', insertError)
+        // Continua mesmo com erro, pois as push notifications podem funcionar
+      } else {
+        console.log(`${notificationsToInsert.length} notificações salvas no histórico`)
+      }
     }
 
     // Payload da notificação

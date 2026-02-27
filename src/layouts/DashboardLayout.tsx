@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { BottomNavBar } from "@/components/mobile/BottomNavBar";
+import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,6 @@ import {
   User,
   Users,
   LogOut,
-  Bell,
   Menu,
   X,
   Settings,
@@ -197,10 +197,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <span className="text-lg font-bold text-blue-700">Sama Conecta</span>
               </Link>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="relative h-9 w-9">
-                  <Bell className="h-5 w-5 text-slate-600" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                </Button>
+                <NotificationDropdown />
                 <button
                   className="p-2 hover:bg-slate-100 rounded-lg"
                   onClick={() => setMobileMenuOpen(true)}
@@ -226,11 +223,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5 text-slate-600" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-                  <span className="sr-only">Notificações</span>
-                </Button>
+                <NotificationDropdown />
 
                 <Button variant="ghost" size="icon" className="hidden sm:flex">
                   <Settings className="h-5 w-5 text-slate-600" />

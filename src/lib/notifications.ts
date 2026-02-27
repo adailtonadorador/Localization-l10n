@@ -10,6 +10,7 @@ interface NotificationPayload {
   body: string;
   url?: string;
   userIds?: string[]; // Se especificado, envia apenas para estes usuários
+  type?: 'new_job' | 'assignment' | 'approval' | 'general';
 }
 
 /**
@@ -53,6 +54,7 @@ export async function notifyNewJob(jobTitle: string, location?: string): Promise
     title: 'Nova Vaga Disponível!',
     body,
     url: '/worker/jobs',
+    type: 'new_job',
   }).catch(err => console.error('[Notifications] Erro ao notificar nova vaga:', err));
 }
 
@@ -69,8 +71,9 @@ export async function notifyJobAssignment(
   sendPushNotification({
     title: 'Você foi selecionado!',
     body: `Vaga: ${jobTitle} - ${formattedDate}`,
-    url: '/worker/assignments',
+    url: '/worker/my-jobs',
     userIds: [workerId],
+    type: 'assignment',
   }).catch(err => console.error('[Notifications] Erro ao notificar atribuição:', err));
 }
 
@@ -83,5 +86,6 @@ export async function notifyWorkerApproved(workerId: string): Promise<void> {
     body: 'Seu cadastro foi aprovado. Você já pode se candidatar às vagas.',
     url: '/worker',
     userIds: [workerId],
+    type: 'approval',
   }).catch(err => console.error('[Notifications] Erro ao notificar aprovação:', err));
 }
