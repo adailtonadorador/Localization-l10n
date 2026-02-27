@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase, supabaseUntyped } from '@/lib/supabase'
-import { unregisterUser } from '@/lib/onesignal'
+import { unsubscribeFromPush } from '@/lib/webpush'
 import type { Database } from '@/types/database'
 
 type UserRole = Database['public']['Enums']['user_role']
@@ -453,11 +453,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear cached profiles
     clearAllCache()
 
-    // Desregistrar do OneSignal
+    // Desregistrar do Web Push
     try {
-      await unregisterUser()
+      if (profile?.id) {
+        await unsubscribeFromPush(profile.id)
+      }
     } catch (error) {
-      console.error('Erro ao desregistrar do OneSignal:', error)
+      console.error('Erro ao desregistrar do Web Push:', error)
     }
 
     // Sign out from Supabase

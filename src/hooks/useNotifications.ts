@@ -1,23 +1,18 @@
 /**
  * useNotifications Hook
- * Hook React para gerenciar push notifications com OneSignal
+ * Hook React para gerenciar Web Push Notifications nativo
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseUntyped } from '@/lib/supabase';
 import {
-  initOneSignal,
-  registerUser,
-  promptForPushPermission,
-  updateUserTags,
-  isSubscribed,
+  initWebPush,
+  subscribeToPush,
+  isSubscribed as checkIsSubscribed,
   getPermissionStatus,
-  onNotificationReceived,
-  onNotificationClicked,
-  type UserRole,
-  type UserTags,
-} from '@/lib/onesignal';
+  isWebPushSupported,
+} from '@/lib/webpush';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export interface NotificationState {
@@ -34,7 +29,7 @@ export interface UseNotificationsReturn extends NotificationState {
 }
 
 export function useNotifications(): UseNotificationsReturn {
-  const { profile, workerProfile } = useAuth();
+  const { profile } = useAuth();
   const [state, setState] = useState<NotificationState>({
     isInitialized: false,
     isSubscribed: false,
@@ -44,19 +39,29 @@ export function useNotifications(): UseNotificationsReturn {
   });
 
   const hasRegisteredRef = useRef(false);
-  const previousWorkerProfileRef = useRef<typeof workerProfile>(null);
 
-  // Inicializa o OneSignal quando o componente monta
+  // Inicializa o Web Push quando o componente monta
   useEffect(() => {
     let isMounted = true;
 
     async function initialize() {
       try {
-        await initOneSignal();
+        // Verifica se o navegador suporta
+        if (!isWebPushSupported()) {
+          setState((prev) => ({
+            ...prev,
+            isInitialized: false,
+            permissionStatus: 'unsupported',
+            isLoading: false,
+          }));
+          return;
+        }
+
+        await initWebPush();
 
         if (!isMounted) return;
 
-        const subscribed = await isSubscribed();
+        const subscribed = await checkIsSubscribed();
         const permission = getPermissionStatus();
 
         setState((prev) => ({
@@ -85,14 +90,9 @@ export function useNotifications(): UseNotificationsReturn {
     };
   }, []);
 
-  // Registra o usuário quando o perfil está disponível
+  // Verifica se o usuário já está inscrito quando o perfil carrega
   useEffect(() => {
     if (!state.isInitialized || !profile?.id) {
-      return;
-    }
-
-    // Para workers, aguarda workerProfile estar disponível
-    if (profile.role === 'worker' && !workerProfile) {
       return;
     }
 
@@ -101,160 +101,70 @@ export function useNotifications(): UseNotificationsReturn {
       return;
     }
 
-    async function register() {
-      // Marca como registrando antes da chamada async para evitar race conditions
-      hasRegisteredRef.current = true;
-
-      try {
-        const role = profile!.role as UserRole;
-        const tags: Partial<UserTags> = {};
-
-        // Tags específicas para workers
-        if (role === 'worker' && workerProfile) {
-          tags.approval_status = workerProfile.approval_status;
-          tags.is_active = workerProfile.is_active ? 'true' : 'false';
-        }
-
-        await registerUser(profile!.id, role, tags);
-
-        // Salva estado do workerProfile para comparação futura
-        if (workerProfile) {
-          previousWorkerProfileRef.current = workerProfile;
-        }
-
-        // Atualiza status de inscrição após registrar
-        const subscribed = await isSubscribed();
-        setState((prev) => ({
-          ...prev,
-          isSubscribed: subscribed,
-        }));
-      } catch (error) {
-        console.error('[useNotifications] Erro ao registrar usuário:', error);
-        // Em caso de erro, permite nova tentativa
-        hasRegisteredRef.current = false;
-      }
+    async function checkSubscription() {
+      const subscribed = await checkIsSubscribed();
+      setState((prev) => ({
+        ...prev,
+        isSubscribed: subscribed,
+      }));
     }
 
-    register();
-  }, [state.isInitialized, profile?.id, profile?.role, workerProfile]);
-
-  // Atualiza tags APENAS quando workerProfile muda APÓS registro inicial
-  useEffect(() => {
-    // Só atualiza se já foi registrado anteriormente
-    if (!hasRegisteredRef.current) {
-      return;
-    }
-
-    if (!state.isInitialized || !profile?.id || profile.role !== 'worker' || !workerProfile) {
-      return;
-    }
-
-    // Verifica se workerProfile realmente mudou
-    const prev = previousWorkerProfileRef.current;
-    if (
-      prev &&
-      prev.approval_status === workerProfile.approval_status &&
-      prev.is_active === workerProfile.is_active
-    ) {
-      return;
-    }
-
-    previousWorkerProfileRef.current = workerProfile;
-
-    async function updateTags() {
-      try {
-        await updateUserTags({
-          approval_status: workerProfile!.approval_status,
-          is_active: workerProfile!.is_active ? 'true' : 'false',
-        });
-      } catch (error) {
-        console.error('[useNotifications] Erro ao atualizar tags:', error);
-      }
-    }
-
-    updateTags();
-  }, [state.isInitialized, profile?.id, profile?.role, workerProfile?.approval_status, workerProfile?.is_active]);
-
-  // Configura listeners de notificação
-  useEffect(() => {
-    if (!state.isInitialized) return;
-
-    // Listener para notificações recebidas (app em foreground)
-    const removeReceivedListener = onNotificationReceived((event) => {
-      console.log('[useNotifications] Notificação recebida:', event);
-    });
-
-    // Listener para cliques em notificações
-    const removeClickedListener = onNotificationClicked((event: unknown) => {
-      console.log('[useNotifications] Notificação clicada:', event);
-
-      // Navegar com base nos dados da notificação
-      const typedEvent = event as { notification?: { additionalData?: { url?: string } } } | null;
-      const data = typedEvent?.notification?.additionalData;
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    });
-
-    return () => {
-      removeReceivedListener();
-      removeClickedListener();
-    };
-  }, [state.isInitialized]);
+    checkSubscription();
+  }, [state.isInitialized, profile?.id]);
 
   // Solicita permissão de notificações
   const requestPermission = useCallback(async (): Promise<boolean> => {
     console.log('[useNotifications] requestPermission iniciado');
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-    try {
-      // Primeiro, tenta solicitar permissão via API nativa do navegador
-      // Isso é necessário no Android/PWA onde o OneSignal pode não funcionar diretamente
-      if ('Notification' in window && Notification.permission === 'default') {
-        console.log('[useNotifications] Solicitando permissão nativa do navegador...');
-        const nativePermission = await Notification.requestPermission();
-        console.log('[useNotifications] Permissão nativa:', nativePermission);
-      }
+    if (!profile?.id) {
+      console.error('[useNotifications] Usuário não autenticado');
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: 'Usuário não autenticado',
+      }));
+      return false;
+    }
 
-      // Depois, tenta registrar no OneSignal
-      console.log('[useNotifications] Chamando promptForPushPermission...');
-      const granted = await promptForPushPermission();
-      console.log('[useNotifications] Resultado promptForPushPermission:', granted);
+    try {
+      // Tenta inscrever no Web Push
+      const success = await subscribeToPush(profile.id);
+      console.log('[useNotifications] Resultado subscribeToPush:', success);
 
       const permission = getPermissionStatus();
-      const browserGranted = Notification.permission === 'granted';
 
-      console.log('[useNotifications] Estado final:', { granted, browserGranted, permission });
+      if (success) {
+        hasRegisteredRef.current = true;
+        setState((prev) => ({
+          ...prev,
+          isSubscribed: true,
+          permissionStatus: permission === 'unsupported' ? 'default' : permission,
+          isLoading: false,
+        }));
+        return true;
+      }
+
+      // Se falhou mas a permissão foi negada
+      if (permission === 'denied') {
+        setState((prev) => ({
+          ...prev,
+          isSubscribed: false,
+          permissionStatus: 'denied',
+          isLoading: false,
+          error: 'Permissão negada pelo usuário',
+        }));
+        return false;
+      }
 
       setState((prev) => ({
         ...prev,
-        isSubscribed: granted || browserGranted,
-        permissionStatus: permission === 'unsupported' ? 'default' : permission,
         isLoading: false,
+        error: 'Falha ao ativar notificações',
       }));
-
-      return granted || browserGranted;
+      return false;
     } catch (error) {
       console.error('[useNotifications] Erro ao solicitar permissão:', error);
-
-      // Fallback: tenta usar apenas a API nativa
-      try {
-        if ('Notification' in window && Notification.permission !== 'denied') {
-          console.log('[useNotifications] Tentando fallback com API nativa...');
-          const nativeResult = await Notification.requestPermission();
-          if (nativeResult === 'granted') {
-            setState((prev) => ({
-              ...prev,
-              isSubscribed: true,
-              permissionStatus: 'granted',
-              isLoading: false,
-            }));
-            return true;
-          }
-        }
-      } catch (fallbackError) {
-        console.error('[useNotifications] Erro no fallback:', fallbackError);
-      }
 
       setState((prev) => ({
         ...prev,
@@ -263,12 +173,12 @@ export function useNotifications(): UseNotificationsReturn {
       }));
       return false;
     }
-  }, []);
+  }, [profile?.id]);
 
   // Atualiza o status manualmente
   const refreshStatus = useCallback(async (): Promise<void> => {
     try {
-      const subscribed = await isSubscribed();
+      const subscribed = await checkIsSubscribed();
       const permission = getPermissionStatus();
 
       setState((prev) => ({
