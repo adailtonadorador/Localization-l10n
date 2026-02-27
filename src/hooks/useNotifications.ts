@@ -185,11 +185,12 @@ export function useNotifications(): UseNotificationsReturn {
     });
 
     // Listener para cliques em notificações
-    const removeClickedListener = onNotificationClicked((event) => {
+    const removeClickedListener = onNotificationClicked((event: unknown) => {
       console.log('[useNotifications] Notificação clicada:', event);
 
       // Navegar com base nos dados da notificação
-      const data = event?.notification?.additionalData;
+      const typedEvent = event as { notification?: { additionalData?: { url?: string } } } | null;
+      const data = typedEvent?.notification?.additionalData;
       if (data?.url) {
         window.location.href = data.url;
       }

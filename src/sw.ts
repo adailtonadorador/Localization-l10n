@@ -52,7 +52,5 @@ registerRoute(
   })
 );
 
-// ============================================================================
-// OneSignal Integration
-// ============================================================================
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+// OneSignal agora usa Service Worker separado em /push/onesignal/
+// para evitar conflito com o PWA

@@ -2,6 +2,9 @@
  * Serviço OneSignal
  * Integração com OneSignal para Push Notifications
  * Usando API v16 do OneSignal SDK via react-onesignal
+ *
+ * IMPORTANTE: Usa escopo separado (/push/onesignal/) para evitar
+ * conflito com o Service Worker do PWA (Workbox)
  */
 
 import OneSignal from 'react-onesignal';
@@ -9,8 +12,13 @@ import OneSignal from 'react-onesignal';
 // Configurações
 const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID;
 
+// Caminho do Service Worker do OneSignal (escopo separado do PWA)
+const ONESIGNAL_SW_PATH = '/push/onesignal/OneSignalSDKWorker.js';
+const ONESIGNAL_SW_SCOPE = '/push/onesignal/';
+
 // Estado de inicialização
 let isInitialized = false;
+let initializationPromise: Promise<boolean> | null = null;
 
 export type UserRole = 'worker' | 'client' | 'admin';
 
@@ -23,61 +31,21 @@ export interface UserTags {
 }
 
 /**
- * Aguarda o Service Worker estar pronto e ativo
- */
-async function waitForServiceWorker(): Promise<ServiceWorkerRegistration | null> {
-  if (!('serviceWorker' in navigator)) {
-    console.warn('[OneSignal] Service Worker não suportado');
-    return null;
-  }
-
-  try {
-    // Primeiro, tenta obter o registration existente
-    const registration = await navigator.serviceWorker.getRegistration('/');
-
-    if (registration) {
-      // Se já tem um SW ativo, retorna
-      if (registration.active) {
-        console.log('[OneSignal] Service Worker já está ativo');
-        return registration;
-      }
-
-      // Se tem um SW instalando ou esperando, aguarda ficar ativo
-      const sw = registration.installing || registration.waiting;
-      if (sw) {
-        console.log('[OneSignal] Aguardando Service Worker ativar...');
-        await new Promise<void>((resolve) => {
-          sw.addEventListener('statechange', function handler() {
-            if (sw.state === 'activated') {
-              sw.removeEventListener('statechange', handler);
-              resolve();
-            }
-          });
-          // Timeout de 10 segundos
-          setTimeout(resolve, 10000);
-        });
-        return registration;
-      }
-    }
-
-    // Se não tem registration, aguarda o ready
-    console.log('[OneSignal] Aguardando Service Worker ready...');
-    const readyRegistration = await navigator.serviceWorker.ready;
-    return readyRegistration;
-  } catch (error) {
-    console.warn('[OneSignal] Erro ao aguardar Service Worker:', error);
-    return null;
-  }
-}
-
-/**
  * Inicializa o OneSignal SDK
  * Deve ser chamado uma única vez
+ * Usa escopo separado para evitar conflito com PWA
  */
 export async function initOneSignal(): Promise<boolean> {
+  // Se já está inicializado, retorna
   if (isInitialized) {
     console.log('[OneSignal] Já inicializado');
     return true;
+  }
+
+  // Se já está inicializando, aguarda
+  if (initializationPromise) {
+    console.log('[OneSignal] Aguardando inicialização em andamento...');
+    return initializationPromise;
   }
 
   if (!ONESIGNAL_APP_ID) {
@@ -85,48 +53,58 @@ export async function initOneSignal(): Promise<boolean> {
     return false;
   }
 
-  try {
-    // Aguarda o Service Worker estar pronto antes de inicializar
-    const swRegistration = await waitForServiceWorker();
-    console.log('[OneSignal] Service Worker status:', swRegistration ? 'pronto' : 'não disponível');
+  // Cria promise de inicialização para evitar múltiplas chamadas
+  initializationPromise = (async () => {
+    try {
+      console.log('[OneSignal] Iniciando inicialização...');
+      console.log('[OneSignal] Service Worker Path:', ONESIGNAL_SW_PATH);
+      console.log('[OneSignal] Service Worker Scope:', ONESIGNAL_SW_SCOPE);
 
-    // Em desenvolvimento, o SW do PWA está desabilitado, então usa o SW do OneSignal diretamente
-    // Em produção, usa o SW unificado (PWA + OneSignal)
-    const isDev = import.meta.env.DEV;
-    const serviceWorkerPath = isDev ? '/OneSignalSDKWorker.js' : '/sw.js';
-    console.log('[OneSignal] Usando Service Worker:', serviceWorkerPath);
+      await OneSignal.init({
+        appId: ONESIGNAL_APP_ID,
+        allowLocalhostAsSecureOrigin: true,
+        // Usa escopo separado para não conflitar com PWA
+        serviceWorkerPath: ONESIGNAL_SW_PATH,
+        serviceWorkerParam: { scope: ONESIGNAL_SW_SCOPE },
+        // Configurações adicionais
+        autoResubscribe: true,
+        notificationClickHandlerMatch: 'origin',
+        notificationClickHandlerAction: 'focus',
+      });
 
-    await OneSignal.init({
-      appId: ONESIGNAL_APP_ID,
-      allowLocalhostAsSecureOrigin: true,
-      serviceWorkerPath,
-      serviceWorkerParam: { scope: '/' },
-      // Desabilita prompts automáticos - usamos botão customizado no dashboard
-      autoResubscribe: true,
-    });
-
-    isInitialized = true;
-    console.log('[OneSignal] Inicializado com sucesso');
-    return true;
-  } catch (error) {
-    const errorMessage = String(error);
-
-    // Se o SDK já foi inicializado, consideramos sucesso
-    if (errorMessage.includes('already initialized')) {
       isInitialized = true;
-      console.log('[OneSignal] SDK já estava inicializado, continuando...');
+      console.log('[OneSignal] Inicializado com sucesso');
+
+      // Log do estado atual
+      const permission = OneSignal.Notifications.permission;
+      const optedIn = OneSignal.User.PushSubscription.optedIn;
+      console.log('[OneSignal] Estado atual:', { permission, optedIn });
+
       return true;
-    }
+    } catch (error) {
+      const errorMessage = String(error);
 
-    // Em desenvolvimento, ignorar erro de domínio não configurado
-    if (import.meta.env.DEV && errorMessage.includes('Can only be used on')) {
-      console.warn('[OneSignal] Domínio localhost não configurado no OneSignal. Push desabilitado em dev.');
+      // Se o SDK já foi inicializado, consideramos sucesso
+      if (errorMessage.includes('already initialized')) {
+        isInitialized = true;
+        console.log('[OneSignal] SDK já estava inicializado, continuando...');
+        return true;
+      }
+
+      // Em desenvolvimento, ignorar erro de domínio não configurado
+      if (import.meta.env.DEV && errorMessage.includes('Can only be used on')) {
+        console.warn('[OneSignal] Domínio localhost não configurado no OneSignal. Push desabilitado em dev.');
+        return false;
+      }
+
+      console.error('[OneSignal] Erro ao inicializar:', error);
       return false;
+    } finally {
+      initializationPromise = null;
     }
+  })();
 
-    console.error('[OneSignal] Erro ao inicializar:', error);
-    return false;
-  }
+  return initializationPromise;
 }
 
 /**
@@ -139,8 +117,12 @@ export async function registerUser(
   _additionalTags?: Partial<UserTags>
 ): Promise<void> {
   if (!isInitialized) {
-    console.warn('[OneSignal] Não inicializado. Chame initOneSignal primeiro.');
-    return;
+    console.warn('[OneSignal] Não inicializado. Tentando inicializar...');
+    const success = await initOneSignal();
+    if (!success) {
+      console.error('[OneSignal] Falha ao inicializar, não é possível registrar usuário');
+      return;
+    }
   }
 
   try {
@@ -149,7 +131,7 @@ export async function registerUser(
     console.log('[OneSignal] Usuário registrado:', { userId, role });
   } catch (error) {
     console.error('[OneSignal] Erro ao registrar usuário:', error);
-    throw error;
+    // Não lança erro para não quebrar o fluxo da aplicação
   }
 }
 
@@ -175,22 +157,24 @@ export async function unregisterUser(): Promise<void> {
  */
 export async function promptForPushPermission(): Promise<boolean> {
   console.log('[OneSignal] promptForPushPermission chamado');
-  console.log('[OneSignal] isInitialized:', isInitialized);
 
   if (!isInitialized) {
-    console.warn('[OneSignal] Não inicializado. Chame initOneSignal primeiro.');
-    // Tenta inicializar se ainda não foi
     console.log('[OneSignal] Tentando inicializar...');
     const initResult = await initOneSignal();
-    console.log('[OneSignal] Resultado da inicialização:', initResult);
     if (!initResult) {
+      console.error('[OneSignal] Falha ao inicializar');
       return false;
     }
   }
 
   try {
-    console.log('[OneSignal] Chamando OneSignal.Notifications.requestPermission()...');
-    // API v16: usa OneSignal.Notifications.requestPermission()
+    // Verifica se já tem permissão
+    if (Notification.permission === 'granted' && OneSignal.User.PushSubscription.optedIn) {
+      console.log('[OneSignal] Já tem permissão e está inscrito');
+      return true;
+    }
+
+    console.log('[OneSignal] Solicitando permissão...');
     const permission = await OneSignal.Notifications.requestPermission();
     console.log('[OneSignal] Resultado do prompt:', permission);
     return permission;
@@ -271,7 +255,7 @@ export async function getPlayerId(): Promise<string | null> {
 /**
  * Adiciona listener para eventos de notificação
  */
-export function onNotificationReceived(callback: (data: any) => void): () => void {
+export function onNotificationReceived(callback: (data: unknown) => void): () => void {
   if (!isInitialized) {
     console.warn('[OneSignal] SDK não inicializado');
     return () => {};
@@ -287,7 +271,7 @@ export function onNotificationReceived(callback: (data: any) => void): () => voi
 /**
  * Adiciona listener para cliques em notificação
  */
-export function onNotificationClicked(callback: (data: any) => void): () => void {
+export function onNotificationClicked(callback: (data: unknown) => void): () => void {
   if (!isInitialized) {
     console.warn('[OneSignal] SDK não inicializado');
     return () => {};
