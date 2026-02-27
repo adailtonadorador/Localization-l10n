@@ -204,14 +204,27 @@ export function useNotifications(): UseNotificationsReturn {
 
   // Solicita permissão de notificações
   const requestPermission = useCallback(async (): Promise<boolean> => {
+    console.log('[useNotifications] requestPermission iniciado');
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const granted = await promptForPushPermission();
-      const permission = getPermissionStatus();
+      // Primeiro, tenta solicitar permissão via API nativa do navegador
+      // Isso é necessário no Android/PWA onde o OneSignal pode não funcionar diretamente
+      if ('Notification' in window && Notification.permission === 'default') {
+        console.log('[useNotifications] Solicitando permissão nativa do navegador...');
+        const nativePermission = await Notification.requestPermission();
+        console.log('[useNotifications] Permissão nativa:', nativePermission);
+      }
 
-      // Se a permissão do navegador foi concedida, consideramos sucesso
+      // Depois, tenta registrar no OneSignal
+      console.log('[useNotifications] Chamando promptForPushPermission...');
+      const granted = await promptForPushPermission();
+      console.log('[useNotifications] Resultado promptForPushPermission:', granted);
+
+      const permission = getPermissionStatus();
       const browserGranted = Notification.permission === 'granted';
+
+      console.log('[useNotifications] Estado final:', { granted, browserGranted, permission });
 
       setState((prev) => ({
         ...prev,
@@ -224,16 +237,23 @@ export function useNotifications(): UseNotificationsReturn {
     } catch (error) {
       console.error('[useNotifications] Erro ao solicitar permissão:', error);
 
-      // Mesmo com erro, verifica se permissão do navegador foi concedida
-      const browserGranted = Notification.permission === 'granted';
-      if (browserGranted) {
-        setState((prev) => ({
-          ...prev,
-          isSubscribed: true,
-          permissionStatus: 'granted',
-          isLoading: false,
-        }));
-        return true;
+      // Fallback: tenta usar apenas a API nativa
+      try {
+        if ('Notification' in window && Notification.permission !== 'denied') {
+          console.log('[useNotifications] Tentando fallback com API nativa...');
+          const nativeResult = await Notification.requestPermission();
+          if (nativeResult === 'granted') {
+            setState((prev) => ({
+              ...prev,
+              isSubscribed: true,
+              permissionStatus: 'granted',
+              isLoading: false,
+            }));
+            return true;
+          }
+        }
+      } catch (fallbackError) {
+        console.error('[useNotifications] Erro no fallback:', fallbackError);
       }
 
       setState((prev) => ({
