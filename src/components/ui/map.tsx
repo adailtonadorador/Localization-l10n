@@ -63,22 +63,15 @@ function RecenterMap({ coords }: { coords: Coordinates }) {
   return null;
 }
 
-// Geocode address using BrasilAPI (GPS direto) + Photon/Komoot (gratuito, sem API key)
+// Geocode address using Google Maps API (via Vercel proxy) + BrasilAPI direct GPS
 async function geocodeAddress(address: string, cep?: string): Promise<Coordinates | null> {
 
-  async function fetchPhoton(query: string): Promise<Coordinates | null> {
+  async function fetchGoogleMaps(query: string): Promise<Coordinates | null> {
     try {
-      // Photon não aceita vírgulas na query (retorna 400) — substitui por espaço
-      const sanitized = query.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
-      const res = await fetch(
-        `https://photon.komoot.io/api/?q=${encodeURIComponent(sanitized)}&limit=1`
-      );
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
       if (!res.ok) return null;
       const data = await res.json();
-      if (data.features?.length > 0) {
-        const [lng, lat] = data.features[0].geometry.coordinates;
-        if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
-      }
+      if (data.lat !== undefined && data.lng !== undefined) return { lat: data.lat, lng: data.lng };
     } catch { /* silent */ }
     return null;
   }
@@ -100,7 +93,7 @@ async function geocodeAddress(address: string, cep?: string): Promise<Coordinate
   // Strip CEP suffix before sending to geocoder
   const addressNoCep = address.replace(/,?\s*CEP[:\s]+\d{5}-?\d{3}/i, '').trim();
 
-  // 1. BrasilAPI → GPS direto quando disponível (gratuito, sem chamada extra)
+  // 1. BrasilAPI → GPS direto quando disponível (gratuito, sem chamar Google)
   if (cleanCep) {
     try {
       const res = await fetch(`https://brasilapi.com.br/api/cep/v2/${cleanCep}`);
@@ -109,19 +102,12 @@ async function geocodeAddress(address: string, cep?: string): Promise<Coordinate
         const lat = parseFloat(d.location?.coordinates?.latitude);
         const lng = parseFloat(d.location?.coordinates?.longitude);
         if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
-
-        // Sem GPS direto → query limpa com dados do CEP para o Photon
-        if (d.city) {
-          const q = [d.street, d.neighborhood, d.city, d.state, 'Brasil'].filter(Boolean).join(', ');
-          const result = await fetchPhoton(q);
-          if (result) return result;
-        }
       }
     } catch { /* ignore */ }
   }
 
-  // 2. Photon com o endereço completo
-  return fetchPhoton(`${addressNoCep}, Brasil`);
+  // 2. Google Maps com endereço completo
+  return fetchGoogleMaps(addressNoCep);
 }
 
 // Calculate distance between two coordinates (Haversine formula)
