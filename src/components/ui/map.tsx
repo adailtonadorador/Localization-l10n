@@ -63,193 +63,119 @@ function RecenterMap({ coords }: { coords: Coordinates }) {
   return null;
 }
 
-// Geocode address using our API proxy (avoids CORS issues)
-// Tries multiple search strategies from most specific to least specific
+// Geocode address using Nominatim (OpenStreetMap)
+// Tries structured search first (most reliable), then free-text fallbacks
 async function geocodeAddress(address: string, cep?: string): Promise<Coordinates | null> {
-  // Get city info from ViaCEP if we have a CEP
-  let cityInfo: { city: string; state: string; street?: string; neighborhood?: string } | null = null;
 
-  if (cep) {
+  // Helper: make one Nominatim request with either structured or free-text params
+  async function fetchNominatim(params: Record<string, string>): Promise<Coordinates | null> {
     try {
-      const cleanCep = cep.replace(/\D/g, '');
-      if (cleanCep.length === 8) {
-        const viaCepResponse = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-        const viaCepData = await viaCepResponse.json();
-        if (viaCepData && !viaCepData.erro && viaCepData.localidade) {
-          cityInfo = {
-            city: viaCepData.localidade,
-            state: viaCepData.uf,
-            street: viaCepData.logradouro,
-            neighborhood: viaCepData.bairro
-          };
-        }
-      }
-    } catch (error) {
-      console.error('ViaCEP error:', error);
-    }
-  }
-
-  const searchStrategies: string[] = [];
-
-  // Strategy 0 (highest priority): CEP alone — Google resolves any Brazilian CEP instantly
-  if (cep) {
-    const cleanCep = cep.replace(/\D/g, '');
-    if (cleanCep.length === 8) {
-      searchStrategies.push(`${cleanCep}, Brasil`);
-    }
-  }
-
-  // Clean address - remove "- complemento" parts and extra spaces
-  const cleanAddress = address
-    .replace(/\s*-\s*[^,]*(?=,)/g, '') // Remove "- complemento" before commas
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  // Parse address parts: "Rua X, 123, Bairro, Cidade - UF"
-  const parts = cleanAddress.split(',').map(p => p.trim()).filter(p => p && !p.includes('CEP:'));
-
-  // Extract city and state from "Cidade - UF" pattern at the end
-  const cityStateMatch = cleanAddress.match(/,\s*([^,]+)\s*-\s*([A-Z]{2})\s*$/i);
-  const city = cityStateMatch ? cityStateMatch[1].trim() : cityInfo?.city;
-  const state = cityStateMatch ? cityStateMatch[2].trim() : cityInfo?.state;
-
-  // First part is usually the street with number: "Rua X, 123" or "Rua X 123"
-  const firstPart = parts[0] || '';
-
-  // Try to extract street name and number
-  let street: string | null = null;
-  let number: string | null = null;
-
-  // Check if number is in the second part
-  if (parts.length > 1 && /^\d+/.test(parts[1])) {
-    street = firstPart;
-    number = parts[1].match(/^\d+/)?.[0] || null;
-  } else {
-    // Number might be in the first part: "Rua X, 123" or "Rua X 123"
-    const streetNumberMatch = firstPart.match(/^(.+?)\s*,?\s*(\d+)\s*$/);
-    if (streetNumberMatch) {
-      street = streetNumberMatch[1].trim();
-      number = streetNumberMatch[2];
-    } else {
-      street = firstPart;
-    }
-  }
-
-  // Extract neighborhood (part before "Cidade - UF")
-  let neighborhood: string | null = null;
-  if (parts.length >= 3) {
-    // Second to last part is usually the neighborhood
-    const potentialNeighborhood = parts[parts.length - 2];
-    if (potentialNeighborhood && !/^\d+/.test(potentialNeighborhood)) {
-      neighborhood = potentialNeighborhood;
-    }
-  }
-
-  // Use ViaCEP data as fallback
-  if (!neighborhood && cityInfo?.neighborhood) {
-    neighborhood = cityInfo.neighborhood;
-  }
-  const finalStreet = street || cityInfo?.street;
-
-  // Special handling for DF addresses (quadras format: Q CSG 20, LOTE 2, etc.)
-  const isDF = state === 'DF';
-  let quadra: string | null = null;
-
-  if (isDF && finalStreet) {
-    // Extract quadra from formats like "Q CSG 20", "QS 01", "QNL 15", etc.
-    const quadraMatch = finalStreet.match(/Q\s*([A-Z]{1,4})\s*(\d+)/i);
-    if (quadraMatch) {
-      quadra = `Quadra ${quadraMatch[1]} ${quadraMatch[2]}`;
-    }
-  }
-
-  // Strategy 1: For DF - try quadra + neighborhood + city
-  if (isDF && quadra && neighborhood) {
-    searchStrategies.push(`${quadra}, ${neighborhood}, Brasília, DF, Brasil`);
-    // Also try just the quadra identifier
-    const simpleQuadra = finalStreet?.match(/Q\s*[A-Z]{1,4}\s*\d+/i)?.[0];
-    if (simpleQuadra) {
-      searchStrategies.push(`${simpleQuadra}, ${neighborhood}, Brasília, Brasil`);
-    }
-  }
-
-  // Strategy 2: Full address from ViaCEP (most reliable)
-  if (cityInfo?.street && cityInfo.neighborhood && city && state) {
-    searchStrategies.push(`${cityInfo.street}, ${cityInfo.neighborhood}, ${city}, ${state}, Brasil`);
-  }
-
-  // Strategy 3: Street + neighborhood + city + state
-  if (finalStreet && neighborhood && city && state) {
-    searchStrategies.push(`${finalStreet}, ${neighborhood}, ${city}, ${state}, Brasil`);
-  }
-
-  // Strategy 4: Street + number + city + state
-  if (finalStreet && number && city && state) {
-    searchStrategies.push(`${finalStreet}, ${number}, ${city}, ${state}, Brasil`);
-  }
-
-  // Strategy 5: Street + city + state
-  if (finalStreet && city && state) {
-    searchStrategies.push(`${finalStreet}, ${city}, ${state}, Brasil`);
-  }
-
-  // Strategy 6: Neighborhood + City + State
-  if (neighborhood && city && state) {
-    searchStrategies.push(`${neighborhood}, ${city}, ${state}, Brasil`);
-  }
-
-  // Strategy 7: For DF - try neighborhood as region
-  if (isDF && neighborhood) {
-    // Remove parentheses content for cleaner search
-    const cleanNeighborhood = neighborhood.replace(/\s*\([^)]*\)/g, '').trim();
-    if (cleanNeighborhood !== neighborhood) {
-      searchStrategies.push(`${cleanNeighborhood}, Brasília, DF, Brasil`);
-    }
-  }
-
-  // Strategy 8: Just City + State (last resort)
-  if (city && state) {
-    searchStrategies.push(`${city}, ${state}, Brasil`);
-  }
-
-  // Remove duplicates while preserving order
-  const uniqueStrategies = [...new Set(searchStrategies)];
-
-  console.log('Geocoding strategies:', uniqueStrategies);
-  console.log('Parsed address:', { street: finalStreet, number, neighborhood, city, state });
-
-  for (const searchQuery of uniqueStrategies) {
-    try {
-      // Call Nominatim directly from browser (CORS supported, distributed IPs avoid rate limiting)
-      const encodedQuery = encodeURIComponent(searchQuery);
+      const qs = new URLSearchParams({ ...params, format: 'json', countrycodes: 'br', limit: '1' });
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&countrycodes=br&limit=1`,
-        { headers: { 'Accept': 'application/json' } }
+        `https://nominatim.openstreetmap.org/search?${qs}`,
+        { headers: { Accept: 'application/json' } }
       );
-
-      if (!response.ok) {
-        console.error('Geocoding response not ok:', response.status);
-        continue;
-      }
-
+      if (!response.ok) return null;
       const data = await response.json();
-
       if (data?.length > 0) {
         const lat = parseFloat(data[0].lat);
         const lon = parseFloat(data[0].lon);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          console.log('Geocoding success with query:', searchQuery, '-> lat:', lat, 'lon:', lon);
-          return { lat, lng: lon };
-        }
-      } else {
-        console.log('No results for query:', searchQuery);
+        if (!isNaN(lat) && !isNaN(lon)) return { lat, lng: lon };
       }
-    } catch (error) {
-      console.error('Geocoding error for query:', searchQuery, error);
-    }
+    } catch { /* silent */ }
+    return null;
   }
 
-  console.log('Geocoding failed for all strategies');
+  // --- Parse address ---
+  // Clean: remove complement after dash before a comma ("Rua X, 123 - Apto 2, Bairro" → "Rua X, 123, Bairro")
+  const cleanAddress = address
+    .replace(/\s*-\s*[^,]+(?=,)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const parts = cleanAddress.split(',').map(p => p.trim()).filter(Boolean);
+
+  // Extract "Cidade - UF" from the end
+  const cityStateMatch = cleanAddress.match(/,\s*([^,]+?)\s*-\s*([A-Z]{2})\s*$/i);
+  const city = cityStateMatch?.[1]?.trim() ?? undefined;
+  const state = cityStateMatch?.[2]?.trim() ?? undefined;
+
+  // Extract street and optional number from first two parts
+  const firstPart = parts[0] ?? '';
+  let streetName: string | undefined;
+  let streetNumber: string | undefined;
+
+  if (parts.length > 1 && /^\d+/.test(parts[1])) {
+    streetName = firstPart;
+    streetNumber = parts[1].match(/^\d+/)?.[0];
+  } else {
+    const m = firstPart.match(/^(.+?)\s+(\d+)\s*$/);
+    streetName = m ? m[1].trim() : firstPart;
+    streetNumber = m ? m[2] : undefined;
+  }
+
+  // Neighborhood: second-to-last part (before "Cidade - UF")
+  const neighborhood = parts.length >= 3 && !/^\d+/.test(parts[parts.length - 2])
+    ? parts[parts.length - 2]
+    : undefined;
+
+  // CEP from prop
+  let cleanCep: string | undefined;
+  if (cep) {
+    const c = cep.replace(/\D/g, '');
+    if (c.length === 8) cleanCep = c;
+  }
+
+  // --- Geocoding attempts ---
+
+  // 1. CEP → ViaCEP → structured Nominatim (most reliable for Brazilian addresses)
+  if (cleanCep) {
+    try {
+      const viaCepRes = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const viaCepData = await viaCepRes.json();
+      if (!viaCepData.erro && viaCepData.localidade) {
+        const c = viaCepData.localidade;
+        const s = viaCepData.uf;
+        if (viaCepData.logradouro) {
+          const result = await fetchNominatim({ street: viaCepData.logradouro, city: c, state: s, country: 'Brazil' });
+          if (result) return result;
+        }
+        const result = await fetchNominatim({ city: c, state: s, country: 'Brazil' });
+        if (result) return result;
+      }
+    } catch { /* ignore */ }
+  }
+
+  // 2. Structured: street + number + city + state
+  if (streetName && streetNumber && city && state) {
+    const result = await fetchNominatim({ street: `${streetName} ${streetNumber}`, city, state, country: 'Brazil' });
+    if (result) return result;
+  }
+
+  // 3. Structured: street + city + state
+  if (streetName && city && state) {
+    const result = await fetchNominatim({ street: streetName, city, state, country: 'Brazil' });
+    if (result) return result;
+  }
+
+  // 4. Structured: neighborhood + city + state (free-text q=)
+  if (neighborhood && city && state) {
+    const result = await fetchNominatim({ q: `${neighborhood}, ${city}, ${state}, Brasil` });
+    if (result) return result;
+  }
+
+  // 5. Structured: city + state only
+  if (city && state) {
+    const result = await fetchNominatim({ city, state, country: 'Brazil' });
+    if (result) return result;
+  }
+
+  // 6. Free-text: full clean address
+  if (city && state) {
+    const result = await fetchNominatim({ q: `${cleanAddress.replace(/\s*-\s*[A-Z]{2}\s*$/, '')}, Brasil` });
+    if (result) return result;
+  }
+
   return null;
 }
 
