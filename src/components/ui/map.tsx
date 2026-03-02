@@ -220,9 +220,12 @@ async function geocodeAddress(address: string, cep?: string): Promise<Coordinate
 
   for (const searchQuery of uniqueStrategies) {
     try {
-      // Use our API proxy to avoid CORS issues
+      // Call Nominatim directly from browser (CORS supported, distributed IPs avoid rate limiting)
       const encodedQuery = encodeURIComponent(searchQuery);
-      const response = await fetch(`/api/geocode?q=${encodedQuery}`);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&countrycodes=br&limit=1`,
+        { headers: { 'Accept': 'application/json' } }
+      );
 
       if (!response.ok) {
         console.error('Geocoding response not ok:', response.status);
