@@ -87,7 +87,7 @@ export function AdminNewJobPage() {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [dailyRate, setDailyRate] = useState("110");
+  const dailyRate = "110";
   const [requiredWorkers, setRequiredWorkers] = useState("1");
   const [skills, setSkills] = useState<string[]>([]);
 
