@@ -86,9 +86,26 @@ async function geocodeAddress(address: string, cep?: string): Promise<Coordinate
     return null;
   }
 
+  // --- Extract CEP (from prop or embedded in address string like "CEP: 71732-040") ---
+  let cleanCep: string | undefined;
+  if (cep) {
+    const c = cep.replace(/\D/g, '');
+    if (c.length === 8) cleanCep = c;
+  }
+  if (!cleanCep) {
+    const cepMatch = address.match(/CEP[:\s]+(\d{5}-?\d{3})/i);
+    if (cepMatch) {
+      const c = cepMatch[1].replace(/\D/g, '');
+      if (c.length === 8) cleanCep = c;
+    }
+  }
+
   // --- Parse address ---
+  // Strip embedded CEP suffix before further parsing
+  const addressNoCep = address.replace(/,?\s*CEP[:\s]+\d{5}-?\d{3}/i, '').trim();
+
   // Clean: remove complement after dash before a comma ("Rua X, 123 - Apto 2, Bairro" → "Rua X, 123, Bairro")
-  const cleanAddress = address
+  const cleanAddress = addressNoCep
     .replace(/\s*-\s*[^,]+(?=,)/g, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -118,13 +135,6 @@ async function geocodeAddress(address: string, cep?: string): Promise<Coordinate
   const neighborhood = parts.length >= 3 && !/^\d+/.test(parts[parts.length - 2])
     ? parts[parts.length - 2]
     : undefined;
-
-  // CEP from prop
-  let cleanCep: string | undefined;
-  if (cep) {
-    const c = cep.replace(/\D/g, '');
-    if (c.length === 8) cleanCep = c;
-  }
 
   // --- Geocoding attempts ---
 
