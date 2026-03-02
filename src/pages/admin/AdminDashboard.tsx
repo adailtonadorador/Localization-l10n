@@ -286,7 +286,11 @@ export function AdminDashboard() {
   return (
     <DashboardLayout>
       {/* Notification Prompt */}
-      <NotificationPrompt variant="banner" className="mb-6 rounded-xl" />
+      <NotificationPrompt
+        variant="banner"
+        className="mb-6 rounded-xl"
+        description="Ative as notificações para ser alertado quando um prestador aceitar uma diária."
+      />
 
       {/* Header */}
       <div className="mb-6">

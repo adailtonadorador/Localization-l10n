@@ -16,12 +16,16 @@ interface NotificationPromptProps {
   variant?: NotificationPromptVariant;
   onDismiss?: () => void;
   className?: string;
+  title?: string;
+  description?: string;
 }
 
 export function NotificationPrompt({
   variant = 'card',
   onDismiss,
   className = '',
+  title,
+  description,
 }: NotificationPromptProps) {
   const { permissionStatus, isSubscribed, isLoading, requestPermission } = useNotifications();
   const [dismissed, setDismissed] = useState(false);
@@ -60,9 +64,9 @@ export function NotificationPrompt({
                 <Bell className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <CardTitle className="text-base text-blue-900">Ative as Notificações</CardTitle>
+                <CardTitle className="text-base text-blue-900">{title ?? 'Ative as Notificações'}</CardTitle>
                 <CardDescription className="text-blue-700">
-                  Receba alertas de novas vagas e atualizações
+                  {description ?? 'Receba alertas de novas vagas e atualizações'}
                 </CardDescription>
               </div>
             </div>
@@ -109,7 +113,7 @@ export function NotificationPrompt({
           <div className="flex items-center gap-3">
             <Bell className="h-5 w-5" />
             <p className="text-sm font-medium">
-              Ative as notificações para não perder nenhuma vaga!
+              {description ?? 'Ative as notificações para não perder nenhuma vaga!'}
             </p>
           </div>
           <div className="flex items-center gap-2">
