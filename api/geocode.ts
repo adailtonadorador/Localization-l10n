@@ -13,33 +13,32 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Query parameter "q" is required' });
   }
 
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  const apiKey = process.env.HERE_MAPS_API_KEY;
   if (!apiKey) {
-    console.error('GOOGLE_MAPS_API_KEY not configured');
+    console.error('HERE_MAPS_API_KEY not configured');
     return res.status(500).json({ error: 'Geocoding API key not configured' });
   }
 
   try {
     const encodedQuery = encodeURIComponent(q);
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedQuery}&key=${apiKey}&language=pt-BR&region=br`,
+      `https://geocode.search.hereapi.com/v1/geocode?q=${encodedQuery}&apiKey=${apiKey}&lang=pt&in=countryCode:BRA&limit=1`,
       { headers: { Accept: 'application/json' } }
     );
 
     if (!response.ok) {
-      console.error('Google Maps Geocoding error:', response.status);
+      console.error('HERE Maps Geocoding error:', response.status, await response.text());
       return res.status(response.status).json({ error: 'Geocoding service error' });
     }
 
     const data = await response.json();
 
     // Normalize to [{lat, lon}] format expected by the frontend
-    if (data.status === 'OK' && data.results?.length > 0) {
-      const { lat, lng } = data.results[0].geometry.location;
+    if (data.items?.length > 0) {
+      const { lat, lng } = data.items[0].position;
       return res.status(200).json([{ lat: String(lat), lon: String(lng) }]);
     }
 
-    // ZERO_RESULTS or other non-error statuses → empty array
     return res.status(200).json([]);
   } catch (error) {
     console.error('Error in geocoding:', error);
