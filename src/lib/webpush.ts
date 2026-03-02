@@ -97,8 +97,11 @@ export async function subscribeToPush(userId: string): Promise<boolean> {
       return false;
     }
 
-    if (!swRegistration) {
-      console.error('[WebPush] Service Worker não disponível');
+    // Re-obtém o registro para garantir que o SW está ativo neste momento
+    swRegistration = await navigator.serviceWorker.ready;
+
+    if (!swRegistration?.active) {
+      console.error('[WebPush] Service Worker não está ativo');
       return false;
     }
 
