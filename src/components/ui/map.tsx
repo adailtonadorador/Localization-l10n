@@ -138,22 +138,40 @@ async function geocodeAddress(address: string, cep?: string): Promise<Coordinate
 
   // --- Geocoding attempts ---
 
-  // 1. CEP → ViaCEP → structured Nominatim (most reliable for Brazilian addresses)
+  // 1. CEP → BrasilAPI (primary) ou ViaCEP (fallback) → Nominatim estruturado
   if (cleanCep) {
+    let cepCity: string | undefined;
+    let cepState: string | undefined;
+    let cepStreet: string | undefined;
+
+    // Tenta BrasilAPI primeiro (mais estável, CORS correto)
     try {
-      const viaCepRes = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-      const viaCepData = await viaCepRes.json();
-      if (!viaCepData.erro && viaCepData.localidade) {
-        const c = viaCepData.localidade;
-        const s = viaCepData.uf;
-        if (viaCepData.logradouro) {
-          const result = await fetchNominatim({ street: viaCepData.logradouro, city: c, state: s, country: 'Brazil' });
-          if (result) return result;
-        }
-        const result = await fetchNominatim({ city: c, state: s, country: 'Brazil' });
-        if (result) return result;
+      const res = await fetch(`https://brasilapi.com.br/api/cep/v2/${cleanCep}`);
+      if (res.ok) {
+        const d = await res.json();
+        if (d.city) { cepCity = d.city; cepState = d.state; cepStreet = d.street || undefined; }
       }
     } catch { /* ignore */ }
+
+    // Fallback para ViaCEP
+    if (!cepCity) {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+        if (res.ok) {
+          const d = await res.json();
+          if (!d.erro && d.localidade) { cepCity = d.localidade; cepState = d.uf; cepStreet = d.logradouro || undefined; }
+        }
+      } catch { /* ignore */ }
+    }
+
+    if (cepCity && cepState) {
+      if (cepStreet) {
+        const result = await fetchNominatim({ street: cepStreet, city: cepCity, state: cepState, country: 'Brazil' });
+        if (result) return result;
+      }
+      const result = await fetchNominatim({ city: cepCity, state: cepState, country: 'Brazil' });
+      if (result) return result;
+    }
   }
 
   // 2. Structured: street + number + city + state
