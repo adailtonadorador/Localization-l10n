@@ -28,7 +28,6 @@ interface WorkRecord {
   signature_data: string | null;
   signed_at: string | null;
   status: string;
-  job_assignment_id: string | null;
   workers: {
     id: string;
     rating: number;
@@ -140,7 +139,6 @@ export function AdminMonitoringPage() {
           signature_data,
           signed_at,
           status,
-          job_assignment_id,
           worker_id,
           workers (
             id,
@@ -275,7 +273,6 @@ export function AdminMonitoringPage() {
               signature_data: null,
               signed_at: null,
               status: 'pending',
-              job_assignment_id: assignment.id,
               workers: assignment.workers,
               job_assignments: {
                 id: assignment.id,
