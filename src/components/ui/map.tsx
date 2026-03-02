@@ -91,6 +91,14 @@ async function geocodeAddress(address: string, cep?: string): Promise<Coordinate
 
   const searchStrategies: string[] = [];
 
+  // Strategy 0 (highest priority): CEP alone — Google resolves any Brazilian CEP instantly
+  if (cep) {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length === 8) {
+      searchStrategies.push(`${cleanCep}, Brasil`);
+    }
+  }
+
   // Clean address - remove "- complemento" parts and extra spaces
   const cleanAddress = address
     .replace(/\s*-\s*[^,]*(?=,)/g, '') // Remove "- complemento" before commas
