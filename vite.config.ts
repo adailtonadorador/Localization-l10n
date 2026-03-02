@@ -20,6 +20,7 @@ export default defineConfig({
         name: 'Sama Conecta',
         short_name: 'Sama Conecta',
         description: 'Conectando trabalhadores e empresas',
+        lang: 'pt-BR',
         theme_color: '#0A2A5A',
         background_color: '#ffffff',
         display: 'standalone',

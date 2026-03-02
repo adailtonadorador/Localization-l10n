@@ -2,7 +2,7 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { clientsClaim } from 'workbox-core';
 import { registerRoute } from 'workbox-routing';
-import { NetworkFirst, CacheFirst } from 'workbox-strategies';
+import { NetworkFirst, NetworkOnly, CacheFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
@@ -18,7 +18,16 @@ cleanupOutdatedCaches();
 // Precache dos assets gerados pelo build
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Cache para Supabase API (NetworkFirst - prioriza rede)
+// NÃO cachear work_records: contém fotos em base64 (grandes) e dados que mudam
+// frequentemente (check-in/check-out). Sempre buscar da rede.
+registerRoute(
+  ({ url }) =>
+    url.hostname.includes('supabase.co') &&
+    url.pathname.includes('/rest/v1/work_records'),
+  new NetworkOnly()
+);
+
+// Cache para outras APIs do Supabase (NetworkFirst - prioriza rede)
 registerRoute(
   ({ url }) => url.hostname.includes('supabase.co'),
   new NetworkFirst({
@@ -26,7 +35,7 @@ registerRoute(
     plugins: [
       new ExpirationPlugin({
         maxEntries: 50,
-        maxAgeSeconds: 60 * 60 * 24, // 24 horas
+        maxAgeSeconds: 60 * 5, // 5 minutos (dados mudam com frequência)
       }),
       new CacheableResponsePlugin({
         statuses: [0, 200],
