@@ -30,7 +30,6 @@ import {
   Users,
   Search,
   Star,
-  Shield,
   Clock,
   CheckCircle2,
   Filter,
@@ -93,6 +92,12 @@ interface Worker {
   pix_key: string | null;
   birth_date: string | null;
   phone_recado: string | null;
+  cep: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cidade: string | null;
   users: {
     name: string;
     email: string;
@@ -672,13 +677,6 @@ export function AdminWorkersPage() {
                               </Badge>
                             ) : null}
 
-                            {/* Secondary Badge: Docs status (only if approved and active) */}
-                            {worker.approval_status === 'approved' && worker.is_active !== false && !worker.documents_verified && (
-                              <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50 gap-1">
-                                <Shield className="h-3 w-3" />
-                                Docs pendentes
-                              </Badge>
-                            )}
 
                             {/* Active Jobs - as text, not badge */}
                             {activeJobs.length > 0 && (
@@ -1089,12 +1087,33 @@ export function AdminWorkersPage() {
                     </p>
                     <p className="font-medium text-sm">{formatCpf(selectedWorker.cpf)}</p>
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> Estado
-                    </p>
-                    <p className="font-medium text-sm">{selectedWorker.uf || 'Não informado'}</p>
-                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="p-3 bg-slate-50 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> Endereço
+                  </p>
+                  {(selectedWorker.logradouro || selectedWorker.cidade || selectedWorker.uf) ? (
+                    <div className="space-y-0.5">
+                      {selectedWorker.logradouro && (
+                        <p className="font-medium text-sm">
+                          {selectedWorker.logradouro}{selectedWorker.numero ? `, ${selectedWorker.numero}` : ''}{selectedWorker.complemento ? ` - ${selectedWorker.complemento}` : ''}
+                        </p>
+                      )}
+                      {selectedWorker.bairro && (
+                        <p className="text-sm text-muted-foreground">{selectedWorker.bairro}</p>
+                      )}
+                      {(selectedWorker.cidade || selectedWorker.uf) && (
+                        <p className="text-sm text-muted-foreground">
+                          {[selectedWorker.cidade, selectedWorker.uf].filter(Boolean).join(' - ')}
+                          {selectedWorker.cep ? ` · CEP ${selectedWorker.cep}` : ''}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="font-medium text-sm">Não informado</p>
+                  )}
                 </div>
 
                 {/* Stats */}
