@@ -138,18 +138,28 @@ async function geocodeAddress(address: string, cep?: string): Promise<Coordinate
 
   // --- Geocoding attempts ---
 
-  // 1. CEP → BrasilAPI (primary) ou ViaCEP (fallback) → Nominatim estruturado
+  // 1. CEP → BrasilAPI (primary) ou ViaCEP (fallback) → coordenadas diretas ou Nominatim
   if (cleanCep) {
     let cepCity: string | undefined;
     let cepState: string | undefined;
     let cepStreet: string | undefined;
+    let cepNeighborhood: string | undefined;
 
-    // Tenta BrasilAPI primeiro (mais estável, CORS correto)
+    // Tenta BrasilAPI primeiro — pode retornar coordenadas GPS diretas
     try {
       const res = await fetch(`https://brasilapi.com.br/api/cep/v2/${cleanCep}`);
       if (res.ok) {
         const d = await res.json();
-        if (d.city) { cepCity = d.city; cepState = d.state; cepStreet = d.street || undefined; }
+        if (d.city) {
+          cepCity = d.city;
+          cepState = d.state;
+          cepStreet = d.street || undefined;
+          cepNeighborhood = d.neighborhood || undefined;
+          // Coordenadas diretas disponíveis → retorna imediatamente (mais preciso)
+          const lat = parseFloat(d.location?.coordinates?.latitude);
+          const lng = parseFloat(d.location?.coordinates?.longitude);
+          if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+        }
       }
     } catch { /* ignore */ }
 
@@ -159,16 +169,28 @@ async function geocodeAddress(address: string, cep?: string): Promise<Coordinate
         const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
         if (res.ok) {
           const d = await res.json();
-          if (!d.erro && d.localidade) { cepCity = d.localidade; cepState = d.uf; cepStreet = d.logradouro || undefined; }
+          if (!d.erro && d.localidade) {
+            cepCity = d.localidade;
+            cepState = d.uf;
+            cepStreet = d.logradouro || undefined;
+            cepNeighborhood = d.bairro || undefined;
+          }
         }
       } catch { /* ignore */ }
     }
 
     if (cepCity && cepState) {
+      // Tenta bairro + cidade (funciona melhor para endereços do DF)
+      if (cepNeighborhood) {
+        const result = await fetchNominatim({ q: `${cepNeighborhood}, ${cepCity}, ${cepState}, Brasil` });
+        if (result) return result;
+      }
+      // Tenta rua + cidade
       if (cepStreet) {
         const result = await fetchNominatim({ street: cepStreet, city: cepCity, state: cepState, country: 'Brazil' });
         if (result) return result;
       }
+      // Mínimo: cidade + estado
       const result = await fetchNominatim({ city: cepCity, state: cepState, country: 'Brazil' });
       if (result) return result;
     }
