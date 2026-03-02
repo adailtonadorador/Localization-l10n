@@ -68,8 +68,10 @@ async function geocodeAddress(address: string, cep?: string): Promise<Coordinate
 
   async function fetchPhoton(query: string): Promise<Coordinates | null> {
     try {
+      // Photon não aceita vírgulas na query (retorna 400) — substitui por espaço
+      const sanitized = query.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
       const res = await fetch(
-        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1&lang=pt`
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(sanitized)}&limit=1`
       );
       if (!res.ok) return null;
       const data = await res.json();
