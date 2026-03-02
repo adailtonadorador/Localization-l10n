@@ -16,7 +16,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, Eye, Mail, Phone, Star, FileSignature, MapPin, Building, ClipboardCheck } from "lucide-react";
+import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, Eye, Mail, Phone, Star, Camera, MapPin, Building, ClipboardCheck, ZoomIn } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RatingDialog, RatingDisplay } from "@/components/RatingDialog";
 
@@ -25,6 +25,7 @@ interface WorkRecord {
   work_date: string;
   check_in: string | null;
   check_out: string | null;
+  check_in_photo: string | null;
   signature_data: string | null;
   signed_at: string | null;
   status: string;
@@ -105,6 +106,9 @@ export function AdminMonitoringPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [ratingFilter, setRatingFilter] = useState<"all" | "pending" | "rated">("all");
 
+  // Photo zoom state
+  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
+
   // Rating dialog state
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<WorkRecord | null>(null);
@@ -136,6 +140,7 @@ export function AdminMonitoringPage() {
           work_date,
           check_in,
           check_out,
+          check_in_photo,
           signature_data,
           signed_at,
           status,
@@ -270,6 +275,7 @@ export function AdminMonitoringPage() {
               work_date: filterDate,
               check_in: null,
               check_out: null,
+              check_in_photo: null,
               signature_data: null,
               signed_at: null,
               status: 'pending',
@@ -1055,24 +1061,54 @@ export function AdminMonitoringPage() {
                               </div>
                             </div>
 
-                            {/* Assinatura */}
-                            {record.signature_data && (
+                            {/* Fotos de Registro */}
+                            {(record.check_in_photo || record.signature_data) && (
                               <div className="pt-3 border-t">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                                  <FileSignature className="h-4 w-4" />
-                                  <span>Assinatura Digital</span>
-                                  {record.signed_at && (
-                                    <span className="text-xs">
-                                      ({new Date(record.signed_at).toLocaleString('pt-BR')})
-                                    </span>
-                                  )}
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                                  <Camera className="h-4 w-4" />
+                                  <span>Fotos de Registro</span>
                                 </div>
-                                <div className="bg-white border rounded-lg p-2 inline-block">
-                                  <img
-                                    src={record.signature_data}
-                                    alt="Assinatura"
-                                    className="h-16 w-auto object-contain"
-                                  />
+                                <div className="flex gap-3 flex-wrap">
+                                  {record.check_in_photo && (
+                                    <div className="flex flex-col items-center gap-1">
+                                      <span className="text-xs text-muted-foreground">Entrada</span>
+                                      <button
+                                        type="button"
+                                        className="relative group"
+                                        onClick={() => setSelectedPhotoUrl(record.check_in_photo)}
+                                        title="Clique para ampliar"
+                                      >
+                                        <img
+                                          src={record.check_in_photo}
+                                          alt="Foto de entrada"
+                                          className="h-20 w-28 object-cover rounded-lg border"
+                                        />
+                                        <div className="absolute inset-0 rounded-lg bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                          <ZoomIn className="h-5 w-5 text-white" />
+                                        </div>
+                                      </button>
+                                    </div>
+                                  )}
+                                  {record.signature_data && (
+                                    <div className="flex flex-col items-center gap-1">
+                                      <span className="text-xs text-muted-foreground">Saída</span>
+                                      <button
+                                        type="button"
+                                        className="relative group"
+                                        onClick={() => setSelectedPhotoUrl(record.signature_data)}
+                                        title="Clique para ampliar"
+                                      >
+                                        <img
+                                          src={record.signature_data}
+                                          alt="Foto de saída"
+                                          className="h-20 w-28 object-cover rounded-lg border"
+                                        />
+                                        <div className="absolute inset-0 rounded-lg bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                          <ZoomIn className="h-5 w-5 text-white" />
+                                        </div>
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -1142,6 +1178,18 @@ export function AdminMonitoringPage() {
           onSuccess={loadCompletedAssignments}
         />
       )}
+      {/* Photo Zoom Dialog */}
+      <Dialog open={!!selectedPhotoUrl} onOpenChange={(open) => !open && setSelectedPhotoUrl(null)}>
+        <DialogContent className="max-w-lg p-2 bg-black border-0">
+          {selectedPhotoUrl && (
+            <img
+              src={selectedPhotoUrl}
+              alt="Foto de registro"
+              className="w-full rounded-lg object-contain max-h-[80vh]"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
