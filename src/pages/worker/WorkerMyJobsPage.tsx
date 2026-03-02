@@ -6,7 +6,7 @@ import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SignatureDialog } from "@/components/SignatureDialog";
+import { PhotoCaptureDialog } from "@/components/PhotoCaptureDialog";
 import { WithdrawalDialog } from "@/components/WithdrawalDialog";
 import { notifyJobAvailableAfterWithdrawal } from "@/lib/notifications";
 import { Clock, MapPin, CheckCircle, Calendar, Building, Play, LogOut, Briefcase, ArrowRight, XCircle } from "lucide-react";
@@ -17,6 +17,7 @@ interface WorkRecord {
   work_date: string;
   check_in: string | null;
   check_out: string | null;
+  check_in_photo: string | null;
   signature_data: string | null;
   signed_at: string | null;
   status: string;
@@ -38,7 +39,8 @@ export function WorkerMyJobsPage() {
   const { profile } = useAuth();
   const [records, setRecords] = useState<WorkRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+  const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false);
+  const [photoType, setPhotoType] = useState<'checkin' | 'checkout'>('checkin');
   const [selectedRecord, setSelectedRecord] = useState<WorkRecord | null>(null);
   const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false);
   const [selectedJobForWithdrawal, setSelectedJobForWithdrawal] = useState<{ id: string; title: string; job_id: string } | null>(null);
@@ -78,52 +80,52 @@ export function WorkerMyJobsPage() {
     }
   }
 
-  async function handleCheckIn(record: WorkRecord) {
-    try {
-      const { error } = await supabaseUntyped
-        .from('work_records')
-        .update({
-          check_in: new Date().toISOString(),
-          status: 'in_progress'
-        })
-        .eq('id', record.id);
-
-      if (error) throw error;
-      toast.success('Entrada registrada com sucesso!');
-      loadRecords();
-    } catch (error) {
-      console.error('Error checking in:', error);
-      toast.error('Erro ao registrar entrada. Tente novamente.');
-    }
-  }
-
-  async function handleCheckOut(record: WorkRecord) {
+  function handleCheckIn(record: WorkRecord) {
     setSelectedRecord(record);
-    setSignatureDialogOpen(true);
+    setPhotoType('checkin');
+    setPhotoCaptureOpen(true);
   }
 
-  async function handleSignatureSubmit(signatureData: string) {
+  function handleCheckOut(record: WorkRecord) {
+    setSelectedRecord(record);
+    setPhotoType('checkout');
+    setPhotoCaptureOpen(true);
+  }
+
+  async function handlePhotoSubmit(photoData: string) {
     if (!selectedRecord) return;
 
     try {
-      const { error } = await supabaseUntyped
-        .from('work_records')
-        .update({
-          check_out: new Date().toISOString(),
-          signature_data: signatureData,
-          signed_at: new Date().toISOString(),
-          status: 'completed'
-        })
-        .eq('id', selectedRecord.id);
-
-      if (error) throw error;
-      setSignatureDialogOpen(false);
+      if (photoType === 'checkin') {
+        const { error } = await supabaseUntyped
+          .from('work_records')
+          .update({
+            check_in: new Date().toISOString(),
+            check_in_photo: photoData,
+            status: 'in_progress',
+          })
+          .eq('id', selectedRecord.id);
+        if (error) throw error;
+        toast.success('Entrada registrada com sucesso!');
+      } else {
+        const { error } = await supabaseUntyped
+          .from('work_records')
+          .update({
+            check_out: new Date().toISOString(),
+            signature_data: photoData,
+            signed_at: new Date().toISOString(),
+            status: 'completed',
+          })
+          .eq('id', selectedRecord.id);
+        if (error) throw error;
+        toast.success('Saída registrada com sucesso!');
+      }
+      setPhotoCaptureOpen(false);
       setSelectedRecord(null);
-      toast.success('Saída registrada com sucesso!');
       loadRecords();
     } catch (error) {
-      console.error('Error checking out:', error);
-      toast.error('Erro ao registrar saída. Tente novamente.');
+      console.error('Error saving photo:', error);
+      toast.error('Erro ao salvar foto. Tente novamente.');
     }
   }
 
@@ -558,10 +560,16 @@ export function WorkerMyJobsPage() {
         </Card>
       )}
 
-      <SignatureDialog
-        open={signatureDialogOpen}
-        onOpenChange={setSignatureDialogOpen}
-        onSubmit={handleSignatureSubmit}
+      <PhotoCaptureDialog
+        open={photoCaptureOpen}
+        onOpenChange={setPhotoCaptureOpen}
+        onSubmit={handlePhotoSubmit}
+        title={photoType === 'checkin' ? 'Foto de Entrada' : 'Foto de Saída'}
+        description={
+          photoType === 'checkin'
+            ? 'Tire uma foto para registrar sua entrada no local de trabalho.'
+            : 'Tire uma foto para confirmar o fim do expediente.'
+        }
       />
 
       <WithdrawalDialog
