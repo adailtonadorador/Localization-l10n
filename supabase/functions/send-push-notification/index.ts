@@ -36,6 +36,8 @@ interface RequestBody {
   url?: string
   icon?: string
   userIds?: string[]
+  funcao?: string // Se informado, busca workers com essa funcao internamente (server-side)
+  targetRole?: string // Se informado, envia para todos os usuários com essa role (ex: 'admin')
   tag?: string
   type?: string // 'new_job', 'assignment', 'approval', 'general'
   saveToHistory?: boolean // Se deve salvar no histórico (default: true)
@@ -79,14 +81,61 @@ serve(async (req) => {
       )
     }
 
+    // Resolve destinatários server-side (bypassa RLS com service role)
+    let resolvedUserIds = body.userIds ?? []
+
+    // Por funcao: busca workers com a função correspondente
+    if (body.funcao && resolvedUserIds.length === 0) {
+      const { data: workerData, error: workerError } = await supabase
+        .from('workers')
+        .select('id')
+        .eq('funcao', body.funcao)
+        .eq('approval_status', 'approved')
+        .eq('is_active', true)
+
+      if (workerError) {
+        console.error('Erro ao buscar workers por funcao:', workerError)
+      } else if (workerData && workerData.length > 0) {
+        resolvedUserIds = workerData.map((w: { id: string }) => w.id)
+        console.log(`[funcao=${body.funcao}] Workers encontrados:`, resolvedUserIds.length)
+      } else {
+        console.log(`[funcao=${body.funcao}] Nenhum worker aprovado encontrado`)
+        return new Response(
+          JSON.stringify({ message: 'Nenhum worker com essa funcao encontrado', sent: 0 }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
+    // Por role: busca todos os usuários com a role especificada (ex: 'admin')
+    if (body.targetRole && resolvedUserIds.length === 0) {
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', body.targetRole)
+
+      if (usersError) {
+        console.error('Erro ao buscar users por role:', usersError)
+      } else if (usersData && usersData.length > 0) {
+        resolvedUserIds = usersData.map((u: { id: string }) => u.id)
+        console.log(`[role=${body.targetRole}] Users encontrados:`, resolvedUserIds.length)
+      } else {
+        console.log(`[role=${body.targetRole}] Nenhum user com essa role encontrado`)
+        return new Response(
+          JSON.stringify({ message: 'Nenhum user com essa role encontrado', sent: 0 }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
     // Busca as subscriptions
     let query = supabase
       .from('push_subscriptions')
       .select('user_id, endpoint, p256dh, auth')
 
-    // Se userIds foi informado, filtra por eles
-    if (body.userIds && body.userIds.length > 0) {
-      query = query.in('user_id', body.userIds)
+    // Filtra por userIds (seja passado diretamente ou resolvido via funcao)
+    if (resolvedUserIds.length > 0) {
+      query = query.in('user_id', resolvedUserIds)
     }
 
     const { data: subscriptions, error: fetchError } = await query

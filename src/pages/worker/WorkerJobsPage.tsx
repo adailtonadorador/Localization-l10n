@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
-import { notifyJobAssignment } from "@/lib/notifications";
+import { notifyJobAssignment, notifyAdminJobAssigned } from "@/lib/notifications";
 import { BRAZILIAN_STATES } from "@/lib/brazil-locations";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -328,8 +328,10 @@ export function WorkerJobsPage() {
         description: 'Acesse "Meus Trabalhos" para ver seus dias de trabalho.',
       });
 
-      // Envia notificação de confirmação
+      // Envia notificação de confirmação para o worker
       notifyJobAssignment(profile.id, selectedJob.title, selectedJob.date);
+      // Notifica admins sobre a atribuição
+      notifyAdminJobAssigned(profile.name || 'Trabalhador', selectedJob.title, selectedJob.date, selectedJob.location);
 
       loadJobs();
     } catch (error) {

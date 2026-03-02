@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { WithdrawalDialog } from "@/components/WithdrawalDialog";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
+import { notifyAdminJobAssigned } from "@/lib/notifications";
 import {
   Briefcase,
   Star,
@@ -198,8 +199,8 @@ export function WorkerDashboard() {
   async function loadDashboardData() {
     setLoading(true);
     try {
-      // Load available jobs (open status)
-      const { data: jobsData } = await supabaseUntyped
+      // Load available jobs (open status), filtered by worker's funcao
+      let jobsQuery = supabaseUntyped
         .from('jobs')
         .select(`
           *,
@@ -209,6 +210,12 @@ export function WorkerDashboard() {
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
         .limit(5);
+
+      if (workerProfile?.funcao) {
+        jobsQuery = jobsQuery.eq('title', workerProfile.funcao);
+      }
+
+      const { data: jobsData } = await jobsQuery;
 
       setAvailableJobs(jobsData || []);
 
@@ -498,6 +505,7 @@ export function WorkerDashboard() {
       toast.success('Diária aceita com sucesso!', {
         description: 'Acesse "Meus Trabalhos" para ver seus dias de trabalho.',
       });
+      notifyAdminJobAssigned(profile?.name || 'Trabalhador', selectedJob.title, selectedJob.date, selectedJob.location);
     } catch {
       toast.error('Erro ao aceitar vaga. Tente novamente.');
     }

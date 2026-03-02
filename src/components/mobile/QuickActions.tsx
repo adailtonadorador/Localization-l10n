@@ -32,7 +32,7 @@ export function QuickActions({ profileCompleteness }: QuickActionsProps) {
       show: true
     },
     {
-      label: 'Meus Trabalhos',
+      label: 'Minhas Diárias',
       icon: Calendar,
       href: '/worker/my-jobs',
       color: 'text-cyan-700',

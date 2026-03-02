@@ -27,12 +27,12 @@ const WORKER_NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
-    label: 'Vagas',
+    label: 'Disponíveis',
     href: '/worker/jobs',
     icon: Briefcase,
   },
   {
-    label: 'Trabalhos',
+    label: 'Minhas Diárias',
     href: '/worker/my-jobs',
     icon: ClipboardList,
   },

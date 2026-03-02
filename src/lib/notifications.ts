@@ -2,35 +2,16 @@
  * Funções para enviar notificações push
  */
 
-import { supabaseUntyped } from '@/lib/supabase';
-
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-/**
- * Busca IDs dos workers aprovados com a função correspondente ao título da diária
- */
-async function fetchWorkerIdsByFuncao(funcao: string): Promise<string[]> {
-  try {
-    const { data, error } = await supabaseUntyped
-      .from('workers')
-      .select('id')
-      .eq('funcao', funcao)
-      .eq('approval_status', 'approved')
-      .eq('is_active', true);
-
-    if (error || !data) return [];
-    return data.map((w: { id: string }) => w.id);
-  } catch {
-    return [];
-  }
-}
 
 interface NotificationPayload {
   title: string;
   body: string;
   url?: string;
   userIds?: string[]; // Se especificado, envia apenas para estes usuários
+  funcao?: string; // Se especificado, a Edge Function busca workers com essa funcao server-side
+  targetRole?: string; // Se especificado, envia para todos os usuários com essa role (ex: 'admin')
   type?: 'new_job' | 'assignment' | 'approval' | 'general';
 }
 
@@ -63,43 +44,64 @@ export async function sendPushNotification(payload: NotificationPayload): Promis
 }
 
 /**
- * Notifica workers com a função correspondente sobre uma nova diária
+ * Notifica workers com a função correspondente sobre uma nova diária.
+ * A busca por workers é feita server-side na Edge Function (com service role, bypassa RLS).
  */
 export async function notifyNewJob(jobTitle: string, location?: string): Promise<void> {
   const body = location
     ? `Nova diária: ${jobTitle} em ${location}`
     : `Nova diária disponível: ${jobTitle}`;
 
-  const userIds = await fetchWorkerIdsByFuncao(jobTitle);
-  if (userIds.length === 0) return;
-
   sendPushNotification({
     title: 'Nova Diária Disponível!',
     body,
     url: '/worker/jobs',
-    userIds,
+    funcao: jobTitle,
     type: 'new_job',
   }).catch(err => console.error('[Notifications] Erro ao notificar nova diária:', err));
 }
 
 /**
- * Notifica workers com a função correspondente que uma diária ficou disponível após desistência
+ * Notifica workers com a função correspondente que uma diária ficou disponível após desistência.
+ * A busca por workers é feita server-side na Edge Function (com service role, bypassa RLS).
  */
 export async function notifyJobAvailableAfterWithdrawal(jobTitle: string, location?: string): Promise<void> {
   const body = location
     ? `Diária disponível: ${jobTitle} em ${location}`
     : `Diária disponível: ${jobTitle}`;
 
-  const userIds = await fetchWorkerIdsByFuncao(jobTitle);
-  if (userIds.length === 0) return;
-
   sendPushNotification({
     title: 'Diária Disponível!',
     body,
     url: '/worker/jobs',
-    userIds,
+    funcao: jobTitle,
     type: 'new_job',
   }).catch(err => console.error('[Notifications] Erro ao notificar diária disponível:', err));
+}
+
+/**
+ * Notifica todos os admins quando um worker aceita uma diária.
+ * Inclui nome do worker, título, data e local da diária.
+ */
+export async function notifyAdminJobAssigned(
+  workerName: string,
+  jobTitle: string,
+  jobDate: string,
+  location: string
+): Promise<void> {
+  const formattedDate = new Date(jobDate + 'T00:00:00').toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+
+  sendPushNotification({
+    title: '✅ Diária Aceita',
+    body: `${workerName} aceitou "${jobTitle}" em ${formattedDate} — ${location}`,
+    url: '/admin/monitoring',
+    targetRole: 'admin',
+    type: 'assignment',
+  }).catch(err => console.error('[Notifications] Erro ao notificar admin sobre atribuição:', err));
 }
 
 /**

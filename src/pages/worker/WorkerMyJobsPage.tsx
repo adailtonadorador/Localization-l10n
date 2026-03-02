@@ -298,7 +298,7 @@ export function WorkerMyJobsPage() {
     <DashboardLayout>
       {/* Header */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Meus Trabalhos</h2>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Minhas Diárias</h2>
         <p className="text-muted-foreground">Gerencie seus dias de trabalho e registre presença</p>
       </div>
 

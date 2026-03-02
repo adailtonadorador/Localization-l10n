@@ -157,7 +157,7 @@ export function WorkerHistoryPage() {
     <DashboardLayout>
       {/* Header */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Histórico de Trabalhos</h2>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Histórico de Diárias</h2>
         <p className="text-muted-foreground">Acompanhe seu desempenho na plataforma</p>
       </div>
 
@@ -171,7 +171,7 @@ export function WorkerHistoryPage() {
               </div>
               <div>
                 <p className="text-3xl font-bold text-blue-600">{completedRecords.length}</p>
-                <p className="text-sm text-muted-foreground">Trabalhos Concluídos</p>
+                <p className="text-sm text-muted-foreground">Diárias Concluídas</p>
               </div>
             </div>
           </CardContent>
@@ -201,7 +201,7 @@ export function WorkerHistoryPage() {
             <div className="p-1.5 bg-slate-800 rounded-lg">
               <Clock className="h-4 w-4 text-white" />
             </div>
-            <h3 className="text-lg font-semibold">Trabalhos Realizados</h3>
+            <h3 className="text-lg font-semibold">Diárias Realizadas</h3>
             <Badge variant="secondary">{records.length}</Badge>
           </div>
 
@@ -288,9 +288,9 @@ export function WorkerHistoryPage() {
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Briefcase className="h-8 w-8 text-slate-400" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">Nenhum trabalho realizado</h3>
+            <h3 className="font-semibold text-lg mb-2">Nenhuma diária realizada</h3>
             <p className="text-muted-foreground">
-              Seu histórico de trabalhos aparecerá aqui após completar suas primeiras vagas.
+              Seu histórico de diárias aparecerá aqui após completar suas primeiras diárias.
             </p>
           </CardContent>
         </Card>

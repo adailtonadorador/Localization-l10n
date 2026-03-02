@@ -33,7 +33,7 @@ const menuItems = {
   worker: [
     { label: 'Dashboard', href: '/worker', icon: LayoutDashboard },
     { label: 'Diárias Disponíveis', href: '/worker/jobs', icon: Briefcase },
-    { label: 'Meus Trabalhos', href: '/worker/my-jobs', icon: ClipboardList },
+    { label: 'Minhas Diárias', href: '/worker/my-jobs', icon: ClipboardList },
     { label: 'Histórico', href: '/worker/history', icon: Clock },
     { label: 'Meu Perfil', href: '/worker/profile', icon: User },
   ],

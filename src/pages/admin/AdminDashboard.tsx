@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
+import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -284,6 +285,9 @@ export function AdminDashboard() {
 
   return (
     <DashboardLayout>
+      {/* Notification Prompt */}
+      <NotificationPrompt variant="banner" className="mb-6 rounded-xl" />
+
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-slate-900">Painel Administrativo</h2>
