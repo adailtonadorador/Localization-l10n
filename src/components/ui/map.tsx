@@ -69,7 +69,7 @@ async function geocodeAddress(address: string, cep?: string): Promise<Coordinate
   async function fetchPhoton(query: string): Promise<Coordinates | null> {
     try {
       const res = await fetch(
-        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1&countrycodes=br`
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1&lang=pt`
       );
       if (!res.ok) return null;
       const data = await res.json();
