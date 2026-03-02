@@ -28,7 +28,9 @@ export function NotificationPrompt({
   description,
 }: NotificationPromptProps) {
   const { permissionStatus, isSubscribed, isLoading, requestPermission } = useNotifications();
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem('notification-prompt-dismissed') === 'true'
+  );
   const [isRequesting, setIsRequesting] = useState(false);
 
   // Não mostrar se já está inscrito, já negou ou foi dismissado
@@ -49,6 +51,7 @@ export function NotificationPrompt({
   };
 
   const handleDismiss = () => {
+    localStorage.setItem('notification-prompt-dismissed', 'true');
     setDismissed(true);
     onDismiss?.();
   };
