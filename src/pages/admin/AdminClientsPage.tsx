@@ -133,7 +133,7 @@ export function AdminClientsPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Clientes</h2>
-          <p className="text-muted-foreground">Gerencie empresas e suas vagas</p>
+          <p className="text-muted-foreground">Gerencie empresas e suas diárias</p>
         </div>
         <Link to="/admin/clients/new">
           <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/25">
@@ -163,7 +163,7 @@ export function AdminClientsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-600 font-medium">Com Vagas Ativas</p>
+                <p className="text-sm text-blue-600 font-medium">Com Diárias Ativas</p>
                 <p className="text-3xl font-bold">{clientsWithJobs}</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-xl">
@@ -177,7 +177,7 @@ export function AdminClientsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-purple-600 font-medium">Total de Vagas</p>
+                <p className="text-sm text-purple-600 font-medium">Total de Diárias</p>
                 <p className="text-3xl font-bold">{totalJobs}</p>
               </div>
               <div className="p-3 bg-purple-100 rounded-xl">
@@ -263,7 +263,7 @@ export function AdminClientsPage() {
                         <div className="hidden md:flex items-center gap-4">
                           <div className="text-center px-3">
                             <p className="text-2xl font-bold text-slate-900">{jobStats.total}</p>
-                            <p className="text-xs text-muted-foreground">Vagas</p>
+                            <p className="text-xs text-muted-foreground">Diárias</p>
                           </div>
                           {jobStats.open > 0 && (
                             <Badge className="bg-blue-500 gap-1">
@@ -290,7 +290,7 @@ export function AdminClientsPage() {
 
                     {/* Mobile Stats */}
                     <div className="flex md:hidden items-center gap-2 mt-4 pt-4 border-t">
-                      <Badge variant="outline">{jobStats.total} vagas</Badge>
+                      <Badge variant="outline">{jobStats.total} diárias</Badge>
                       {jobStats.open > 0 && (
                         <Badge className="bg-blue-500">{jobStats.open} abertas</Badge>
                       )}

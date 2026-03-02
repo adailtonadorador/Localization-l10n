@@ -2,8 +2,29 @@
  * Funções para enviar notificações push
  */
 
+import { supabaseUntyped } from '@/lib/supabase';
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+/**
+ * Busca IDs dos workers aprovados com a função correspondente ao título da diária
+ */
+async function fetchWorkerIdsByFuncao(funcao: string): Promise<string[]> {
+  try {
+    const { data, error } = await supabaseUntyped
+      .from('workers')
+      .select('id')
+      .eq('funcao', funcao)
+      .eq('approval_status', 'approved')
+      .eq('is_active', true);
+
+    if (error || !data) return [];
+    return data.map((w: { id: string }) => w.id);
+  } catch {
+    return [];
+  }
+}
 
 interface NotificationPayload {
   title: string;
@@ -42,20 +63,43 @@ export async function sendPushNotification(payload: NotificationPayload): Promis
 }
 
 /**
- * Notifica todos os workers aprovados sobre uma nova vaga
+ * Notifica workers com a função correspondente sobre uma nova diária
  */
 export async function notifyNewJob(jobTitle: string, location?: string): Promise<void> {
   const body = location
-    ? `Nova vaga: ${jobTitle} em ${location}`
-    : `Nova vaga disponível: ${jobTitle}`;
+    ? `Nova diária: ${jobTitle} em ${location}`
+    : `Nova diária disponível: ${jobTitle}`;
 
-  // Envia em background, não bloqueia a UI
+  const userIds = await fetchWorkerIdsByFuncao(jobTitle);
+  if (userIds.length === 0) return;
+
   sendPushNotification({
-    title: 'Nova Vaga Disponível!',
+    title: 'Nova Diária Disponível!',
     body,
     url: '/worker/jobs',
+    userIds,
     type: 'new_job',
-  }).catch(err => console.error('[Notifications] Erro ao notificar nova vaga:', err));
+  }).catch(err => console.error('[Notifications] Erro ao notificar nova diária:', err));
+}
+
+/**
+ * Notifica workers com a função correspondente que uma diária ficou disponível após desistência
+ */
+export async function notifyJobAvailableAfterWithdrawal(jobTitle: string, location?: string): Promise<void> {
+  const body = location
+    ? `Diária disponível: ${jobTitle} em ${location}`
+    : `Diária disponível: ${jobTitle}`;
+
+  const userIds = await fetchWorkerIdsByFuncao(jobTitle);
+  if (userIds.length === 0) return;
+
+  sendPushNotification({
+    title: 'Diária Disponível!',
+    body,
+    url: '/worker/jobs',
+    userIds,
+    type: 'new_job',
+  }).catch(err => console.error('[Notifications] Erro ao notificar diária disponível:', err));
 }
 
 /**

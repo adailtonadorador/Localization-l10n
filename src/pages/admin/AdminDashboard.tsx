@@ -296,7 +296,7 @@ export function AdminDashboard() {
           <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white hover:shadow-md transition-shadow cursor-pointer">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardDescription className="text-blue-600 font-medium">Trabalhadores</CardDescription>
+                <CardDescription className="text-blue-600 font-medium">Prestadores</CardDescription>
                 <div className="p-2 bg-blue-100 rounded-lg">
                   <Users className="h-4 w-4 text-blue-600" />
                 </div>
@@ -323,7 +323,7 @@ export function AdminDashboard() {
         <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-white">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardDescription className="text-purple-600 font-medium">Total Vagas</CardDescription>
+              <CardDescription className="text-purple-600 font-medium">Total Diárias</CardDescription>
               <div className="p-2 bg-purple-100 rounded-lg">
                 <Briefcase className="h-4 w-4 text-purple-600" />
               </div>
@@ -335,7 +335,7 @@ export function AdminDashboard() {
         <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-white">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardDescription className="text-green-600 font-medium">Vagas Abertas</CardDescription>
+              <CardDescription className="text-green-600 font-medium">Diárias Abertas</CardDescription>
               <div className="p-2 bg-green-100 rounded-lg">
                 <TrendingUp className="h-4 w-4 text-green-600" />
               </div>
@@ -365,9 +365,9 @@ export function AdminDashboard() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
-              Vagas por Status
+              Diárias por Status
             </CardTitle>
-            <CardDescription>Distribuição das vagas cadastradas</CardDescription>
+            <CardDescription>Distribuição das diárias cadastradas</CardDescription>
           </CardHeader>
           <CardContent>
             {totalJobsForChart > 0 ? (
@@ -384,7 +384,7 @@ export function AdminDashboard() {
                     <div key={item.label} className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="font-medium">{item.label}</span>
-                        <span className="text-muted-foreground">{item.count} vagas</span>
+                        <span className="text-muted-foreground">{item.count} diárias</span>
                       </div>
                       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div
@@ -407,7 +407,7 @@ export function AdminDashboard() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-lg">Atividade Recente</CardTitle>
-              <CardDescription>Últimas vagas cadastradas</CardDescription>
+              <CardDescription>Últimas diárias cadastradas</CardDescription>
             </div>
             <Link to="/admin/clients">
               <Button variant="ghost" size="sm" className="gap-1">
@@ -448,7 +448,7 @@ export function AdminDashboard() {
               </div>
               <div>
                 <CardTitle className="text-lg">Desistências Recentes</CardTitle>
-                <CardDescription>Trabalhadores que desistiram de diárias</CardDescription>
+                <CardDescription>Prestadores que desistiram de diárias</CardDescription>
               </div>
             </div>
             <Link to="/admin/withdrawals">
@@ -562,7 +562,7 @@ export function AdminDashboard() {
                   </div>
                   <div>
                     <p className="font-medium">Gerenciar Clientes</p>
-                    <p className="text-sm text-muted-foreground">Ver empresas e criar vagas</p>
+                    <p className="text-sm text-muted-foreground">Ver empresas e criar diárias</p>
                   </div>
                 </div>
                 <ChevronRight className="h-5 w-5 text-blue-500" />
@@ -576,7 +576,7 @@ export function AdminDashboard() {
                     <Users className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-medium">Gerenciar Trabalhadores</p>
+                    <p className="font-medium">Gerenciar Prestadores</p>
                     <p className="text-sm text-muted-foreground">
                       Verificar documentos e perfis
                       {stats.pendingVerifications > 0 && (

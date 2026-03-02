@@ -8,6 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 // Avatar components not used - AvatarUpload handles avatar display
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { ProfileCompleteness } from "@/components/ProfileCompleteness";
@@ -58,6 +65,31 @@ const AVAILABLE_SKILLS = [
   'Promoção',
 ];
 
+function formatPhone(value: string) {
+  const numbers = value.replace(/\D/g, '').slice(0, 11);
+  if (numbers.length <= 10) {
+    return numbers
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+  return numbers
+    .replace(/(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d)/, '$1-$2');
+}
+
+function formatDisplayPhone(phoneNumber: string) {
+  if (!phoneNumber) return 'Não informado';
+  const numbers = phoneNumber.replace(/\D/g, '');
+  if (numbers.length <= 10) {
+    return numbers
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+  return numbers
+    .replace(/(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d)/, '$1-$2');
+}
+
 export function WorkerProfilePage() {
   const { profile, workerProfile, refreshProfile } = useAuth();
   const [editing, setEditing] = useState(false);
@@ -68,7 +100,10 @@ export function WorkerProfilePage() {
 
   // Form state
   const [name, setName] = useState(profile?.name || '');
-  const [phone, setPhone] = useState(profile?.phone || '');
+  const [phone, setPhone] = useState(formatPhone(profile?.phone || ''));
+  const [phoneRecado, setPhoneRecado] = useState(formatPhone(workerProfile?.phone_recado || ''));
+  const [birthDate, setBirthDate] = useState(workerProfile?.birth_date || '');
+  const [funcao, setFuncao] = useState(workerProfile?.funcao || '');
   const [skills, setSkills] = useState<string[]>(workerProfile?.skills || []);
   const [pix, setPix] = useState(workerProfile?.pix_key || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
@@ -142,6 +177,10 @@ export function WorkerProfilePage() {
   }
 
   async function handleSave() {
+    if (phoneRecado && phone.replace(/\D/g, '') === phoneRecado.replace(/\D/g, '')) {
+      toast.error('O Telefone para Recado deve ser diferente do Telefone principal.');
+      return;
+    }
     setLoading(true);
     try {
       // Build full address string
@@ -163,6 +202,9 @@ export function WorkerProfilePage() {
         .update({
           skills,
           pix_key: pix || null,
+          phone_recado: phoneRecado.replace(/\D/g, '') || null,
+          birth_date: birthDate || null,
+          funcao: funcao || null,
           address: fullAddress,
           cep: cep.replace(/\D/g, '') || null,
           logradouro: logradouro || null,
@@ -198,31 +240,6 @@ export function WorkerProfilePage() {
   function formatCpf(cpf: string) {
     if (!cpf) return '';
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  }
-
-  function formatPhone(value: string) {
-    const numbers = value.replace(/\D/g, '').slice(0, 11);
-    if (numbers.length <= 10) {
-      return numbers
-        .replace(/(\d{2})(\d)/, '($1) $2')
-        .replace(/(\d{4})(\d)/, '$1-$2');
-    }
-    return numbers
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2');
-  }
-
-  function formatDisplayPhone(phoneNumber: string) {
-    if (!phoneNumber) return 'Não informado';
-    const numbers = phoneNumber.replace(/\D/g, '');
-    if (numbers.length <= 10) {
-      return numbers
-        .replace(/(\d{2})(\d)/, '($1) $2')
-        .replace(/(\d{4})(\d)/, '$1-$2');
-    }
-    return numbers
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2');
   }
 
   return (
@@ -418,6 +435,54 @@ export function WorkerProfilePage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="phone-recado" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    Telefone para Recado
+                  </Label>
+                  <Input
+                    id="phone-recado"
+                    value={phoneRecado}
+                    onChange={(e) => setPhoneRecado(formatPhone(e.target.value))}
+                    placeholder="(11) 99999-9999"
+                    disabled={loading}
+                    className="bg-white"
+                  />
+                  <p className="text-xs text-muted-foreground">Deve ser diferente do telefone principal. Ex: familiar ou contato alternativo.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="birth-date" className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    Data de Nascimento
+                  </Label>
+                  <Input
+                    id="birth-date"
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    disabled={loading}
+                    className="bg-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="funcao" className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    Função
+                  </Label>
+                  <Select value={funcao} onValueChange={setFuncao} disabled={loading}>
+                    <SelectTrigger id="funcao" className="bg-white">
+                      <SelectValue placeholder="Selecione sua função" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Operador Caixa">Operador Caixa</SelectItem>
+                      <SelectItem value="Repositor">Repositor</SelectItem>
+                      <SelectItem value="Empacotador">Empacotador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="pix" className="flex items-center gap-2">
                     <Wallet className="h-4 w-4 text-muted-foreground" />
                     Chave PIX
@@ -461,6 +526,31 @@ export function WorkerProfilePage() {
                   <div>
                     <p className="text-xs text-muted-foreground">CPF</p>
                     <p className="font-medium">{formatCpf(workerProfile?.cpf || '')}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                  <Phone className="h-5 w-5 text-slate-500" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Telefone para Recado</p>
+                    <p className="font-medium">{formatDisplayPhone(workerProfile?.phone_recado || '')}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                  <User className="h-5 w-5 text-slate-500" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Data de Nascimento</p>
+                    <p className="font-medium">
+                      {workerProfile?.birth_date
+                        ? new Date(workerProfile.birth_date + 'T00:00:00').toLocaleDateString('pt-BR')
+                        : 'Não informada'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                  <Briefcase className="h-5 w-5 text-slate-500" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Função</p>
+                    <p className="font-medium">{workerProfile?.funcao || 'Não informada'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">

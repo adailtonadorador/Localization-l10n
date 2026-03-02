@@ -402,6 +402,19 @@ export function WorkerDashboard() {
         }
       }
 
+      // Verificar se ainda há vagas disponíveis antes de atribuir
+      const { count: currentAssigned } = await supabaseUntyped
+        .from('job_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('job_id', jobId)
+        .in('status', ['pending', 'confirmed']);
+
+      if ((currentAssigned || 0) >= selectedJob.required_workers) {
+        toast.error('Esta diária já foi preenchida por outros prestadores.');
+        loadDashboardData();
+        return;
+      }
+
       // Verificar se já existe um assignment (pode estar withdrawn)
       const { data: existingAssignment } = await supabaseUntyped
         .from('job_assignments')
@@ -422,8 +435,13 @@ export function WorkerDashboard() {
           .eq('id', existingAssignment[0].id);
 
         if (updateError) {
-          console.error('Update assignment error:', updateError);
-          toast.error('Erro ao aceitar vaga. Tente novamente.');
+          if (updateError.message?.includes('CAPACITY_EXCEEDED')) {
+            toast.error('Esta diária já foi preenchida por outros prestadores.');
+            loadDashboardData();
+          } else {
+            console.error('Update assignment error:', updateError);
+            toast.error('Erro ao aceitar vaga. Tente novamente.');
+          }
           return;
         }
       } else {
@@ -435,7 +453,10 @@ export function WorkerDashboard() {
         });
 
         if (assignError) {
-          if (assignError.message.includes('duplicate')) {
+          if (assignError.message?.includes('CAPACITY_EXCEEDED')) {
+            toast.error('Esta diária já foi preenchida por outros prestadores.');
+            loadDashboardData();
+          } else if (assignError.message?.includes('duplicate')) {
             toast.warning('Você já está atribuído a esta vaga.');
           } else {
             toast.error('Erro ao aceitar vaga. Tente novamente.');
@@ -899,7 +920,7 @@ export function WorkerDashboard() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <CardTitle className="text-lg">Vagas Disponíveis</CardTitle>
+                <CardTitle className="text-lg">Diárias Disponíveis</CardTitle>
                 <CardDescription className="truncate">Oportunidades abertas para candidatura</CardDescription>
               </div>
               <Link to="/worker/jobs" className="flex-shrink-0">
@@ -924,7 +945,7 @@ export function WorkerDashboard() {
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <h4 className="font-semibold text-slate-900 truncate flex-1">{job.title}</h4>
                         <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50 whitespace-nowrap text-xs">
-                          {job.required_workers} vaga(s)
+                          {job.required_workers} diária(s)
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">{job.clients?.company_name}</p>
@@ -988,7 +1009,7 @@ export function WorkerDashboard() {
                       </div>
                       <div className="text-right flex flex-col items-end gap-2">
                         <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50 whitespace-nowrap">
-                          {job.required_workers} vaga(s)
+                          {job.required_workers} diária(s)
                         </Badge>
                         <p className="font-bold text-lg text-blue-700">
                           R$ {job.daily_rate}/dia
@@ -1087,7 +1108,7 @@ export function WorkerDashboard() {
                     </p>
                   </div>
                   <Badge className="bg-white/20 text-white border-white/30">
-                    {selectedJob.required_workers} vaga(s)
+                    {selectedJob.required_workers} diária(s)
                   </Badge>
                 </div>
 

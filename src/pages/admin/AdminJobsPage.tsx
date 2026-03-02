@@ -182,15 +182,16 @@ export function AdminJobsPage() {
 
       if (assignmentError) {
         console.error('[AdminJobs] Error updating assignment:', assignmentError);
-        toast.error('Erro ao desatribuir trabalhador');
+        toast.error('Erro ao desatribuir prestador');
         return;
       }
 
-      // 2. Deletar work_records associados a este assignment
+      // 2. Deletar work_records associados a este worker/job
       const { error: workRecordsError } = await supabaseUntyped
         .from('work_records')
         .delete()
-        .eq('job_assignment_id', selectedAssignment.id);
+        .eq('job_id', selectedJob.id)
+        .eq('worker_id', selectedAssignment.worker_id);
 
       if (workRecordsError) {
         console.error('[AdminJobs] Error deleting work_records:', workRecordsError);
@@ -202,11 +203,11 @@ export function AdminJobsPage() {
         .from('job_assignments')
         .select('*', { count: 'exact', head: true })
         .eq('job_id', selectedJob.id)
-        .in('status', ['pending', 'confirmed']);
+        .in('status', ['pending', 'confirmed', 'in_progress', 'checked_in']);
 
       const requiredWorkers = selectedJob.required_workers || 1;
 
-      // Se trabalhadores ativos < requeridos, reabrir a vaga
+      // Se prestadores ativos < requeridos, reabrir a vaga
       if ((activeCount || 0) < requiredWorkers && selectedJob.status !== 'open') {
         await supabaseUntyped
           .from('jobs')
@@ -214,13 +215,13 @@ export function AdminJobsPage() {
           .eq('id', selectedJob.id);
       }
 
-      toast.success('Trabalhador desatribuído com sucesso! A vaga está disponível novamente.');
+      toast.success('Prestador desatribuído com sucesso! A diária está disponível novamente.');
       setUnassignDialogOpen(false);
       setDetailsOpen(false);
       loadJobs();
     } catch (error) {
       console.error('[AdminJobs] Error unassigning worker:', error);
-      toast.error('Erro ao desatribuir trabalhador');
+      toast.error('Erro ao desatribuir prestador');
     } finally {
       setUnassignLoading(false);
     }
@@ -250,7 +251,7 @@ export function AdminJobsPage() {
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-            <p className="text-sm text-muted-foreground">Carregando vagas...</p>
+            <p className="text-sm text-muted-foreground">Carregando diárias...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -262,13 +263,13 @@ export function AdminJobsPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Vagas</h2>
-          <p className="text-muted-foreground">Gerencie todas as vagas da plataforma</p>
+          <h2 className="text-2xl font-bold text-slate-900">Diárias</h2>
+          <p className="text-muted-foreground">Gerencie todas as diárias da plataforma</p>
         </div>
         <Link to="/admin/jobs/new">
           <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/25">
             <Plus className="h-4 w-4 mr-2" />
-            Nova Vaga
+            Nova Diária
           </Button>
         </Link>
       </div>
@@ -413,7 +414,7 @@ export function AdminJobsPage() {
                       <div className="flex items-center gap-3">
                         <div className="text-center px-3 py-2 bg-slate-50 rounded-lg">
                           <p className="text-xl font-bold text-slate-900">{stats.active}/{job.required_workers}</p>
-                          <p className="text-xs text-muted-foreground">Trabalhadores</p>
+                          <p className="text-xs text-muted-foreground">Prestadores</p>
                         </div>
                         <div className="text-center px-3 py-2 bg-green-50 rounded-lg">
                           <p className="text-xl font-bold text-green-600">R$ {job.daily_rate}</p>
@@ -442,7 +443,7 @@ export function AdminJobsPage() {
                 <p className="text-muted-foreground">
                   {searchTerm || statusFilter !== "all"
                     ? "Tente ajustar os filtros de busca."
-                    : "As vagas aparecerão aqui quando forem criadas."}
+                    : "As diárias aparecerão aqui quando forem criadas."}
                 </p>
               </div>
             </CardContent>
@@ -474,7 +475,7 @@ export function AdminJobsPage() {
                 {/* Status e Info */}
                 <div className="flex flex-wrap gap-2">
                   {getStatusBadge(selectedJob.status)}
-                  <Badge variant="outline">{selectedJob.required_workers} vagas</Badge>
+                  <Badge variant="outline">{selectedJob.required_workers} diárias</Badge>
                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                     R$ {selectedJob.daily_rate}/dia
                   </Badge>
@@ -513,17 +514,17 @@ export function AdminJobsPage() {
                   </div>
                 )}
 
-                {/* Trabalhadores */}
+                {/* Prestadores */}
                 <div>
                   <h4 className="font-semibold mb-3 flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    Trabalhadores Atribuídos
+                    Prestadores Atribuídos
                   </h4>
 
                   {selectedJob.job_assignments && selectedJob.job_assignments.length > 0 ? (
                     <div className="space-y-2">
                       {selectedJob.job_assignments.map((assignment) => {
-                        const canUnassign = ['pending', 'confirmed'].includes(assignment.status);
+                        const canUnassign = ['pending', 'confirmed', 'in_progress', 'checked_in'].includes(assignment.status);
                         return (
                           <div
                             key={assignment.id}
@@ -562,7 +563,7 @@ export function AdminJobsPage() {
                                   size="sm"
                                   className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                                   onClick={() => openUnassignDialog(assignment)}
-                                  title="Desatribuir trabalhador"
+                                  title="Desatribuir prestador"
                                 >
                                   <UserMinus className="h-4 w-4" />
                                 </Button>
@@ -591,7 +592,7 @@ export function AdminJobsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="h-5 w-5" />
-              Desatribuir Trabalhador
+              Desatribuir Prestador
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
@@ -603,7 +604,7 @@ export function AdminJobsPage() {
               <ul className="list-disc list-inside space-y-1">
                 <li>Remover o trabalhador da vaga</li>
                 <li>Excluir os registros de trabalho pendentes</li>
-                <li>Reabrir a vaga para outros trabalhadores</li>
+                <li>Reabrir a vaga para outros prestadores</li>
               </ul>
             </div>
             <p className="text-sm text-muted-foreground">

@@ -218,7 +218,7 @@ export function AdminWithdrawalsPage() {
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Desistências</h2>
             <p className="text-muted-foreground">
-              Histórico de trabalhadores que desistiram de diárias
+              Histórico de prestadores que desistiram de diárias
             </p>
           </div>
         </div>

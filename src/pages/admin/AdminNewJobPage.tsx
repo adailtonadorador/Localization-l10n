@@ -87,7 +87,7 @@ export function AdminNewJobPage() {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [dailyRate, setDailyRate] = useState("");
+  const [dailyRate, setDailyRate] = useState("110");
   const [requiredWorkers, setRequiredWorkers] = useState("1");
   const [skills, setSkills] = useState<string[]>([]);
 
@@ -385,15 +385,17 @@ export function AdminNewJobPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="title">Título da Vaga *</Label>
-                  <Input
-                    id="title"
-                    placeholder="Ex: Auxiliar de Carga e Descarga"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    disabled={loading}
-                    className="bg-white"
-                  />
+                  <Label>Título da Vaga *</Label>
+                  <Select value={title} onValueChange={setTitle} disabled={loading}>
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Selecione o título da vaga" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Operador Caixa">Operador Caixa</SelectItem>
+                      <SelectItem value="Repositor">Repositor</SelectItem>
+                      <SelectItem value="Empacotador">Empacotador</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
@@ -578,24 +580,20 @@ export function AdminNewJobPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="daily-rate">Valor por Dia (R$) *</Label>
+                  <Label htmlFor="daily-rate">Valor por Dia (R$)</Label>
                   <Input
                     id="daily-rate"
                     type="number"
-                    min="1"
-                    step="1"
-                    placeholder="150.00"
                     value={dailyRate}
-                    onChange={(e) => setDailyRate(e.target.value)}
-                    disabled={loading}
-                    className="bg-white text-lg font-semibold"
+                    readOnly
+                    className="bg-slate-100 text-lg font-semibold cursor-not-allowed"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="workers" className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    Trabalhadores Necessários *
+                    Prestadores Necessários *
                   </Label>
                   <Input
                     id="workers"
@@ -659,7 +657,7 @@ export function AdminNewJobPage() {
                     <span className="font-medium">{selectedDates.length} dia{selectedDates.length !== 1 ? 's' : ''}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Trabalhadores:</span>
+                    <span className="text-muted-foreground">Prestadores:</span>
                     <span className="font-medium">{requiredWorkers}</span>
                   </div>
                   {selectedDates.length > 0 && dailyRate && startTime && endTime && (

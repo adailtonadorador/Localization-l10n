@@ -49,7 +49,10 @@ import {
   MapPin,
   Eye,
   FileText,
-  History
+  History,
+  ZoomIn,
+  Wallet,
+  Cake
 } from "lucide-react";
 
 interface JobAssignment {
@@ -87,6 +90,9 @@ interface Worker {
   rejected_reason: string | null;
   created_at: string;
   uf: string | null;
+  pix_key: string | null;
+  birth_date: string | null;
+  phone_recado: string | null;
   users: {
     name: string;
     email: string;
@@ -115,6 +121,9 @@ export function AdminWorkersPage() {
   const [approvalNotes, setApprovalNotes] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Photo modal state
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
 
   // Filter expansion state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -159,21 +168,6 @@ export function AdminWorkersPage() {
       console.error('Error loading workers:', error);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleVerifyWorker(workerId: string) {
-    try {
-      await supabaseUntyped
-        .from('workers')
-        .update({ documents_verified: true })
-        .eq('id', workerId);
-
-      loadWorkers();
-      toast.success('Trabalhador verificado com sucesso!');
-    } catch (error) {
-      console.error('Error verifying worker:', error);
-      toast.error('Erro ao verificar trabalhador.');
     }
   }
 
@@ -411,7 +405,7 @@ export function AdminWorkersPage() {
         <div className="flex items-center justify-center h-64">
           <div className="flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-            <p className="text-sm text-muted-foreground">Carregando trabalhadores...</p>
+            <p className="text-sm text-muted-foreground">Carregando prestadores...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -422,8 +416,8 @@ export function AdminWorkersPage() {
     <DashboardLayout>
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">Trabalhadores</h2>
-        <p className="text-muted-foreground">Gerencie os trabalhadores cadastrados</p>
+        <h2 className="text-2xl font-bold text-slate-900">Prestadores</h2>
+        <p className="text-muted-foreground">Gerencie os prestadores cadastrados</p>
       </div>
 
       {/* Stats Cards - Consolidated (4 cards) */}
@@ -568,7 +562,7 @@ export function AdminWorkersPage() {
                 <span className="text-sm text-muted-foreground">Filtro ativo:</span>
                 <Badge variant="secondary" className="gap-1">
                   {activeCardFilter === 'pending' && 'Pendentes de aprovação'}
-                  {activeCardFilter === 'active' && 'Trabalhadores ativos'}
+                  {activeCardFilter === 'active' && 'Prestadores ativos'}
                   {activeCardFilter === 'rejected' && 'Rejeitados'}
                   {activeCardFilter === 'blocked' && 'Bloqueados'}
                   <button onClick={() => { setActiveCardFilter(null); clearAllFilters(); }} className="ml-1 hover:text-destructive">
@@ -761,18 +755,6 @@ export function AdminWorkersPage() {
                             </>
                           )}
 
-                          {/* Document Verification */}
-                          {!worker.documents_verified && worker.is_active !== false && worker.approval_status !== 'pending' && (
-                            <Button
-                              size="sm"
-                              className="bg-blue-500 hover:bg-blue-600 gap-1"
-                              onClick={() => handleVerifyWorker(worker.id)}
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                              Verificar Docs
-                            </Button>
-                          )}
-
                           {/* Enable/Disable Actions */}
                           {worker.is_active === false ? (
                             <Button
@@ -805,7 +787,7 @@ export function AdminWorkersPage() {
                       <div className="mt-3 pt-3 border-t border-slate-200">
                         <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                           <Briefcase className="h-3 w-3" />
-                          Vagas atribuídas:
+                          Diárias atribuídas:
                         </p>
                         <div className="space-y-2">
                           {activeJobs.map((assignment) => (
@@ -871,7 +853,7 @@ export function AdminWorkersPage() {
                 <p className="text-muted-foreground">
                   {searchTerm || selectedUf !== "all" || statusFilter !== "all"
                     ? "Tente ajustar os filtros de busca."
-                    : "Os trabalhadores aparecerão aqui quando se cadastrarem."}
+                    : "Os prestadores aparecerão aqui quando se cadastrarem."}
                 </p>
               </div>
             )}
@@ -892,7 +874,7 @@ export function AdminWorkersPage() {
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <p className="text-sm text-green-700">
                 Você está aprovando <strong>{selectedWorker?.users?.name}</strong> para acessar a plataforma.
-                Após a aprovação, o trabalhador poderá visualizar e se candidatar a vagas de trabalho.
+                Após a aprovação, o trabalhador poderá visualizar e se candidatar a diárias de trabalho.
               </p>
             </div>
             <div className="space-y-2">
@@ -934,7 +916,7 @@ export function AdminWorkersPage() {
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <p className="text-sm text-red-700">
                 Você está rejeitando o cadastro de <strong>{selectedWorker?.users?.name}</strong>.
-                O trabalhador não conseguirá acessar vagas até que seja aprovado.
+                O trabalhador não conseguirá acessar diárias até que seja aprovado.
               </p>
             </div>
             <div className="space-y-2">
@@ -1012,12 +994,24 @@ export function AdminWorkersPage() {
             <>
               <DialogHeader>
                 <div className="flex items-start gap-4">
-                  <Avatar className={`h-16 w-16 ring-2 ${selectedWorker.is_active === false ? 'ring-red-200' : 'ring-blue-200'} shadow-lg`}>
-                    <AvatarImage src={selectedWorker.users?.avatar_url || ''} />
-                    <AvatarFallback className={`${selectedWorker.is_active === false ? 'bg-slate-400' : 'bg-blue-500'} text-white text-xl font-medium`}>
-                      {selectedWorker.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
-                    </AvatarFallback>
-                  </Avatar>
+                  <button
+                    type="button"
+                    className="relative group flex-shrink-0"
+                    onClick={() => selectedWorker.users?.avatar_url && setPhotoDialogOpen(true)}
+                    title={selectedWorker.users?.avatar_url ? 'Clique para ampliar' : undefined}
+                  >
+                    <Avatar className={`h-16 w-16 ring-2 ${selectedWorker.is_active === false ? 'ring-red-200' : 'ring-blue-200'} shadow-lg`}>
+                      <AvatarImage src={selectedWorker.users?.avatar_url || ''} />
+                      <AvatarFallback className={`${selectedWorker.is_active === false ? 'bg-slate-400' : 'bg-blue-500'} text-white text-xl font-medium`}>
+                        {selectedWorker.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
+                      </AvatarFallback>
+                    </Avatar>
+                    {selectedWorker.users?.avatar_url && (
+                      <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <ZoomIn className="h-5 w-5 text-white" />
+                      </div>
+                    )}
+                  </button>
                   <div className="flex-1">
                     <DialogTitle className="text-xl">{selectedWorker.users?.name}</DialogTitle>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -1056,26 +1050,46 @@ export function AdminWorkersPage() {
 
               <div className="space-y-6 mt-4">
                 {/* Contact Info */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="p-4 bg-slate-50 rounded-lg">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                       <Mail className="h-3 w-3" /> Email
                     </p>
                     <p className="font-medium text-sm">{selectedWorker.users?.email}</p>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-lg">
+                  <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                       <Phone className="h-3 w-3" /> Telefone
                     </p>
                     <p className="font-medium text-sm">{selectedWorker.users?.phone || 'Não informado'}</p>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-lg">
+                  <div className="p-3 bg-slate-50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Phone className="h-3 w-3" /> Telefone para Recado
+                    </p>
+                    <p className="font-medium text-sm">{selectedWorker.phone_recado || 'Não informado'}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Cake className="h-3 w-3" /> Idade
+                    </p>
+                    <p className="font-medium text-sm">
+                      {selectedWorker.birth_date ? `${calculateAge(selectedWorker.birth_date)} anos` : 'Não informado'}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Wallet className="h-3 w-3" /> PIX
+                    </p>
+                    <p className="font-medium text-sm">{selectedWorker.pix_key || 'Não informado'}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                       <FileText className="h-3 w-3" /> CPF
                     </p>
                     <p className="font-medium text-sm">{formatCpf(selectedWorker.cpf)}</p>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-lg">
+                  <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                       <MapPin className="h-3 w-3" /> Estado
                     </p>
@@ -1100,7 +1114,7 @@ export function AdminWorkersPage() {
                     <p className="text-2xl font-bold text-slate-600">
                       {selectedWorker.job_assignments?.filter(a => ['pending', 'confirmed'].includes(a.status)).length || 0}
                     </p>
-                    <p className="text-xs text-slate-600">Vagas Ativas</p>
+                    <p className="text-xs text-slate-600">Diárias Ativas</p>
                   </div>
                 </div>
 
@@ -1154,7 +1168,7 @@ export function AdminWorkersPage() {
                 <div>
                   <h4 className="font-semibold mb-3 flex items-center gap-2">
                     <History className="h-4 w-4" />
-                    Histórico de Vagas ({selectedWorker.job_assignments?.length || 0})
+                    Histórico de Diárias ({selectedWorker.job_assignments?.length || 0})
                   </h4>
 
                   {selectedWorker.job_assignments && selectedWorker.job_assignments.length > 0 ? (
@@ -1239,6 +1253,28 @@ export function AdminWorkersPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Photo Zoom Dialog */}
+      <Dialog open={photoDialogOpen} onOpenChange={setPhotoDialogOpen}>
+        <DialogContent className="max-w-lg p-2 bg-black border-0">
+          {selectedWorker?.users?.avatar_url && (
+            <img
+              src={selectedWorker.users.avatar_url}
+              alt={selectedWorker.users.name}
+              className="w-full rounded-lg object-contain max-h-[80vh]"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
+}
+
+function calculateAge(birthDate: string): number {
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
 }

@@ -126,7 +126,7 @@ export function AdminMonitoringPage() {
       console.log('[AdminMonitoring] Loading jobs for date:', filterDate);
 
       // Estratégia: buscar work_records do dia e depois os jobs relacionados
-      // Isso garante que encontramos todos os trabalhadores escalados para o dia
+      // Isso garante que encontramos todos os prestadores escalados para o dia
 
       // 1. Buscar todos os work_records do dia selecionado
       const { data: workRecordsData, error: workRecordsError } = await supabaseUntyped
@@ -254,7 +254,7 @@ export function AdminMonitoringPage() {
             };
           });
 
-        // Se não há work_records mas há assignments, criar registros "virtuais" para mostrar os trabalhadores
+        // Se não há work_records mas há assignments, criar registros "virtuais" para mostrar os prestadores
         if (jobWorkRecords.length === 0) {
           const jobAssignments = (assignmentsData || []).filter(
             (a: { job_id: string }) => a.job_id === job.id
@@ -407,7 +407,7 @@ export function AdminMonitoringPage() {
       return <Badge variant="destructive">Falta</Badge>;
     }
     if (record.status === 'in_progress' || record.status === 'checked_in' || record.check_in) {
-      return <Badge className="bg-blue-500">Trabalhando</Badge>;
+      return <Badge className="bg-blue-500">Em andamento</Badge>;
     }
     return <Badge variant="secondary">Pendente</Badge>;
   }
@@ -528,7 +528,7 @@ export function AdminMonitoringPage() {
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-2xl font-bold">{filteredJobs.length}</p>
-                <p className="text-sm text-muted-foreground">Vagas no dia</p>
+                <p className="text-sm text-muted-foreground">Diárias no dia</p>
               </div>
             </div>
           </CardContent>
@@ -542,7 +542,7 @@ export function AdminMonitoringPage() {
                 <p className="text-2xl font-bold">
                   {filteredJobs.reduce((acc, job) => acc + getJobStats(job).checkedIn, 0)}
                 </p>
-                <p className="text-sm text-muted-foreground">Trabalhando</p>
+                <p className="text-sm text-muted-foreground">Em andamento</p>
               </div>
             </div>
           </CardContent>
@@ -577,7 +577,7 @@ export function AdminMonitoringPage() {
         </Card>
       </div>
 
-      {/* Lista de vagas */}
+      {/* Lista de diárias */}
       {filteredJobs.length > 0 ? (
         <div className="grid gap-4">
           {filteredJobs.map((job) => {
@@ -618,7 +618,7 @@ export function AdminMonitoringPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{stats.total} trabalhadores</span>
+                      <span className="text-sm">{stats.total} prestadores</span>
                     </div>
                     <div className="flex items-center gap-2 ml-auto">
                       <Badge variant="outline" className="bg-blue-50">
@@ -655,7 +655,7 @@ export function AdminMonitoringPage() {
                     </div>
                   )}
 
-                  {/* Lista de trabalhadores do dia */}
+                  {/* Lista de prestadores do dia */}
                   {todayRecords.length > 0 && (
                     <div className="border-t pt-4">
                       <p className="text-xs font-medium text-muted-foreground mb-3">TRABALHADORES DO DIA</p>
@@ -703,7 +703,7 @@ export function AdminMonitoringPage() {
                                 ) : record.status === 'checked_in' || record.status === 'in_progress' || record.check_in ? (
                                   <span className="text-blue-600 flex items-center gap-1">
                                     <Clock className="h-3 w-3" />
-                                    Trabalhando {record.check_in && `desde ${formatTime(record.check_in)}`}
+                                    Em andamento {record.check_in && `desde ${formatTime(record.check_in)}`}
                                   </span>
                                 ) : (
                                   <span className="text-amber-600 flex items-center gap-1">
@@ -949,7 +949,7 @@ export function AdminMonitoringPage() {
                   <div className="bg-white/10 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
                       <Users className="h-3 w-3" />
-                      Trabalhadores
+                      Prestadores
                     </div>
                     <p className="font-semibold text-sm">{getJobStats(selectedJob).total} no dia</p>
                   </div>

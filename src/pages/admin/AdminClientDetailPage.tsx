@@ -525,7 +525,7 @@ export function AdminClientDetailPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-600 font-medium">Total de Vagas</p>
+                <p className="text-sm text-slate-600 font-medium">Total de Diárias</p>
                 <p className="text-3xl font-bold">{jobStats.total}</p>
               </div>
               <div className="p-3 bg-slate-100 rounded-xl">
@@ -588,7 +588,7 @@ export function AdminClientDetailPage() {
                 className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm px-4"
               >
                 <Briefcase className="h-4 w-4" />
-                Vagas ({jobs.length})
+                Diárias ({jobs.length})
               </TabsTrigger>
               <TabsTrigger
                 value="info"
@@ -659,7 +659,7 @@ export function AdminClientDetailPage() {
                         <div className="mt-3 pt-3 border-t border-slate-200">
                           <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                             <Users className="h-3 w-3" />
-                            Trabalhadores atribuídos:
+                            Prestadores atribuídos:
                           </p>
                           <div className="flex flex-wrap gap-2">
                             {job.job_assignments.map((assignment) => (
@@ -938,7 +938,7 @@ export function AdminClientDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1">
-                      <Users className="h-4 w-4" /> Trabalhadores *
+                      <Users className="h-4 w-4" /> Prestadores *
                     </Label>
                     <Input
                       type="number"
@@ -979,7 +979,7 @@ export function AdminClientDetailPage() {
                           <span className="font-medium">{selectedDates.length}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Trabalhadores:</span>
+                          <span className="text-muted-foreground">Prestadores:</span>
                           <span className="font-medium">{requiredWorkers}</span>
                         </div>
                         {startTime && endTime && (
@@ -1062,7 +1062,7 @@ export function AdminClientDetailPage() {
                     <p className="font-medium text-[#4A90E2]">R$ {selectedJob.daily_rate}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Trabalhadores</p>
+                    <p className="text-xs text-muted-foreground mb-1">Prestadores</p>
                     <p className="font-medium">
                       {selectedJob.job_assignments?.length || 0}/{selectedJob.required_workers}
                     </p>

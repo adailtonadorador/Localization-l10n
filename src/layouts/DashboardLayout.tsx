@@ -32,16 +32,16 @@ interface DashboardLayoutProps {
 const menuItems = {
   worker: [
     { label: 'Dashboard', href: '/worker', icon: LayoutDashboard },
-    { label: 'Vagas Disponíveis', href: '/worker/jobs', icon: Briefcase },
+    { label: 'Diárias Disponíveis', href: '/worker/jobs', icon: Briefcase },
     { label: 'Meus Trabalhos', href: '/worker/my-jobs', icon: ClipboardList },
     { label: 'Histórico', href: '/worker/history', icon: Clock },
     { label: 'Meu Perfil', href: '/worker/profile', icon: User },
   ],
   admin: [
     { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { label: 'Vagas', href: '/admin/jobs', icon: Briefcase },
+    { label: 'Diárias', href: '/admin/jobs', icon: Briefcase },
     { label: 'Clientes', href: '/admin/clients', icon: Building2 },
-    { label: 'Trabalhadores', href: '/admin/workers', icon: Users },
+    { label: 'Prestadores', href: '/admin/workers', icon: Users },
     { label: 'Monitoramento', href: '/admin/monitoring', icon: Activity },
     { label: 'Desistências', href: '/admin/withdrawals', icon: AlertTriangle },
   ],
@@ -126,7 +126,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r shadow-sm transform transition-transform duration-200 ease-in-out md:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b px-6">
-          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link to={`/${profile.role}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <img src="/logo.png" alt="Sama Conecta" className="w-9 h-9 object-contain" />
             <span className="text-xl font-bold text-blue-700">Sama Conecta</span>
           </Link>
@@ -192,7 +192,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {isMobile ? (
             // Mobile Header - Simplified
             <>
-              <Link to="/" className="flex items-center gap-2">
+              <Link to={`/${profile.role}`} className="flex items-center gap-2">
                 <img src="/logo.png" alt="Sama Conecta" className="w-8 h-8 object-contain" />
                 <span className="text-lg font-bold text-blue-700">Sama Conecta</span>
               </Link>

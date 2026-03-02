@@ -28,6 +28,9 @@ interface WorkerProfile {
   approval_notes: string | null
   rejected_reason: string | null
   pix_key: string | null
+  birth_date: string | null
+  phone_recado: string | null
+  funcao: string | null
   address: string | null
   cep: string | null
   logradouro: string | null

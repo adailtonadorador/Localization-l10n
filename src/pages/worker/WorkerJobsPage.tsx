@@ -79,8 +79,8 @@ export function WorkerJobsPage() {
   async function loadJobs() {
     setLoading(true);
     try {
-      // Load all open jobs
-      const { data: jobsData } = await supabaseUntyped
+      // Load open jobs filtered by the worker's funcao
+      let query = supabaseUntyped
         .from('jobs')
         .select(`
           *,
@@ -89,6 +89,12 @@ export function WorkerJobsPage() {
         .eq('status', 'open')
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true });
+
+      if (workerProfile?.funcao) {
+        query = query.eq('title', workerProfile.funcao);
+      }
+
+      const { data: jobsData } = await query;
 
       setJobs(jobsData || []);
 
@@ -220,6 +226,21 @@ export function WorkerJobsPage() {
         }
       }
 
+      // Verificar se ainda há vagas disponíveis antes de atribuir
+      const { count: currentAssigned } = await supabaseUntyped
+        .from('job_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('job_id', selectedJob.id)
+        .in('status', ['pending', 'confirmed']);
+
+      if ((currentAssigned || 0) >= selectedJob.required_workers) {
+        toast.error('Esta diária já foi preenchida por outros prestadores.');
+        setDetailsOpen(false);
+        setAssigning(false);
+        loadJobs();
+        return;
+      }
+
       // Verificar se já existe um assignment (pode estar withdrawn)
       const { data: existingAssignment } = await supabaseUntyped
         .from('job_assignments')
@@ -240,8 +261,14 @@ export function WorkerJobsPage() {
           .eq('id', existingAssignment[0].id);
 
         if (updateError) {
-          console.error('Update assignment error:', updateError);
-          toast.error('Erro ao se atribuir à vaga. Tente novamente.');
+          if (updateError.message?.includes('CAPACITY_EXCEEDED')) {
+            toast.error('Esta diária já foi preenchida por outros prestadores.');
+            setDetailsOpen(false);
+            loadJobs();
+          } else {
+            console.error('Update assignment error:', updateError);
+            toast.error('Erro ao se atribuir à vaga. Tente novamente.');
+          }
           return;
         }
       } else {
@@ -253,8 +280,14 @@ export function WorkerJobsPage() {
         });
 
         if (assignError) {
-          console.error('Assignment error:', assignError);
-          toast.error('Erro ao se atribuir à vaga. Tente novamente.');
+          if (assignError.message?.includes('CAPACITY_EXCEEDED')) {
+            toast.error('Esta diária já foi preenchida por outros prestadores.');
+            setDetailsOpen(false);
+            loadJobs();
+          } else {
+            console.error('Assignment error:', assignError);
+            toast.error('Erro ao se atribuir à vaga. Tente novamente.');
+          }
           return;
         }
       }
@@ -372,7 +405,7 @@ export function WorkerJobsPage() {
   return (
     <DashboardLayout>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2 text-slate-900">Vagas Disponíveis</h2>
+        <h2 className="text-2xl font-bold mb-2 text-slate-900">Diárias Disponíveis</h2>
         <p className="text-slate-600">Encontre oportunidades de trabalho perto de você</p>
       </div>
 
@@ -474,7 +507,7 @@ export function WorkerJobsPage() {
             </button>
           </Badge>
           <span className="text-sm text-muted-foreground">
-            {filteredJobs.length} vaga(s) encontrada(s)
+            {filteredJobs.length} diária(s) encontrada(s)
           </span>
         </div>
       )}
@@ -494,7 +527,7 @@ export function WorkerJobsPage() {
                         {job.clients?.company_name}
                       </CardDescription>
                     </div>
-                    <Badge className="whitespace-nowrap flex-shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">{job.required_workers} vaga(s)</Badge>
+                    <Badge className="whitespace-nowrap flex-shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">{job.required_workers} diária(s)</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-4">
@@ -543,7 +576,11 @@ export function WorkerJobsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              {searchTerm ? 'Nenhuma vaga encontrada para sua busca.' : 'Nenhuma vaga disponível no momento.'}
+              {!workerProfile?.funcao
+                ? 'Cadastre sua função no perfil para visualizar as diárias disponíveis.'
+                : searchTerm
+                  ? 'Nenhuma diária encontrada para sua busca.'
+                  : `Nenhuma diária disponível para ${workerProfile.funcao} no momento.`}
             </p>
           </CardContent>
         </Card>
@@ -565,7 +602,7 @@ export function WorkerJobsPage() {
                     </p>
                   </div>
                   <Badge className="bg-white/20 text-white border-white/30">
-                    {selectedJob.required_workers} vaga(s)
+                    {selectedJob.required_workers} diária(s)
                   </Badge>
                 </div>
 

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { WithdrawalDialog } from "@/components/WithdrawalDialog";
+import { notifyJobAvailableAfterWithdrawal } from "@/lib/notifications";
 import { Clock, MapPin, CheckCircle, Calendar, Building, Play, LogOut, Briefcase, ArrowRight, XCircle } from "lucide-react";
 
 interface WorkRecord {
@@ -221,6 +222,9 @@ export function WorkerMyJobsPage() {
           .from('jobs')
           .update({ status: 'open' })
           .eq('id', selectedJobForWithdrawal.job_id);
+
+        // Notifica workers com a mesma função que a diária está disponível novamente
+        notifyJobAvailableAfterWithdrawal(selectedJobForWithdrawal.title);
       }
 
       setWithdrawalDialogOpen(false);
@@ -548,7 +552,7 @@ export function WorkerMyJobsPage() {
             </div>
             <h3 className="font-semibold text-lg mb-2">Nenhum trabalho agendado</h3>
             <p className="text-muted-foreground">
-              Vá em "Vagas Disponíveis" para encontrar oportunidades de trabalho.
+              Vá em "Diárias Disponíveis" para encontrar oportunidades de trabalho.
             </p>
           </CardContent>
         </Card>
