@@ -63,170 +63,63 @@ function RecenterMap({ coords }: { coords: Coordinates }) {
   return null;
 }
 
-// Geocode address using Nominatim (OpenStreetMap)
-// Tries structured search first (most reliable), then free-text fallbacks
+// Geocode address using BrasilAPI (GPS direto) + Photon/Komoot (gratuito, sem API key)
 async function geocodeAddress(address: string, cep?: string): Promise<Coordinates | null> {
 
-  // Helper: make one Nominatim request with either structured or free-text params
-  async function fetchNominatim(params: Record<string, string>): Promise<Coordinates | null> {
+  async function fetchPhoton(query: string): Promise<Coordinates | null> {
     try {
-      const qs = new URLSearchParams({ ...params, format: 'json', countrycodes: 'br', limit: '1' });
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?${qs}`,
-        { headers: { Accept: 'application/json' } }
+      const res = await fetch(
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1&countrycodes=br`
       );
-      if (!response.ok) return null;
-      const data = await response.json();
-      if (data?.length > 0) {
-        const lat = parseFloat(data[0].lat);
-        const lon = parseFloat(data[0].lon);
-        if (!isNaN(lat) && !isNaN(lon)) return { lat, lng: lon };
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.features?.length > 0) {
+        const [lng, lat] = data.features[0].geometry.coordinates;
+        if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
       }
     } catch { /* silent */ }
     return null;
   }
 
-  // --- Extract CEP (from prop or embedded in address string like "CEP: 71732-040") ---
+  // Extract CEP from prop or embedded in address string ("CEP: 71732-040")
   let cleanCep: string | undefined;
   if (cep) {
     const c = cep.replace(/\D/g, '');
     if (c.length === 8) cleanCep = c;
   }
   if (!cleanCep) {
-    const cepMatch = address.match(/CEP[:\s]+(\d{5}-?\d{3})/i);
-    if (cepMatch) {
-      const c = cepMatch[1].replace(/\D/g, '');
+    const m = address.match(/CEP[:\s]+(\d{5}-?\d{3})/i);
+    if (m) {
+      const c = m[1].replace(/\D/g, '');
       if (c.length === 8) cleanCep = c;
     }
   }
 
-  // --- Parse address ---
-  // Strip embedded CEP suffix before further parsing
+  // Strip CEP suffix before sending to geocoder
   const addressNoCep = address.replace(/,?\s*CEP[:\s]+\d{5}-?\d{3}/i, '').trim();
 
-  // Clean: remove complement after dash before a comma ("Rua X, 123 - Apto 2, Bairro" → "Rua X, 123, Bairro")
-  const cleanAddress = addressNoCep
-    .replace(/\s*-\s*[^,]+(?=,)/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  const parts = cleanAddress.split(',').map(p => p.trim()).filter(Boolean);
-
-  // Extract "Cidade - UF" from the end
-  const cityStateMatch = cleanAddress.match(/,\s*([^,]+?)\s*-\s*([A-Z]{2})\s*$/i);
-  const city = cityStateMatch?.[1]?.trim() ?? undefined;
-  const state = cityStateMatch?.[2]?.trim() ?? undefined;
-
-  // Extract street and optional number from first two parts
-  const firstPart = parts[0] ?? '';
-  let streetName: string | undefined;
-  let streetNumber: string | undefined;
-
-  if (parts.length > 1 && /^\d+/.test(parts[1])) {
-    streetName = firstPart;
-    streetNumber = parts[1].match(/^\d+/)?.[0];
-  } else {
-    const m = firstPart.match(/^(.+?)\s+(\d+)\s*$/);
-    streetName = m ? m[1].trim() : firstPart;
-    streetNumber = m ? m[2] : undefined;
-  }
-
-  // Neighborhood: second-to-last part (before "Cidade - UF")
-  const neighborhood = parts.length >= 3 && !/^\d+/.test(parts[parts.length - 2])
-    ? parts[parts.length - 2]
-    : undefined;
-
-  // --- Geocoding attempts ---
-
-  // 1. CEP → BrasilAPI (primary) ou ViaCEP (fallback) → coordenadas diretas ou Nominatim
+  // 1. BrasilAPI → GPS direto quando disponível (gratuito, sem chamada extra)
   if (cleanCep) {
-    let cepCity: string | undefined;
-    let cepState: string | undefined;
-    let cepStreet: string | undefined;
-    let cepNeighborhood: string | undefined;
-
-    // Tenta BrasilAPI primeiro — pode retornar coordenadas GPS diretas
     try {
       const res = await fetch(`https://brasilapi.com.br/api/cep/v2/${cleanCep}`);
       if (res.ok) {
         const d = await res.json();
+        const lat = parseFloat(d.location?.coordinates?.latitude);
+        const lng = parseFloat(d.location?.coordinates?.longitude);
+        if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+
+        // Sem GPS direto → query limpa com dados do CEP para o Photon
         if (d.city) {
-          cepCity = d.city;
-          cepState = d.state;
-          cepStreet = d.street || undefined;
-          cepNeighborhood = d.neighborhood || undefined;
-          // Coordenadas diretas disponíveis → retorna imediatamente (mais preciso)
-          const lat = parseFloat(d.location?.coordinates?.latitude);
-          const lng = parseFloat(d.location?.coordinates?.longitude);
-          if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+          const q = [d.street, d.neighborhood, d.city, d.state, 'Brasil'].filter(Boolean).join(', ');
+          const result = await fetchPhoton(q);
+          if (result) return result;
         }
       }
     } catch { /* ignore */ }
-
-    // Fallback para ViaCEP
-    if (!cepCity) {
-      try {
-        const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-        if (res.ok) {
-          const d = await res.json();
-          if (!d.erro && d.localidade) {
-            cepCity = d.localidade;
-            cepState = d.uf;
-            cepStreet = d.logradouro || undefined;
-            cepNeighborhood = d.bairro || undefined;
-          }
-        }
-      } catch { /* ignore */ }
-    }
-
-    if (cepCity && cepState) {
-      // Tenta bairro + cidade (funciona melhor para endereços do DF)
-      if (cepNeighborhood) {
-        const result = await fetchNominatim({ q: `${cepNeighborhood}, ${cepCity}, ${cepState}, Brasil` });
-        if (result) return result;
-      }
-      // Tenta rua + cidade
-      if (cepStreet) {
-        const result = await fetchNominatim({ street: cepStreet, city: cepCity, state: cepState, country: 'Brazil' });
-        if (result) return result;
-      }
-      // Mínimo: cidade + estado
-      const result = await fetchNominatim({ city: cepCity, state: cepState, country: 'Brazil' });
-      if (result) return result;
-    }
   }
 
-  // 2. Structured: street + number + city + state
-  if (streetName && streetNumber && city && state) {
-    const result = await fetchNominatim({ street: `${streetName} ${streetNumber}`, city, state, country: 'Brazil' });
-    if (result) return result;
-  }
-
-  // 3. Structured: street + city + state
-  if (streetName && city && state) {
-    const result = await fetchNominatim({ street: streetName, city, state, country: 'Brazil' });
-    if (result) return result;
-  }
-
-  // 4. Structured: neighborhood + city + state (free-text q=)
-  if (neighborhood && city && state) {
-    const result = await fetchNominatim({ q: `${neighborhood}, ${city}, ${state}, Brasil` });
-    if (result) return result;
-  }
-
-  // 5. Structured: city + state only
-  if (city && state) {
-    const result = await fetchNominatim({ city, state, country: 'Brazil' });
-    if (result) return result;
-  }
-
-  // 6. Free-text: full clean address
-  if (city && state) {
-    const result = await fetchNominatim({ q: `${cleanAddress.replace(/\s*-\s*[A-Z]{2}\s*$/, '')}, Brasil` });
-    if (result) return result;
-  }
-
-  return null;
+  // 2. Photon com o endereço completo
+  return fetchPhoton(`${addressNoCep}, Brasil`);
 }
 
 // Calculate distance between two coordinates (Haversine formula)
