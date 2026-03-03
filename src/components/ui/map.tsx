@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps';
 
 interface Coordinates {
   lat: number;
@@ -78,62 +78,10 @@ function calculateDistance(coord1: Coordinates, coord2: Coordinates): number {
   return R * c;
 }
 
-// Custom SVG marker pin
-function MarkerPin({ color }: { color: string }) {
-  return (
-    <div style={{ cursor: 'pointer', transform: 'translate(-50%, -100%)' }}>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={color} width="36" height="36">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-      </svg>
-    </div>
-  );
-}
-
-// Work location marker (green)
-function WorkMarker({ position, title, address }: { position: Coordinates; title?: string; address: string }) {
-  const [infoOpen, setInfoOpen] = useState(false);
-
-  return (
-    <>
-      <AdvancedMarker
-        position={position}
-        onClick={() => setInfoOpen(true)}
-      >
-        <MarkerPin color="#10b981" />
-      </AdvancedMarker>
-      {infoOpen && (
-        <InfoWindow position={position} onClose={() => setInfoOpen(false)}>
-          <div style={{ fontSize: '14px' }}>
-            {title && <strong style={{ display: 'block', marginBottom: '4px' }}>{title}</strong>}
-            <span style={{ color: '#6b7280' }}>{address}</span>
-          </div>
-        </InfoWindow>
-      )}
-    </>
-  );
-}
-
-// User location marker (blue)
-function UserMarker({ position }: { position: Coordinates }) {
-  const [infoOpen, setInfoOpen] = useState(false);
-
-  return (
-    <>
-      <AdvancedMarker
-        position={position}
-        onClick={() => setInfoOpen(true)}
-      >
-        <MarkerPin color="#3b82f6" />
-      </AdvancedMarker>
-      {infoOpen && (
-        <InfoWindow position={position} onClose={() => setInfoOpen(false)}>
-          <div style={{ fontSize: '14px' }}>
-            <strong>Sua localização</strong>
-          </div>
-        </InfoWindow>
-      )}
-    </>
-  );
+// SVG marker icon as data URI
+function markerIcon(color: string) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" width="32" height="32"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
 }
 
 export function LocationMap({
@@ -256,12 +204,27 @@ export function LocationMap({
             streetViewControl={false}
             mapTypeControl={false}
             fullscreenControl={false}
-            mapId="sama-conecta-map"
           >
-            <WorkMarker position={coordinates} title={title} address={address} />
+            <Marker
+              position={coordinates}
+              icon={{
+                url: markerIcon('#10b981'),
+                scaledSize: { width: 32, height: 32, equals: () => false },
+                anchor: { x: 16, y: 32, equals: () => false },
+              }}
+              title={title || address}
+            />
 
             {userCoordinates && (
-              <UserMarker position={userCoordinates} />
+              <Marker
+                position={userCoordinates}
+                icon={{
+                  url: markerIcon('#3b82f6'),
+                  scaledSize: { width: 32, height: 32, equals: () => false },
+                  anchor: { x: 16, y: 32, equals: () => false },
+                }}
+                title="Sua localização"
+              />
             )}
           </Map>
         </APIProvider>
