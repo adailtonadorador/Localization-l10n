@@ -1,43 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// Fix for default marker icon
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-// @ts-ignore
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-});
-
-// Custom icons
-const workIcon = new L.Icon({
-  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#10b981" width="32" height="32">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-    </svg>
-  `),
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -32],
-});
-
-const userIcon = new L.Icon({
-  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3b82f6" width="32" height="32">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-    </svg>
-  `),
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -32],
-});
+import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 
 interface Coordinates {
   lat: number;
@@ -54,14 +16,7 @@ interface LocationMapProps {
   onDistanceCalculated?: (distance: number) => void;
 }
 
-// Component to recenter map when coordinates change
-function RecenterMap({ coords }: { coords: Coordinates }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView([coords.lat, coords.lng], 15);
-  }, [coords, map]);
-  return null;
-}
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 // Geocode address using Google Maps API (via Vercel proxy) + BrasilAPI direct GPS
 async function geocodeAddress(address: string, cep?: string): Promise<Coordinates | null> {
@@ -121,6 +76,64 @@ function calculateDistance(coord1: Coordinates, coord2: Coordinates): number {
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+// Custom SVG marker pin
+function MarkerPin({ color }: { color: string }) {
+  return (
+    <div style={{ cursor: 'pointer', transform: 'translate(-50%, -100%)' }}>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={color} width="36" height="36">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      </svg>
+    </div>
+  );
+}
+
+// Work location marker (green)
+function WorkMarker({ position, title, address }: { position: Coordinates; title?: string; address: string }) {
+  const [infoOpen, setInfoOpen] = useState(false);
+
+  return (
+    <>
+      <AdvancedMarker
+        position={position}
+        onClick={() => setInfoOpen(true)}
+      >
+        <MarkerPin color="#10b981" />
+      </AdvancedMarker>
+      {infoOpen && (
+        <InfoWindow position={position} onClose={() => setInfoOpen(false)}>
+          <div style={{ fontSize: '14px' }}>
+            {title && <strong style={{ display: 'block', marginBottom: '4px' }}>{title}</strong>}
+            <span style={{ color: '#6b7280' }}>{address}</span>
+          </div>
+        </InfoWindow>
+      )}
+    </>
+  );
+}
+
+// User location marker (blue)
+function UserMarker({ position }: { position: Coordinates }) {
+  const [infoOpen, setInfoOpen] = useState(false);
+
+  return (
+    <>
+      <AdvancedMarker
+        position={position}
+        onClick={() => setInfoOpen(true)}
+      >
+        <MarkerPin color="#3b82f6" />
+      </AdvancedMarker>
+      {infoOpen && (
+        <InfoWindow position={position} onClose={() => setInfoOpen(false)}>
+          <div style={{ fontSize: '14px' }}>
+            <strong>Sua localização</strong>
+          </div>
+        </InfoWindow>
+      )}
+    </>
+  );
 }
 
 export function LocationMap({
@@ -232,42 +245,29 @@ export function LocationMap({
         </div>
       )}
       <div className="rounded-lg overflow-hidden border border-slate-200" style={{ height }}>
-        <MapContainer
-          center={[coordinates.lat, coordinates.lng]}
-          zoom={15}
-          style={{ height: '100%', width: '100%' }}
-          scrollWheelZoom={false}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <RecenterMap coords={coordinates} />
+        <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+          <Map
+            defaultCenter={coordinates}
+            defaultZoom={15}
+            style={{ height: '100%', width: '100%' }}
+            gestureHandling="cooperative"
+            disableDefaultUI={false}
+            zoomControl={true}
+            streetViewControl={false}
+            mapTypeControl={false}
+            fullscreenControl={false}
+            mapId="sama-conecta-map"
+          >
+            <WorkMarker position={coordinates} title={title} address={address} />
 
-          {/* Work location marker */}
-          <Marker position={[coordinates.lat, coordinates.lng]} icon={workIcon}>
-            <Popup>
-              <div className="text-sm">
-                {title && <strong className="block mb-1">{title}</strong>}
-                <span className="text-muted-foreground">{address}</span>
-              </div>
-            </Popup>
-          </Marker>
-
-          {/* User location marker */}
-          {userCoordinates && (
-            <Marker position={[userCoordinates.lat, userCoordinates.lng]} icon={userIcon}>
-              <Popup>
-                <div className="text-sm">
-                  <strong>Sua localização</strong>
-                </div>
-              </Popup>
-            </Marker>
-          )}
-        </MapContainer>
+            {userCoordinates && (
+              <UserMarker position={userCoordinates} />
+            )}
+          </Map>
+        </APIProvider>
       </div>
       <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-        <span className="inline-block w-3 h-3 bg-blue-500 rounded-full"></span>
+        <span className="inline-block w-3 h-3 bg-emerald-500 rounded-full"></span>
         Local de trabalho
         {userCoordinates && (
           <>
@@ -281,7 +281,7 @@ export function LocationMap({
   );
 }
 
-// Simple static map for listing cards
+// Simple static badge for listing cards (no map, just distance)
 export function StaticLocationBadge({
   address,
   className = ''
