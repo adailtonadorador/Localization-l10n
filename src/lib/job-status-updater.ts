@@ -62,18 +62,15 @@ export async function autoUpdateJobStatuses() {
 
 /**
  * Auto-complete work_records with status 'in_progress' (checked in but no check-out)
- * when the job's end_time has passed for that work_date.
+ * when the job's end_time + 15min tolerance has passed for that work_date.
  * Adds a note indicating the missing check-out.
  */
 export async function autoCompleteStaleWorkRecords() {
+  const TOLERANCE_MINUTES = 15;
+
   try {
     const today = getLocalToday();
-    const nowTime = new Date().toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
+    const now = new Date();
 
     const { data: staleRecords, error } = await supabaseUntyped
       .from('work_records')
@@ -88,11 +85,21 @@ export async function autoCompleteStaleWorkRecords() {
       const endTime = record.jobs?.end_time;
       if (!endTime) continue;
 
-      const isPastDate = record.work_date < today;
-      const isEndedToday = record.work_date === today && endTime <= nowTime;
-
-      if (isPastDate || isEndedToday) {
+      // For past dates, always auto-complete
+      if (record.work_date < today) {
         recordsToUpdate.push(record.id);
+        continue;
+      }
+
+      // For today, add 15min tolerance after end_time
+      if (record.work_date === today) {
+        const [hours, minutes] = endTime.split(':').map(Number);
+        const endDate = new Date();
+        endDate.setHours(hours, minutes + TOLERANCE_MINUTES, 0, 0);
+
+        if (now >= endDate) {
+          recordsToUpdate.push(record.id);
+        }
       }
     }
 
