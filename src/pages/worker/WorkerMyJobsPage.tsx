@@ -454,7 +454,7 @@ export function WorkerMyJobsPage() {
                           Registrar Entrada
                         </Button>
                       )}
-                      {record.check_in && !record.check_out && (
+                      {record.check_in && !record.check_out && record.status !== 'completed' && (
                         <Button
                           onClick={() => handleCheckOut(record)}
                           className="gap-2 bg-red-500 hover:bg-red-600"
