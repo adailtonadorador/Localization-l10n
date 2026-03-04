@@ -45,7 +45,7 @@ export function WorkerHistoryPage() {
   async function loadHistory() {
     setLoading(true);
     try {
-      // Fetch completed work records with job_assignment data directly
+      // Fetch completed work records (no FK to job_assignments — fetch ratings separately)
       const { data: workRecords, error: workRecordsError } = await supabaseUntyped
         .from('work_records')
         .select(`
@@ -53,11 +53,6 @@ export function WorkerHistoryPage() {
           jobs (
             *,
             clients (company_name)
-          ),
-          job_assignments!work_records_job_assignment_id_fkey (
-            id,
-            rating,
-            feedback
           )
         `)
         .eq('worker_id', profile?.id)
@@ -74,43 +69,26 @@ export function WorkerHistoryPage() {
         return;
       }
 
-      // Map records with rating/feedback from job_assignments
-      const recordsWithRatings = workRecords.map((r: any) => {
-        // Try to get from direct relation first
-        const directAssignment = r.job_assignments;
+      // Fetch ratings from job_assignments separately
+      const jobIds = [...new Set(workRecords.map((r: any) => r.job_id))];
+      const { data: assignments } = await supabaseUntyped
+        .from('job_assignments')
+        .select('job_id, rating, feedback')
+        .eq('worker_id', profile?.id)
+        .in('job_id', jobIds);
 
-        return {
-          ...r,
-          rating: directAssignment?.rating ?? null,
-          feedback: directAssignment?.feedback ?? null,
-        };
-      });
-
-      // If no ratings found via direct relation, try fetching separately
-      const recordsWithoutRatings = recordsWithRatings.filter((r: any) => r.rating === null);
-      if (recordsWithoutRatings.length > 0) {
-        const jobIds = [...new Set(recordsWithoutRatings.map((r: any) => r.job_id))];
-        const { data: assignments } = await supabaseUntyped
-          .from('job_assignments')
-          .select('job_id, rating, feedback')
-          .eq('worker_id', profile?.id)
-          .in('job_id', jobIds);
-
-        if (assignments && assignments.length > 0) {
-          const ratingsMap = new Map<string, { rating: number | null; feedback: string | null }>();
-          assignments.forEach((a: any) => {
-            ratingsMap.set(a.job_id, { rating: a.rating, feedback: a.feedback });
-          });
-
-          // Update records that didn't have ratings from direct relation
-          recordsWithRatings.forEach((r: any) => {
-            if (r.rating === null && ratingsMap.has(r.job_id)) {
-              r.rating = ratingsMap.get(r.job_id)?.rating ?? null;
-              r.feedback = ratingsMap.get(r.job_id)?.feedback ?? null;
-            }
-          });
-        }
+      const ratingsMap = new Map<string, { rating: number | null; feedback: string | null }>();
+      if (assignments) {
+        assignments.forEach((a: any) => {
+          ratingsMap.set(a.job_id, { rating: a.rating, feedback: a.feedback });
+        });
       }
+
+      const recordsWithRatings = workRecords.map((r: any) => ({
+        ...r,
+        rating: ratingsMap.get(r.job_id)?.rating ?? null,
+        feedback: ratingsMap.get(r.job_id)?.feedback ?? null,
+      }));
 
       setRecords(recordsWithRatings);
     } catch (error) {
