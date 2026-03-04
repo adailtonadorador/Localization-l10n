@@ -97,7 +97,31 @@ export function WorkerJobsPage() {
 
       const { data: jobsData } = await query;
 
-      setJobs(jobsData || []);
+      if (jobsData && jobsData.length > 0) {
+        // Fetch active assignment counts to filter out fully assigned jobs
+        const jobIds = jobsData.map((j: Job) => j.id);
+        const { data: activeAssignments } = await supabaseUntyped
+          .from('job_assignments')
+          .select('job_id')
+          .in('job_id', jobIds)
+          .in('status', ['pending', 'confirmed']);
+
+        // Count assignments per job
+        const assignmentCounts = new Map<string, number>();
+        (activeAssignments || []).forEach((a: { job_id: string }) => {
+          assignmentCounts.set(a.job_id, (assignmentCounts.get(a.job_id) || 0) + 1);
+        });
+
+        // Only show jobs with available slots
+        const availableJobs = jobsData.filter((j: Job) => {
+          const activeCount = assignmentCounts.get(j.id) || 0;
+          return activeCount < j.required_workers;
+        });
+
+        setJobs(availableJobs);
+      } else {
+        setJobs([]);
+      }
 
       // Load jobs the user has already taken (excluding withdrawn)
       if (profile?.id) {
