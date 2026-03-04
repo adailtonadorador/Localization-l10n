@@ -107,7 +107,7 @@ export function WorkerJobsPage() {
           .in('status', ['pending', 'confirmed']);
 
         // Count assignments per job
-        const assignmentCounts = new Map<string, number>();
+        const assignmentCounts = new Map();
         (activeAssignments || []).forEach((a: { job_id: string }) => {
           assignmentCounts.set(a.job_id, (assignmentCounts.get(a.job_id) || 0) + 1);
         });
