@@ -9,7 +9,11 @@ import { Button } from "@/components/ui/button";
 import { PhotoCaptureDialog } from "@/components/PhotoCaptureDialog";
 import { WithdrawalDialog } from "@/components/WithdrawalDialog";
 import { notifyJobAvailableAfterWithdrawal } from "@/lib/notifications";
-import { Clock, MapPin, CheckCircle, Calendar, Building, Play, LogOut, Briefcase, ArrowRight, XCircle } from "lucide-react";
+import {
+  Clock, MapPin, CheckCircle, Calendar, Building, Play, LogOut,
+  Briefcase, ArrowRight, XCircle, ChevronDown, ChevronUp, DollarSign,
+  AlertCircle, Eye
+} from "lucide-react";
 import { getLocalToday } from "@/lib/date-utils";
 
 interface WorkRecord {
@@ -35,6 +39,7 @@ interface WorkRecord {
   };
 }
 
+type TabFilter = 'today' | 'upcoming' | 'history';
 
 export function WorkerMyJobsPage() {
   const { profile } = useAuth();
@@ -45,12 +50,28 @@ export function WorkerMyJobsPage() {
   const [selectedRecord, setSelectedRecord] = useState<WorkRecord | null>(null);
   const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false);
   const [selectedJobForWithdrawal, setSelectedJobForWithdrawal] = useState<{ id: string; title: string; job_id: string } | null>(null);
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabFilter>('today');
 
   useEffect(() => {
     if (profile?.id) {
       loadRecords();
     }
   }, [profile?.id]);
+
+  // Auto-select best tab based on data
+  useEffect(() => {
+    const today = getLocalToday();
+    const hasTodayRecords = records.some(r => r.work_date === today);
+    const hasUpcoming = records.some(r => r.work_date > today);
+    if (hasTodayRecords) {
+      setActiveTab('today');
+    } else if (hasUpcoming) {
+      setActiveTab('upcoming');
+    } else if (records.length > 0) {
+      setActiveTab('history');
+    }
+  }, [records]);
 
   async function loadRecords() {
     setLoading(true);
@@ -70,8 +91,8 @@ export function WorkerMyJobsPage() {
           )
         `)
         .eq('worker_id', profile?.id)
-        .gte('work_date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-        .order('work_date', { ascending: true });
+        .gte('work_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+        .order('work_date', { ascending: false });
 
       setRecords(data || []);
     } catch (error) {
@@ -167,7 +188,6 @@ export function WorkerMyJobsPage() {
     if (!selectedJobForWithdrawal || !profile?.id) return;
 
     try {
-      // 1. Buscar o assignment correspondente (incluindo withdrawn para poder deletar work_records)
       const { data: assignments, error: fetchError } = await supabaseUntyped
         .from('job_assignments')
         .select('id, status')
@@ -185,7 +205,6 @@ export function WorkerMyJobsPage() {
       const assignment = assignments[0];
       const withdrawnAt = new Date().toISOString();
 
-      // 2. Salvar no histórico de desistências
       await supabaseUntyped
         .from('withdrawal_history')
         .insert({
@@ -196,7 +215,6 @@ export function WorkerMyJobsPage() {
           withdrawn_at: withdrawnAt
         });
 
-      // 3. Atualizar o assignment para status 'withdrawn'
       const { error: assignmentError } = await supabaseUntyped
         .from('job_assignments')
         .update({
@@ -217,7 +235,6 @@ export function WorkerMyJobsPage() {
         throw assignmentError;
       }
 
-      // 3. Deletar todos os work_records associados a este job_id e worker_id
       const { error: deleteError } = await supabaseUntyped
         .from('work_records')
         .delete()
@@ -228,21 +245,18 @@ export function WorkerMyJobsPage() {
         console.error('Erro ao deletar work_records:', deleteError);
       }
 
-      // 4. Buscar informações do job (required_workers)
       const { data: jobData } = await supabaseUntyped
         .from('jobs')
         .select('required_workers, status')
         .eq('id', selectedJobForWithdrawal.job_id)
         .single();
 
-      // 5. Contar trabalhadores ativos restantes
       const { count: activeCount } = await supabaseUntyped
         .from('job_assignments')
         .select('*', { count: 'exact', head: true })
         .eq('job_id', selectedJobForWithdrawal.job_id)
         .in('status', ['pending', 'confirmed']);
 
-      // 6. Se o número de trabalhadores ativos for menor que o requerido, reabrir a vaga
       const requiredWorkers = jobData?.required_workers || 1;
       if ((activeCount || 0) < requiredWorkers && jobData?.status !== 'open') {
         await supabaseUntyped
@@ -250,7 +264,6 @@ export function WorkerMyJobsPage() {
           .update({ status: 'open' })
           .eq('id', selectedJobForWithdrawal.job_id);
 
-        // Notifica workers com a mesma função que a diária está disponível novamente
         notifyJobAvailableAfterWithdrawal(selectedJobForWithdrawal.title);
       }
 
@@ -260,13 +273,21 @@ export function WorkerMyJobsPage() {
         description: 'A vaga ficou disponível novamente para outros trabalhadores.'
       });
       loadRecords();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao confirmar desistência:', error);
       toast.error('Erro ao registrar desistência. Tente novamente.');
     }
   }
 
   function formatDate(dateStr: string) {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short'
+    });
+  }
+
+  function formatDateLong(dateStr: string) {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR', {
       weekday: 'long',
       day: '2-digit',
@@ -286,28 +307,42 @@ export function WorkerMyJobsPage() {
     return timeStr.slice(0, 5);
   }
 
-  function isToday(dateStr: string) {
-    const today = getLocalToday();
-    return dateStr === today;
-  }
-
-  function getStatusBadge(record: WorkRecord) {
-    switch (record.status) {
+  function getStatusConfig(status: string) {
+    switch (status) {
       case 'completed':
-        return <Badge className="bg-green-500">Concluído</Badge>;
+        return { label: 'Concluído', color: 'bg-green-500', border: 'border-l-green-500', bg: 'from-green-50', icon: CheckCircle, textColor: 'text-green-600' };
       case 'in_progress':
-        return <Badge className="bg-blue-500">Em andamento</Badge>;
+        return { label: 'Em andamento', color: 'bg-blue-500', border: 'border-l-blue-500', bg: 'from-blue-50', icon: Play, textColor: 'text-blue-600' };
       case 'absent':
-        return <Badge variant="destructive">Falta</Badge>;
+        return { label: 'Falta', color: 'bg-red-500', border: 'border-l-red-500', bg: 'from-red-50', icon: AlertCircle, textColor: 'text-red-600' };
       default:
-        return <Badge variant="secondary">Pendente</Badge>;
+        return { label: 'Pendente', color: 'bg-slate-400', border: 'border-l-slate-400', bg: 'from-slate-50', icon: Clock, textColor: 'text-slate-600' };
     }
   }
 
-  // Separar registros por status
-  const todayRecords = records.filter(r => isToday(r.work_date));
-  const upcomingRecords = records.filter(r => !isToday(r.work_date) && r.work_date > getLocalToday());
-  const pastRecords = records.filter(r => r.work_date < getLocalToday());
+  function toggleCard(id: string) {
+    setExpandedCard(prev => prev === id ? null : id);
+  }
+
+  // Separate records by category
+  const today = getLocalToday();
+  const todayRecords = records.filter(r => r.work_date === today);
+  const upcomingRecords = records.filter(r => r.work_date > today);
+  const pastRecords = records.filter(r => r.work_date < today);
+
+  const tabs: { key: TabFilter; label: string; count: number; icon: typeof Clock }[] = [
+    { key: 'today', label: 'Hoje', count: todayRecords.length, icon: Clock },
+    { key: 'upcoming', label: 'Próximas', count: upcomingRecords.length, icon: Calendar },
+    { key: 'history', label: 'Histórico', count: pastRecords.length, icon: Eye },
+  ];
+
+  const activeRecords = activeTab === 'today' ? todayRecords
+    : activeTab === 'upcoming' ? upcomingRecords
+    : pastRecords;
+
+  const totalEarnings = records
+    .filter(r => r.status === 'completed')
+    .reduce((sum, r) => sum + (r.jobs?.daily_rate || 0), 0);
 
   if (loading) {
     return (
@@ -319,267 +354,268 @@ export function WorkerMyJobsPage() {
     );
   }
 
-  return (
-    <DashboardLayout>
-      {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Minhas Diárias</h2>
-        <p className="text-muted-foreground">Gerencie seus dias de trabalho e registre presença</p>
-      </div>
+  function renderRecordCard(record: WorkRecord) {
+    const isExpanded = expandedCard === record.id;
+    const statusConfig = getStatusConfig(record.status);
+    const isActionable = record.work_date === today && ['pending', 'in_progress'].includes(record.status);
+    const canWithdraw = record.status === 'pending' && record.work_date >= today;
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4 mb-8">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Clock className="h-5 w-5 text-blue-600" />
+    return (
+      <Card
+        key={record.id}
+        className={`border-0 shadow-sm overflow-hidden transition-all duration-200 cursor-pointer active:scale-[0.98] border-l-4 ${statusConfig.border} ${
+          isExpanded ? 'shadow-md ring-1 ring-slate-200' : 'hover:shadow-md'
+        }`}
+        onClick={() => toggleCard(record.id)}
+      >
+        <CardContent className="p-0">
+          {/* Main card content - always visible */}
+          <div className="p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              {/* Status icon */}
+              <div className={`p-2 rounded-xl ${statusConfig.bg} bg-gradient-to-br to-white flex-shrink-0 mt-0.5`}>
+                <statusConfig.icon className={`h-5 w-5 ${statusConfig.textColor}`} />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-600">{todayRecords.length}</p>
-                <p className="text-sm text-muted-foreground">Hoje</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-white">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Calendar className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-purple-600">{upcomingRecords.length}</p>
-                <p className="text-sm text-muted-foreground">Próximos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-white">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-600">
-                  {records.filter(r => r.status === 'completed').length}
-                </p>
-                <p className="text-sm text-muted-foreground">Concluídos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-white">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <Briefcase className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-amber-600">{records.length}</p>
-                <p className="text-sm text-muted-foreground">Total</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Trabalhos de Hoje */}
-      {todayRecords.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-1.5 bg-blue-500 rounded-lg">
-              <Clock className="h-4 w-4 text-white" />
-            </div>
-            <h3 className="text-lg font-semibold">Trabalhos de Hoje</h3>
-            <Badge className="bg-blue-500">{todayRecords.length}</Badge>
-          </div>
-          <div className="grid gap-4">
-            {todayRecords.map((record) => (
-              <Card key={record.id} className="border-0 shadow-md bg-gradient-to-r from-blue-50 via-white to-white overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500" />
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                    {/* Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h4 className="font-bold text-lg text-slate-900">{record.jobs.title}</h4>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                            <Building className="h-3.5 w-3.5" />
-                            {record.jobs.clients?.company_name}
-                          </p>
-                        </div>
-                        {getStatusBadge(record)}
-                      </div>
-
-                      <div className="flex flex-wrap gap-4 text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <MapPin className="h-4 w-4" />
-                          <span>{record.jobs.location}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          <span>{formatScheduleTime(record.jobs.start_time)} - {formatScheduleTime(record.jobs.end_time)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Check-in/out */}
-                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
-                      <div className="text-center px-4 border-r">
-                        <p className="text-xs text-muted-foreground mb-1">Entrada</p>
-                        <p className={`font-bold text-lg ${record.check_in ? 'text-green-600' : 'text-slate-400'}`}>
-                          {record.check_in ? formatTime(record.check_in) : '--:--'}
-                        </p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      <div className="text-center px-4">
-                        <p className="text-xs text-muted-foreground mb-1">Saída</p>
-                        <p className={`font-bold text-lg ${record.check_out ? 'text-red-600' : 'text-slate-400'}`}>
-                          {record.check_out ? formatTime(record.check_out) : '--:--'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      {!record.check_in && record.status === 'pending' && (
-                        <Button
-                          onClick={() => handleCheckIn(record)}
-                          className="gap-2 bg-green-500 hover:bg-green-600"
-                        >
-                          <Play className="h-4 w-4" />
-                          Registrar Entrada
-                        </Button>
-                      )}
-                      {record.check_in && !record.check_out && record.status !== 'completed' && (
-                        <Button
-                          onClick={() => handleCheckOut(record)}
-                          className="gap-2 bg-red-500 hover:bg-red-600"
-                        >
-                          <LogOut className="h-4 w-4" />
-                          Registrar Saída
-                        </Button>
-                      )}
-                      {record.status === 'completed' && (
-                        <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-lg">
-                          <CheckCircle className="h-5 w-5" />
-                          <span className="font-medium">Concluído</span>
-                        </div>
-                      )}
-                    </div>
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-semibold text-slate-900 text-base leading-tight truncate">{record.jobs.title}</h4>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <Building className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate">{record.jobs.clients?.company_name}</span>
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge className={statusConfig.color}>{statusConfig.label}</Badge>
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
 
-      {/* Próximos Trabalhos */}
-      {upcomingRecords.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-1.5 bg-purple-500 rounded-lg">
-              <Calendar className="h-4 w-4 text-white" />
+                {/* Quick info row */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {formatDate(record.work_date)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    {formatScheduleTime(record.jobs.start_time)} - {formatScheduleTime(record.jobs.end_time)}
+                  </span>
+                  <span className="flex items-center gap-1 font-medium text-green-600">
+                    <DollarSign className="h-3.5 w-3.5" />
+                    R$ {record.jobs.daily_rate}
+                  </span>
+                </div>
+
+                {/* Check-in/out summary (inline, non-expanded) */}
+                {!isExpanded && record.check_in && (
+                  <div className="flex items-center gap-2 mt-2 text-sm">
+                    <span className="text-green-600 font-medium">{formatTime(record.check_in)}</span>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                    <span className={record.check_out ? 'text-red-600 font-medium' : 'text-slate-400'}>
+                      {record.check_out ? formatTime(record.check_out) : '--:--'}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-            <h3 className="text-lg font-semibold">Próximos Trabalhos</h3>
-            <Badge className="bg-purple-500">{upcomingRecords.length}</Badge>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {upcomingRecords.map((record) => (
-              <Card key={record.id} className="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-semibold text-slate-900 truncate">{record.jobs.title}</h4>
-                      <p className="text-xs text-muted-foreground truncate">{record.jobs.clients?.company_name}</p>
-                    </div>
-                    <div className="flex-shrink-0">
-                      {getStatusBadge(record)}
-                    </div>
+
+          {/* Expanded content */}
+          {isExpanded && (
+            <div className="border-t border-slate-100 bg-slate-50/50 animate-in slide-in-from-top-2 duration-200">
+              {/* Details grid */}
+              <div className="p-4 sm:p-5 space-y-4">
+                {/* Location */}
+                <div className="flex items-start gap-2 text-sm">
+                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <span className="text-slate-700">{record.jobs.location}</span>
+                </div>
+
+                {/* Date full */}
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-slate-700 capitalize">{formatDateLong(record.work_date)}</span>
+                </div>
+
+                {/* Check-in / Check-out */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white rounded-xl p-3 text-center shadow-sm">
+                    <p className="text-xs text-muted-foreground mb-1">Entrada</p>
+                    <p className={`font-bold text-lg ${record.check_in ? 'text-green-600' : 'text-slate-300'}`}>
+                      {record.check_in ? formatTime(record.check_in) : '--:--'}
+                    </p>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-purple-500 flex-shrink-0" />
-                      <span className="font-medium truncate">{formatDate(record.work_date)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4 flex-shrink-0" />
-                      <span>{formatScheduleTime(record.jobs.start_time)} - {formatScheduleTime(record.jobs.end_time)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{record.jobs.location}</span>
-                    </div>
+                  <div className="bg-white rounded-xl p-3 text-center shadow-sm">
+                    <p className="text-xs text-muted-foreground mb-1">Saída</p>
+                    <p className={`font-bold text-lg ${record.check_out ? 'text-red-600' : 'text-slate-300'}`}>
+                      {record.check_out ? formatTime(record.check_out) : '--:--'}
+                    </p>
                   </div>
-                  <div className="mt-4 pt-4 border-t">
+                </div>
+
+                {/* Daily rate highlight */}
+                <div className="bg-white rounded-xl p-3 flex items-center justify-between shadow-sm">
+                  <span className="text-sm text-muted-foreground">Valor da diária</span>
+                  <span className="font-bold text-lg text-green-600">R$ {record.jobs.daily_rate}</span>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex flex-col gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                  {isActionable && !record.check_in && record.status === 'pending' && (
+                    <Button
+                      onClick={() => handleCheckIn(record)}
+                      className="w-full gap-2 bg-green-500 hover:bg-green-600 h-12 text-base font-semibold rounded-xl"
+                    >
+                      <Play className="h-5 w-5" />
+                      Registrar Entrada
+                    </Button>
+                  )}
+                  {isActionable && record.check_in && !record.check_out && record.status !== 'completed' && (
+                    <Button
+                      onClick={() => handleCheckOut(record)}
+                      className="w-full gap-2 bg-red-500 hover:bg-red-600 h-12 text-base font-semibold rounded-xl"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      Registrar Saída
+                    </Button>
+                  )}
+                  {record.status === 'completed' && (
+                    <div className="flex items-center justify-center gap-2 text-green-600 bg-green-50 p-3 rounded-xl">
+                      <CheckCircle className="h-5 w-5" />
+                      <span className="font-semibold">Diária Concluída</span>
+                    </div>
+                  )}
+                  {record.status === 'absent' && (
+                    <div className="flex items-center justify-center gap-2 text-red-600 bg-red-50 p-3 rounded-xl">
+                      <AlertCircle className="h-5 w-5" />
+                      <span className="font-semibold">Falta Registrada</span>
+                    </div>
+                  )}
+                  {canWithdraw && (
                     <Button
                       variant="outline"
-                      size="sm"
                       onClick={() => handleWithdrawClick(record)}
-                      className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                      className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-11 rounded-xl"
                     >
                       <XCircle className="h-4 w-4" />
                       Desistir da Diária
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Histórico Recente */}
-      {pastRecords.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-1.5 bg-slate-500 rounded-lg">
-              <Clock className="h-4 w-4 text-white" />
+                  )}
+                </div>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold">Histórico Recente</h3>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {pastRecords.map((record) => (
-              <Card key={record.id} className="border-0 shadow-sm bg-slate-50/50">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-medium text-slate-700">{record.jobs.title}</h4>
-                      <p className="text-xs text-muted-foreground">{formatDate(record.work_date)}</p>
-                    </div>
-                    {getStatusBadge(record)}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {record.check_in && record.check_out ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-green-600">{formatTime(record.check_in)}</span>
-                        <ArrowRight className="h-3 w-3" />
-                        <span className="text-red-600">{formatTime(record.check_out)}</span>
-                      </div>
-                    ) : (
-                      <span className="text-slate-400">Sem registro</span>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
-      {records.length === 0 && (
+  return (
+    <DashboardLayout>
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-slate-900 mb-1">Minhas Diárias</h2>
+        <p className="text-sm text-muted-foreground">Gerencie seus dias de trabalho e registre presença</p>
+      </div>
+
+      {/* Compact Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-3 shadow-sm border border-blue-100/50">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-blue-500" />
+            <span className="text-xs text-muted-foreground">Hoje</span>
+          </div>
+          <p className="text-xl font-bold text-blue-600 mt-1">{todayRecords.length}</p>
+        </div>
+        <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-3 shadow-sm border border-purple-100/50">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-purple-500" />
+            <span className="text-xs text-muted-foreground">Próximas</span>
+          </div>
+          <p className="text-xl font-bold text-purple-600 mt-1">{upcomingRecords.length}</p>
+        </div>
+        <div className="bg-gradient-to-br from-green-50 to-white rounded-xl p-3 shadow-sm border border-green-100/50">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-500" />
+            <span className="text-xs text-muted-foreground">Concluídos</span>
+          </div>
+          <p className="text-xl font-bold text-green-600 mt-1">{records.filter(r => r.status === 'completed').length}</p>
+        </div>
+        <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl p-3 shadow-sm border border-amber-100/50">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-amber-500" />
+            <span className="text-xs text-muted-foreground">Ganhos</span>
+          </div>
+          <p className="text-xl font-bold text-amber-600 mt-1">
+            R$ {totalEarnings.toLocaleString('pt-BR')}
+          </p>
+        </div>
+      </div>
+
+      {/* Tab Navigation - Mobile-friendly pill style */}
+      <div className="flex bg-slate-100 rounded-xl p-1 mb-6 overflow-x-auto">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap min-w-0 ${
+              activeTab === tab.key
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-muted-foreground hover:text-slate-700'
+            }`}
+          >
+            <tab.icon className="h-4 w-4 flex-shrink-0" />
+            <span>{tab.label}</span>
+            {tab.count > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
+                activeTab === tab.key
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-slate-200 text-slate-600'
+              }`}>
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Records list */}
+      {activeRecords.length > 0 ? (
+        <div className="grid gap-3">
+          {activeRecords.map((record) => renderRecordCard(record))}
+        </div>
+      ) : (
         <Card className="border-0 shadow-sm">
-          <CardContent className="py-16 text-center">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Briefcase className="h-8 w-8 text-slate-400" />
+          <CardContent className="py-12 text-center">
+            <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              {activeTab === 'today' ? (
+                <Clock className="h-7 w-7 text-slate-400" />
+              ) : activeTab === 'upcoming' ? (
+                <Calendar className="h-7 w-7 text-slate-400" />
+              ) : (
+                <Briefcase className="h-7 w-7 text-slate-400" />
+              )}
             </div>
-            <h3 className="font-semibold text-lg mb-2">Nenhum trabalho agendado</h3>
-            <p className="text-muted-foreground">
-              Vá em "Diárias Disponíveis" para encontrar oportunidades de trabalho.
+            <h3 className="font-semibold text-base mb-1">
+              {activeTab === 'today'
+                ? 'Nenhuma diária para hoje'
+                : activeTab === 'upcoming'
+                ? 'Nenhuma diária agendada'
+                : 'Nenhum registro no histórico'}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {activeTab === 'today'
+                ? 'Verifique as diárias disponíveis para encontrar oportunidades.'
+                : activeTab === 'upcoming'
+                ? 'Candidate-se a diárias disponíveis para agendar trabalhos.'
+                : 'Seus registros dos últimos 30 dias aparecerão aqui.'}
             </p>
           </CardContent>
         </Card>

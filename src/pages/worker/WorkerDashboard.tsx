@@ -254,9 +254,9 @@ export function WorkerDashboard() {
         .in('status', ['pending', 'confirmed'])
         .order('created_at', { ascending: false });
 
-      // Filter only future jobs (Supabase doesn't support filtering on joined tables)
+      // Filter only future/today jobs that are not yet completed or cancelled
       const futureAssignments = (assignmentsData || []).filter(
-        (a: JobAssignment) => a.jobs?.date >= today
+        (a: JobAssignment) => a.jobs?.date >= today && !['completed', 'cancelled'].includes(a.jobs?.status)
       ).slice(0, 5);
 
       setUpcomingJobs(futureAssignments);
@@ -911,17 +911,19 @@ export function WorkerDashboard() {
                             </p>
                           </div>
                         </div>
-                        <div className="pt-3 border-t border-slate-200">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleWithdrawClick(assignment)}
-                            className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                          >
-                            <XCircle className="h-4 w-4" />
-                            Desistir da Diária
-                          </Button>
-                        </div>
+                        {!['completed', 'cancelled'].includes(assignment.jobs?.status) && (
+                          <div className="pt-3 border-t border-slate-200">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleWithdrawClick(assignment)}
+                              className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                            >
+                              <XCircle className="h-4 w-4" />
+                              Desistir da Diária
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
