@@ -163,6 +163,10 @@ CREATE POLICY "Admin can insert users" ON public.users
 CREATE POLICY "Admin can delete users" ON public.users
   FOR DELETE USING (public.is_admin());
 
+-- Clients podem ver dados de users (nome, email, phone em joins com workers)
+CREATE POLICY "Clients can view users" ON public.users
+  FOR SELECT USING (public.is_client());
+
 
 -- ============================================================================
 -- 3. TABELA: workers
@@ -188,6 +192,10 @@ CREATE POLICY "Admin can insert workers" ON public.workers
 
 CREATE POLICY "Admin can delete workers" ON public.workers
   FOR DELETE USING (public.is_admin());
+
+-- Clients podem ver dados de workers (nome, rating, skills em joins com job_applications)
+CREATE POLICY "Clients can view workers" ON public.workers
+  FOR SELECT USING (public.is_client());
 
 
 -- ============================================================================
