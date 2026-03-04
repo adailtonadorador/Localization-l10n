@@ -10,6 +10,7 @@ import { PhotoCaptureDialog } from "@/components/PhotoCaptureDialog";
 import { WithdrawalDialog } from "@/components/WithdrawalDialog";
 import { notifyJobAvailableAfterWithdrawal } from "@/lib/notifications";
 import { Clock, MapPin, CheckCircle, Calendar, Building, Play, LogOut, Briefcase, ArrowRight, XCircle } from "lucide-react";
+import { getLocalToday } from "@/lib/date-utils";
 
 interface WorkRecord {
   id: string;
@@ -262,7 +263,7 @@ export function WorkerMyJobsPage() {
   }
 
   function isToday(dateStr: string) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     return dateStr === today;
   }
 
@@ -281,8 +282,8 @@ export function WorkerMyJobsPage() {
 
   // Separar registros por status
   const todayRecords = records.filter(r => isToday(r.work_date));
-  const upcomingRecords = records.filter(r => !isToday(r.work_date) && r.work_date > new Date().toISOString().split('T')[0]);
-  const pastRecords = records.filter(r => r.work_date < new Date().toISOString().split('T')[0]);
+  const upcomingRecords = records.filter(r => !isToday(r.work_date) && r.work_date > getLocalToday());
+  const pastRecords = records.filter(r => r.work_date < getLocalToday());
 
   if (loading) {
     return (

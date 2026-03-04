@@ -19,6 +19,7 @@ import {
 import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, Eye, Mail, Phone, Star, Camera, MapPin, Building, ClipboardCheck, ZoomIn } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RatingDialog, RatingDisplay } from "@/components/RatingDialog";
+import { getLocalToday } from "@/lib/date-utils";
 
 interface WorkRecord {
   id: string;
@@ -101,7 +102,7 @@ export function AdminMonitoringPage() {
   const [completedRecords, setCompletedRecords] = useState<CompletedWorkRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterDate, setFilterDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [filterDate, setFilterDate] = useState<string>(getLocalToday());
   const [selectedJob, setSelectedJob] = useState<JobWithRecords | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [ratingFilter, setRatingFilter] = useState<"all" | "pending" | "rated">("all");

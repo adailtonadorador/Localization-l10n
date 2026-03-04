@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getLocalToday } from "@/lib/date-utils";
 
 const AVAILABLE_SKILLS = [
   'Limpeza',
@@ -114,7 +115,7 @@ export function ClientNewJobPage() {
   }
 
   // Get minimum date (today)
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalToday();
 
   return (
     <DashboardLayout>

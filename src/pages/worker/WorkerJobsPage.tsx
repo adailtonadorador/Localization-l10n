@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { MapPin, Search, Filter, Eye, Calendar, Clock, Building, Star, UserPlus, AlertTriangle, ShieldAlert, Map } from "lucide-react";
 import { LocationMap } from "@/components/ui/map";
+import { getLocalToday } from "@/lib/date-utils";
 
 interface Job {
   id: string;
@@ -87,7 +88,7 @@ export function WorkerJobsPage() {
           clients (company_name)
         `)
         .eq('status', 'open')
-        .gte('date', new Date().toISOString().split('T')[0])
+        .gte('date', getLocalToday())
         .order('date', { ascending: true });
 
       if (workerProfile?.funcao) {

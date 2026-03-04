@@ -39,6 +39,7 @@ import {
   UserPlus,
   Map
 } from "lucide-react";
+import { getLocalToday } from "@/lib/date-utils";
 
 interface Job {
   id: string;
@@ -207,7 +208,7 @@ export function WorkerDashboard() {
           clients (company_name)
         `)
         .eq('status', 'open')
-        .gte('date', new Date().toISOString().split('T')[0])
+        .gte('date', getLocalToday())
         .order('date', { ascending: true })
         .limit(5);
 
@@ -220,7 +221,7 @@ export function WorkerDashboard() {
       setAvailableJobs(jobsData || []);
 
       // Load upcoming assigned jobs
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalToday();
       const { data: assignmentsData } = await supabaseUntyped
         .from('job_assignments')
         .select(`
