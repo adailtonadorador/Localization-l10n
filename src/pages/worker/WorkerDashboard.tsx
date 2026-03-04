@@ -241,22 +241,38 @@ export function WorkerDashboard() {
 
       // Load upcoming assigned jobs
       const today = getLocalToday();
-      const { data: assignmentsData } = await supabaseUntyped
-        .from('job_assignments')
-        .select(`
-          *,
-          jobs (
+      const [{ data: assignmentsData }, { data: completedRecordsData }] = await Promise.all([
+        supabaseUntyped
+          .from('job_assignments')
+          .select(`
             *,
-            clients (company_name)
-          )
-        `)
-        .eq('worker_id', user?.id)
-        .in('status', ['pending', 'confirmed'])
-        .order('created_at', { ascending: false });
+            jobs (
+              *,
+              clients (company_name)
+            )
+          `)
+          .eq('worker_id', user?.id)
+          .in('status', ['pending', 'confirmed'])
+          .order('created_at', { ascending: false }),
+        supabaseUntyped
+          .from('work_records')
+          .select('job_id, work_date')
+          .eq('worker_id', user?.id)
+          .in('status', ['completed', 'absent'])
+          .gte('work_date', today),
+      ]);
+
+      // Build set of job_id+date combos that are already completed/absent
+      const completedJobDates = new Set(
+        (completedRecordsData || []).map((r: { job_id: string; work_date: string }) => `${r.job_id}_${r.work_date}`)
+      );
 
       // Filter only future/today jobs that are not yet completed or cancelled
       const futureAssignments = (assignmentsData || []).filter(
-        (a: JobAssignment) => a.jobs?.date >= today && !['completed', 'cancelled'].includes(a.jobs?.status)
+        (a: JobAssignment) =>
+          a.jobs?.date >= today &&
+          !['completed', 'cancelled'].includes(a.jobs?.status) &&
+          !completedJobDates.has(`${a.jobs?.id}_${a.jobs?.date}`)
       ).slice(0, 5);
 
       setUpcomingJobs(futureAssignments);
