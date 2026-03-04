@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, Star, MapPin, Clock, Calendar, Award } from "lucide-react";
+import { Briefcase, MapPin, Clock, Calendar } from "lucide-react";
 
 interface WorkRecord {
   id: string;
@@ -26,9 +26,6 @@ interface WorkRecord {
       company_name: string;
     };
   };
-  // Rating from job_assignment
-  rating?: number | null;
-  feedback?: string | null;
 }
 
 export function WorkerHistoryPage() {
@@ -69,28 +66,7 @@ export function WorkerHistoryPage() {
         return;
       }
 
-      // Fetch ratings from job_assignments separately
-      const jobIds = [...new Set(workRecords.map((r: any) => r.job_id))];
-      const { data: assignments } = await supabaseUntyped
-        .from('job_assignments')
-        .select('job_id, rating, feedback')
-        .eq('worker_id', profile?.id)
-        .in('job_id', jobIds);
-
-      const ratingsMap = new Map<string, { rating: number | null; feedback: string | null }>();
-      if (assignments) {
-        assignments.forEach((a: any) => {
-          ratingsMap.set(a.job_id, { rating: a.rating, feedback: a.feedback });
-        });
-      }
-
-      const recordsWithRatings = workRecords.map((r: any) => ({
-        ...r,
-        rating: ratingsMap.get(r.job_id)?.rating ?? null,
-        feedback: ratingsMap.get(r.job_id)?.feedback ?? null,
-      }));
-
-      setRecords(recordsWithRatings);
+      setRecords(workRecords);
     } catch (error) {
       console.error('[WorkerHistory] Error loading history:', error);
     } finally {
@@ -119,7 +95,6 @@ export function WorkerHistoryPage() {
 
   // Calculate stats
   const completedRecords = records.filter(r => r.status === 'completed');
-  const avgRating = completedRecords.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating || 0) / arr.length, 0);
 
   if (loading) {
     return (
@@ -139,8 +114,8 @@ export function WorkerHistoryPage() {
         <p className="text-muted-foreground">Acompanhe seu desempenho na plataforma</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 mb-8">
+      {/* Stats Card */}
+      <div className="mb-8">
         <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -150,22 +125,6 @@ export function WorkerHistoryPage() {
               <div>
                 <p className="text-3xl font-bold text-blue-600">{completedRecords.length}</p>
                 <p className="text-sm text-muted-foreground">Diárias Concluídas</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-white">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-amber-100 rounded-xl">
-                <Star className="h-6 w-6 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-amber-600">
-                  {avgRating > 0 ? avgRating.toFixed(1) : '-'}
-                </p>
-                <p className="text-sm text-muted-foreground">Avaliação Média</p>
               </div>
             </div>
           </CardContent>
@@ -230,30 +189,6 @@ export function WorkerHistoryPage() {
                       </div>
                     </div>
 
-                    {record.feedback && (
-                      <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                        <p className="text-xs font-medium text-blue-700 mb-1">Feedback da empresa:</p>
-                        <p className="text-sm text-blue-900">{record.feedback}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Rating */}
-                  <div className="flex lg:flex-col items-center gap-4 p-4 bg-slate-50 rounded-xl min-w-[140px]">
-                    {record.rating ? (
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
-                          <span className="text-2xl font-bold">{record.rating}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Avaliação</p>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <Award className="h-6 w-6 text-slate-300 mx-auto mb-1" />
-                        <p className="text-xs text-muted-foreground">Sem avaliação</p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </CardContent>
