@@ -45,8 +45,8 @@ export function PhotoCaptureDialog({ open, onOpenChange, onSubmit, title, descri
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 720 },
+          height: { ideal: 960 },
         },
       });
       streamRef.current = stream;
@@ -152,7 +152,7 @@ export function PhotoCaptureDialog({ open, onOpenChange, onSubmit, title, descri
         <div className="space-y-4">
           {/* Live camera preview */}
           {(captureState === 'loading' || captureState === 'preview') && (
-            <div className="relative bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center">
+            <div className="relative bg-black rounded-lg overflow-hidden aspect-[3/4] flex items-center justify-center">
               {captureState === 'loading' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
@@ -171,7 +171,7 @@ export function PhotoCaptureDialog({ open, onOpenChange, onSubmit, title, descri
 
           {/* Captured image */}
           {captureState === 'captured' && capturedImage && (
-            <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+            <div className="relative bg-black rounded-lg overflow-hidden aspect-[3/4]">
               <img src={capturedImage} alt="Foto capturada" className="w-full h-full object-cover" />
             </div>
           )}
