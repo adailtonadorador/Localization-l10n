@@ -91,7 +91,7 @@ export function WorkerJobsPage() {
         .order('date', { ascending: true });
 
       if (workerProfile?.funcao) {
-        query = query.eq('title', workerProfile.funcao);
+        query = query.ilike('title', workerProfile.funcao);
       }
 
       const { data: jobsData } = await query;

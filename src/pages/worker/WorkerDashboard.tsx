@@ -212,7 +212,7 @@ export function WorkerDashboard() {
         .limit(5);
 
       if (workerProfile?.funcao) {
-        jobsQuery = jobsQuery.eq('title', workerProfile.funcao);
+        jobsQuery = jobsQuery.ilike('title', workerProfile.funcao);
       }
 
       const { data: jobsData } = await jobsQuery;
