@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
 import { runAutoUpdates } from "@/lib/job-status-updater";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
