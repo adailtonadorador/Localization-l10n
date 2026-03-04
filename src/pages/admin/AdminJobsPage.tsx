@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
+import { runAutoUpdates } from "@/lib/job-status-updater";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -81,7 +82,7 @@ export function AdminJobsPage() {
   const [unassignLoading, setUnassignLoading] = useState(false);
 
   useEffect(() => {
-    loadJobs();
+    runAutoUpdates().then(() => loadJobs());
   }, [location.pathname]);
 
   async function loadJobs() {

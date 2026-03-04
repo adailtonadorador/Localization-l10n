@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { sendPushNotification } from "@/lib/notifications";
 import { supabaseUntyped } from "@/lib/supabase";
+import { runAutoUpdates } from "@/lib/job-status-updater";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -127,7 +128,7 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    runAutoUpdates().then(() => loadData());
   }, [location.pathname]);
 
   async function loadData() {

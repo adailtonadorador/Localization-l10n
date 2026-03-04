@@ -44,7 +44,7 @@ export function PhotoCaptureDialog({ open, onOpenChange, onSubmit, title, descri
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: 'environment' },
+          facingMode: 'user',
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
@@ -164,7 +164,7 @@ export function PhotoCaptureDialog({ open, onOpenChange, onSubmit, title, descri
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover -scale-x-100"
               />
             </div>
           )}

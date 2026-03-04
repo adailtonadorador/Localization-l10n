@@ -37,7 +37,7 @@ export interface Client extends User {
 }
 
 // Job types
-export type JobStatus = 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+export type JobStatus = 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'unfilled';
 
 export interface Job {
   id: string;

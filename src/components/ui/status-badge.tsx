@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 // Job Status Types
-export type JobStatus = 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+export type JobStatus = 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'unfilled';
 
 // Assignment Status Types
 export type AssignmentStatus = 'pending' | 'confirmed' | 'completed' | 'no_show';
@@ -40,6 +40,10 @@ const jobStatusConfig: Record<JobStatus, StatusConfig> = {
   cancelled: {
     label: 'Cancelada',
     className: 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-sm shadow-red-500/30',
+  },
+  unfilled: {
+    label: 'Não Preenchida',
+    className: 'bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-sm shadow-orange-400/30',
   },
 };
 

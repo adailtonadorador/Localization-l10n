@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
+import { runAutoUpdates } from "@/lib/job-status-updater";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, Eye, Mail, Phone, Star, Camera, MapPin, Building, ClipboardCheck, ZoomIn } from "lucide-react";
+import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, Eye, Mail, Phone, Star, Camera, MapPin, Building, ClipboardCheck, ZoomIn, RefreshCw, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RatingDialog, RatingDisplay } from "@/components/RatingDialog";
 import { getLocalToday } from "@/lib/date-utils";
@@ -30,6 +31,11 @@ interface WorkRecord {
   signature_data: string | null;
   signed_at: string | null;
   status: string;
+  check_in_latitude: number | null;
+  check_in_longitude: number | null;
+  check_out_latitude: number | null;
+  check_out_longitude: number | null;
+  notes: string | null;
   workers: {
     id: string;
     rating: number;
@@ -106,6 +112,8 @@ export function AdminMonitoringPage() {
   const [selectedJob, setSelectedJob] = useState<JobWithRecords | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [ratingFilter, setRatingFilter] = useState<"all" | "pending" | "rated">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "in_progress" | "completed" | "has_absent">("all");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Photo zoom state
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
@@ -115,14 +123,22 @@ export function AdminMonitoringPage() {
   const [selectedRecord, setSelectedRecord] = useState<WorkRecord | null>(null);
   const [selectedWorkRecord, setSelectedWorkRecord] = useState<CompletedWorkRecord | null>(null);
 
+  const [autoUpdated, setAutoUpdated] = useState(false);
+
+  // Auto-update stale records on mount, then allow data load
+  useEffect(() => {
+    runAutoUpdates().then(() => setAutoUpdated(true));
+  }, []);
+
   // Recarrega dados quando navega para esta página ou muda a data/tab
   useEffect(() => {
+    if (!autoUpdated) return;
     if (activeTab === "monitoring") {
       loadJobs();
     } else {
       loadCompletedAssignments();
     }
-  }, [filterDate, location.pathname, activeTab]);
+  }, [filterDate, location.pathname, activeTab, autoUpdated]);
 
   async function loadJobs() {
     setLoading(true);
@@ -145,6 +161,11 @@ export function AdminMonitoringPage() {
           signature_data,
           signed_at,
           status,
+          check_in_latitude,
+          check_in_longitude,
+          check_out_latitude,
+          check_out_longitude,
+          notes,
           worker_id,
           workers (
             id,
@@ -280,6 +301,11 @@ export function AdminMonitoringPage() {
               signature_data: null,
               signed_at: null,
               status: 'pending',
+              check_in_latitude: null,
+              check_in_longitude: null,
+              check_out_latitude: null,
+              check_out_longitude: null,
+              notes: null,
               workers: assignment.workers,
               job_assignments: {
                 id: assignment.id,
@@ -307,6 +333,7 @@ export function AdminMonitoringPage() {
 
       console.log('[AdminMonitoring] Final jobs with records:', jobsWithRecords.length);
       setJobs(jobsWithRecords);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('[AdminMonitoring] Error loading jobs:', error);
       setJobs([]);
@@ -434,6 +461,27 @@ export function AdminMonitoringPage() {
   }
 
   const filteredJobs = jobs.filter(job => {
+    // Status filter
+    if (statusFilter !== "all") {
+      const stats = getJobStats(job);
+      switch (statusFilter) {
+        case "pending":
+          if (stats.checkedIn > 0 || stats.absent > 0) return false;
+          break;
+        case "in_progress":
+          if (stats.checkedIn === stats.completed && stats.completed > 0) return false;
+          if (stats.checkedIn === 0) return false;
+          break;
+        case "completed":
+          if (stats.total === 0 || stats.completed !== stats.total) return false;
+          break;
+        case "has_absent":
+          if (stats.absent === 0) return false;
+          break;
+      }
+    }
+
+    // Search filter
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
@@ -480,9 +528,28 @@ export function AdminMonitoringPage() {
 
   return (
     <DashboardLayout>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Monitoramento de Trabalhos</h2>
-        <p className="text-muted-foreground">Acompanhe em tempo real o status dos trabalhos e avaliações</p>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold mb-1">Monitoramento</h2>
+          <p className="text-muted-foreground text-sm">Acompanhe em tempo real o status das diárias</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {lastUpdated && (
+            <span className="text-xs text-muted-foreground">
+              Atualizado às {lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { if (activeTab === 'monitoring') loadJobs(); else loadCompletedAssignments(); }}
+            disabled={loading}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -502,9 +569,64 @@ export function AdminMonitoringPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="monitoring" className="space-y-6">
-          {/* Filtros */}
-          <div className="flex flex-col sm:flex-row gap-4">
+        <TabsContent value="monitoring" className="space-y-5">
+          {/* Date navigation + Search */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Date navigator */}
+            <div className="flex items-center gap-1 bg-white border rounded-lg p-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  const d = new Date(filterDate + 'T00:00:00');
+                  d.setDate(d.getDate() - 1);
+                  setFilterDate(d.toISOString().split('T')[0]);
+                }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="relative">
+                <button
+                  onClick={() => (document.getElementById('date-picker-hidden') as HTMLInputElement)?.showPicker?.()}
+                  className="px-3 py-1 text-sm font-medium min-w-[130px] text-center hover:bg-slate-50 rounded"
+                >
+                  {filterDate === getLocalToday()
+                    ? `Hoje, ${new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`
+                    : (() => {
+                        const yesterday = new Date();
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        const yStr = yesterday.toISOString().split('T')[0];
+                        return filterDate === yStr
+                          ? `Ontem, ${new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`
+                          : new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                      })()
+                  }
+                </button>
+                <input
+                  id="date-picker-hidden"
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                disabled={filterDate >= getLocalToday()}
+                onClick={() => {
+                  const d = new Date(filterDate + 'T00:00:00');
+                  d.setDate(d.getDate() + 1);
+                  setFilterDate(d.toISOString().split('T')[0]);
+                }}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Search */}
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -514,129 +636,154 @@ export function AdminMonitoringPage() {
                 className="pl-10"
               />
             </div>
-
-            <div className="w-full sm:w-48">
-              <Input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-              />
-            </div>
           </div>
 
-          {/* Resumo do dia */}
-          <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-2xl font-bold">{filteredJobs.length}</p>
-                <p className="text-sm text-muted-foreground">Diárias no dia</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Status filter pills */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+            {([
+              { value: 'all', label: 'Todos', count: jobs.length },
+              { value: 'pending', label: 'Aguardando', count: jobs.filter(j => { const s = getJobStats(j); return s.checkedIn === 0 && s.absent === 0; }).length },
+              { value: 'in_progress', label: 'Em andamento', count: jobs.filter(j => { const s = getJobStats(j); return s.checkedIn > 0 && s.completed !== s.total; }).length },
+              { value: 'completed', label: 'Concluídos', count: jobs.filter(j => { const s = getJobStats(j); return s.total > 0 && s.completed === s.total; }).length },
+              { value: 'has_absent', label: 'Com faltas', count: jobs.filter(j => getJobStats(j).absent > 0).length },
+            ] as const).map((f) => (
+              <Button
+                key={f.value}
+                variant={statusFilter === f.value ? 'default' : 'outline'}
+                size="sm"
+                className={`h-7 text-xs gap-1.5 ${
+                  statusFilter === f.value
+                    ? f.value === 'has_absent' ? 'bg-red-500 hover:bg-red-600' : ''
+                    : f.value === 'has_absent' && f.count > 0 ? 'border-red-200 text-red-700 hover:bg-red-50' : ''
+                }`}
+                onClick={() => setStatusFilter(f.value)}
+              >
+                {f.label}
+                {f.count > 0 && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                    statusFilter === f.value ? 'bg-white/20' : 'bg-slate-100'
+                  }`}>
+                    {f.count}
+                  </span>
+                )}
+              </Button>
+            ))}
+          </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-500" />
-              <div>
-                <p className="text-2xl font-bold">
-                  {filteredJobs.reduce((acc, job) => acc + getJobStats(job).checkedIn, 0)}
-                </p>
-                <p className="text-sm text-muted-foreground">Em andamento</p>
+          {/* KPI Summary */}
+          {(() => {
+            const totalJobs = filteredJobs.length;
+            const totalWorkers = filteredJobs.reduce((a, j) => a + getJobStats(j).total, 0);
+            const totalInProgress = filteredJobs.reduce((a, j) => a + (getJobStats(j).checkedIn - getJobStats(j).completed), 0);
+            const totalCompleted = filteredJobs.reduce((a, j) => a + getJobStats(j).completed, 0);
+            const totalAbsent = filteredJobs.reduce((a, j) => a + getJobStats(j).absent, 0);
+            const completionPct = totalWorkers > 0 ? Math.round((totalCompleted / totalWorkers) * 100) : 0;
+            return (
+              <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+                <div className="relative overflow-hidden rounded-xl border border-l-4 border-l-slate-400 bg-slate-50 p-4">
+                  <Calendar className="absolute top-3 right-3 h-8 w-8 text-slate-200" />
+                  <p className="text-3xl font-black text-slate-800">{totalJobs}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Diárias no dia</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{totalWorkers} prestadores</p>
+                </div>
+                <div className="relative overflow-hidden rounded-xl border border-l-4 border-l-blue-500 bg-blue-50 p-4">
+                  <Users className="absolute top-3 right-3 h-8 w-8 text-blue-200" />
+                  <p className="text-3xl font-black text-blue-700">{totalInProgress}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Em andamento</p>
+                </div>
+                <div className="relative overflow-hidden rounded-xl border border-l-4 border-l-green-500 bg-green-50 p-4">
+                  <CheckCircle className="absolute top-3 right-3 h-8 w-8 text-green-200" />
+                  <p className="text-3xl font-black text-green-700">{totalCompleted}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Concluídos</p>
+                  {totalWorkers > 0 && <p className="text-[10px] text-green-600 mt-0.5">{completionPct}% do total</p>}
+                </div>
+                <div className={`relative overflow-hidden rounded-xl border border-l-4 border-l-red-500 bg-red-50 p-4 ${totalAbsent > 0 ? 'ring-1 ring-red-300' : ''}`}>
+                  <AlertCircle className="absolute top-3 right-3 h-8 w-8 text-red-200" />
+                  <p className="text-3xl font-black text-red-700">{totalAbsent}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Faltas</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <div>
-                <p className="text-2xl font-bold">
-                  {filteredJobs.reduce((acc, job) => acc + getJobStats(job).completed, 0)}
-                </p>
-                <p className="text-sm text-muted-foreground">Concluídos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-              <div>
-                <p className="text-2xl font-bold">
-                  {filteredJobs.reduce((acc, job) => acc + getJobStats(job).absent, 0)}
-                </p>
-                <p className="text-sm text-muted-foreground">Faltas</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            );
+          })()}
 
       {/* Lista de diárias */}
       {filteredJobs.length > 0 ? (
         <div className="grid gap-4">
           {filteredJobs.map((job) => {
             const stats = getJobStats(job);
-            const isAssigned = job.status === 'assigned';
             const todayRecords = job.work_records.filter(r => r.work_date === filterDate);
+            const cardAccent = stats.absent > 0
+              ? 'border-l-4 border-l-red-500 bg-red-50/30'
+              : stats.total > 0 && stats.completed === stats.total
+              ? 'border-l-4 border-l-green-500 bg-green-50/20'
+              : stats.checkedIn > 0
+              ? 'border-l-4 border-l-blue-500'
+              : 'border-l-4 border-l-amber-400 bg-amber-50/20';
             return (
-              <Card key={job.id} className={`transition-all ${
-                isAssigned
-                  ? 'border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-white'
-                  : ''
-              }`}>
+              <Card key={job.id} className={`transition-all hover:shadow-md cursor-pointer ${cardAccent}`} onClick={() => openDetails(job)}>
                 <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <CardTitle className="text-lg">{job.title}</CardTitle>
-                        {isAssigned && (
-                          <Badge className="bg-purple-500 text-white">Atribuída</Badge>
-                        )}
                       </div>
-                      <CardDescription>{job.clients?.company_name} - {job.location}</CardDescription>
+                      <div className="flex items-center gap-3 flex-wrap mt-1">
+                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Building className="h-3 w-3" />
+                          {job.clients?.company_name}
+                        </span>
+                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          <span className="truncate max-w-[200px]">{job.location}</span>
+                        </span>
+                      </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => openDetails(job)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Detalhes
+                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openDetails(job); }} className="text-muted-foreground hover:text-foreground">
+                      <Eye className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Info e Stats */}
-                  <div className="flex flex-wrap gap-4">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        {formatScheduleTime(job.start_time)} - {formatScheduleTime(job.end_time)}
+                  {/* Metadata row */}
+                  <div className="flex items-center gap-4 pb-3 border-b text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      {formatScheduleTime(job.start_time)} - {formatScheduleTime(job.end_time)}
+                    </span>
+                    <span className="text-slate-200">|</span>
+                    <span className="flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5" />
+                      {stats.total} prestadores
+                    </span>
+                  </div>
+
+                  {/* Status badges row */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {stats.checkedIn - stats.completed > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
+                        <Clock className="h-3 w-3" />
+                        {stats.checkedIn - stats.completed} trabalhando
                       </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{stats.total} prestadores</span>
-                    </div>
-                    <div className="flex items-center gap-2 ml-auto">
-                      <Badge variant="outline" className="bg-blue-50">
-                        {stats.checkedIn} trabalhando
-                      </Badge>
-                      <Badge variant="outline" className="bg-green-50">
+                    )}
+                    {stats.completed > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                        <CheckCircle className="h-3 w-3" />
                         {stats.completed} concluídos
-                      </Badge>
-                      {stats.absent > 0 && (
-                        <Badge variant="outline" className="bg-red-50">
-                          {stats.absent} faltas
-                        </Badge>
-                      )}
-                    </div>
+                      </span>
+                    )}
+                    {stats.absent > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
+                        <AlertCircle className="h-3 w-3" />
+                        {stats.absent} faltas
+                      </span>
+                    )}
+                    {stats.checkedIn === 0 && stats.absent === 0 && stats.total > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                        <Clock className="h-3 w-3" />
+                        Aguardando check-in
+                      </span>
+                    )}
                   </div>
 
                   {/* Barra de progresso */}
@@ -695,10 +842,29 @@ export function AdminMonitoringPage() {
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 {/* Check completed first - by status OR by having both check_in and check_out */}
                                 {record.status === 'completed' || (record.check_in && record.check_out) ? (
-                                  <span className="text-green-600 flex items-center gap-1">
-                                    <CheckCircle className="h-3 w-3" />
-                                    Concluído {record.check_out && `às ${formatTime(record.check_out)}`}
-                                  </span>
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-green-600 flex items-center gap-1 flex-wrap">
+                                      <CheckCircle className="h-3 w-3" />
+                                      Concluído {record.check_out && `às ${formatTime(record.check_out)}`}
+                                      {record.check_out_latitude && record.check_out_longitude && (
+                                        <a
+                                          href={`https://www.google.com/maps?q=${record.check_out_latitude},${record.check_out_longitude}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-blue-500 hover:text-blue-700 ml-1"
+                                          title="Ver localização de saída"
+                                        >
+                                          <MapPin className="h-3 w-3" />
+                                        </a>
+                                      )}
+                                    </span>
+                                    {record.notes && record.notes.includes('automaticamente') && (
+                                      <span className="text-orange-500 flex items-center gap-1 text-[10px]">
+                                        <AlertCircle className="h-3 w-3" />
+                                        Sem registro de saída
+                                      </span>
+                                    )}
+                                  </div>
                                 ) : record.status === 'absent' || record.status === 'no_show' ? (
                                   <span className="text-red-600 flex items-center gap-1">
                                     <AlertCircle className="h-3 w-3" />
@@ -708,6 +874,17 @@ export function AdminMonitoringPage() {
                                   <span className="text-blue-600 flex items-center gap-1">
                                     <Clock className="h-3 w-3" />
                                     Em andamento {record.check_in && `desde ${formatTime(record.check_in)}`}
+                                    {record.check_in_latitude && record.check_in_longitude && (
+                                      <a
+                                        href={`https://www.google.com/maps?q=${record.check_in_latitude},${record.check_in_longitude}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-500 hover:text-blue-700 ml-1"
+                                        title="Ver localização de entrada"
+                                      >
+                                        <MapPin className="h-3 w-3" />
+                                      </a>
+                                    )}
                                   </span>
                                 ) : (
                                   <span className="text-amber-600 flex items-center gap-1">
@@ -728,11 +905,21 @@ export function AdminMonitoringPage() {
           })}
         </div>
       ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              Nenhuma vaga encontrada para esta data.
-            </p>
+        <Card className="border-dashed">
+          <CardContent className="py-16 text-center">
+            <Calendar className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+            {searchTerm && jobs.length > 0 ? (
+              <>
+                <p className="text-muted-foreground mb-2">Nenhuma diária corresponde à sua busca.</p>
+                <Button variant="link" size="sm" onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}>
+                  Limpar filtros
+                </Button>
+              </>
+            ) : (
+              <p className="text-muted-foreground">
+                Nenhuma diária agendada para {new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -1061,6 +1248,48 @@ export function AdminMonitoringPage() {
                                 <p className="text-lg font-bold">{formatTime(record.check_out)}</p>
                               </div>
                             </div>
+
+                            {/* Observação de registro automático */}
+                            {record.notes && (
+                              <div className={`p-3 rounded-lg border text-sm ${
+                                record.notes.includes('automaticamente')
+                                  ? 'bg-orange-50 border-orange-200 text-orange-700'
+                                  : 'bg-slate-50 border-slate-200 text-muted-foreground'
+                              }`}>
+                                <div className="flex items-center gap-2">
+                                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                  <span>{record.notes}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Localização GPS */}
+                            {(record.check_in_latitude || record.check_out_latitude) && (
+                              <div className="flex gap-3 text-xs">
+                                {record.check_in_latitude && record.check_in_longitude && (
+                                  <a
+                                    href={`https://www.google.com/maps?q=${record.check_in_latitude},${record.check_in_longitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-blue-500 hover:text-blue-700"
+                                  >
+                                    <MapPin className="h-3 w-3" />
+                                    Local de entrada
+                                  </a>
+                                )}
+                                {record.check_out_latitude && record.check_out_longitude && (
+                                  <a
+                                    href={`https://www.google.com/maps?q=${record.check_out_latitude},${record.check_out_longitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-blue-500 hover:text-blue-700"
+                                  >
+                                    <MapPin className="h-3 w-3" />
+                                    Local de saída
+                                  </a>
+                                )}
+                              </div>
+                            )}
 
                             {/* Fotos de Registro */}
                             {(record.check_in_photo || record.signature_data) && (

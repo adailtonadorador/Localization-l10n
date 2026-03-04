@@ -93,10 +93,26 @@ export function WorkerMyJobsPage() {
     setPhotoCaptureOpen(true);
   }
 
+  function getCurrentPosition(): Promise<{ latitude: number; longitude: number } | null> {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+  }
+
   async function handlePhotoSubmit(photoData: string) {
     if (!selectedRecord) return;
 
     try {
+      const location = await getCurrentPosition();
+
       if (photoType === 'checkin') {
         const { error } = await supabaseUntyped
           .from('work_records')
@@ -104,6 +120,10 @@ export function WorkerMyJobsPage() {
             check_in: new Date().toISOString(),
             check_in_photo: photoData,
             status: 'in_progress',
+            ...(location && {
+              check_in_latitude: location.latitude,
+              check_in_longitude: location.longitude,
+            }),
           })
           .eq('id', selectedRecord.id);
         if (error) throw error;
@@ -116,6 +136,10 @@ export function WorkerMyJobsPage() {
             signature_data: photoData,
             signed_at: new Date().toISOString(),
             status: 'completed',
+            ...(location && {
+              check_out_latitude: location.latitude,
+              check_out_longitude: location.longitude,
+            }),
           })
           .eq('id', selectedRecord.id);
         if (error) throw error;
