@@ -218,7 +218,26 @@ export function WorkerDashboard() {
 
       const { data: jobsData } = await jobsQuery;
 
-      setAvailableJobs(jobsData || []);
+      // Fetch job IDs where this worker already has an active assignment or pending application
+      const [{ data: myAssignments }, { data: myApplications }] = await Promise.all([
+        supabaseUntyped
+          .from('job_assignments')
+          .select('job_id')
+          .eq('worker_id', user?.id)
+          .in('status', ['pending', 'confirmed', 'completed', 'checked_in', 'in_progress']),
+        supabaseUntyped
+          .from('job_applications')
+          .select('job_id')
+          .eq('worker_id', user?.id)
+          .eq('status', 'pending'),
+      ]);
+
+      const excludedJobIds = new Set([
+        ...(myAssignments || []).map((a: { job_id: string }) => a.job_id),
+        ...(myApplications || []).map((a: { job_id: string }) => a.job_id),
+      ]);
+
+      setAvailableJobs((jobsData || []).filter((j: Job) => !excludedJobIds.has(j.id)));
 
       // Load upcoming assigned jobs
       const today = getLocalToday();
