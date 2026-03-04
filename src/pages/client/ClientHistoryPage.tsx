@@ -138,7 +138,7 @@ export function ClientHistoryPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-600 font-medium">Trabalhadores</p>
+                <p className="text-sm text-blue-600 font-medium">Prestadores</p>
                 <p className="text-3xl font-bold text-blue-700">{totalWorkers}</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-xl">
@@ -152,7 +152,7 @@ export function ClientHistoryPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-purple-600 font-medium">Vagas Concluídas</p>
+                <p className="text-sm text-purple-600 font-medium">Diárias Concluídas</p>
                 <p className="text-3xl font-bold text-purple-700">{totalJobs}</p>
               </div>
               <div className="p-3 bg-purple-100 rounded-xl">
@@ -238,7 +238,7 @@ export function ClientHistoryPage() {
           onOpenChange={setRatingDialogOpen}
           assignmentId={selectedAssignment.id}
           workerId={selectedAssignment.workers?.id || ""}
-          workerName={selectedAssignment.workers?.users?.name || "Trabalhador"}
+          workerName={selectedAssignment.workers?.users?.name || "Prestador"}
           jobTitle={selectedAssignment.jobs?.title}
           currentRating={selectedAssignment.rating}
           currentFeedback={selectedAssignment.feedback}

@@ -208,7 +208,7 @@ export function ClientWorkersPage() {
             {date === 'sem-data' ? 'Sem data definida' : formatDateWithWeekday(date)}
           </h3>
           <Badge variant="outline" className="ml-2">
-            {apps.length} {apps.length === 1 ? 'trabalhador' : 'trabalhadores'}
+            {apps.length} {apps.length === 1 ? 'prestador' : 'prestadores'}
           </Badge>
         </div>
         <div className="space-y-2 pl-7">
@@ -232,7 +232,7 @@ export function ClientWorkersPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md mx-4">
           <DialogHeader>
-            <DialogTitle>Detalhes do Trabalhador</DialogTitle>
+            <DialogTitle>Detalhes do Prestador</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6 mt-4">
@@ -297,7 +297,7 @@ export function ClientWorkersPage() {
             {/* Job Info */}
             <div className="space-y-3">
               <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-                Vaga Atribuída
+                Diária Atribuída
               </h4>
               <div className="p-4 bg-blue-50 rounded-lg space-y-2">
                 <div className="flex items-center gap-2">
@@ -346,9 +346,9 @@ export function ClientWorkersPage() {
   return (
     <DashboardLayout>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Trabalhadores</h2>
+        <h2 className="text-2xl font-bold mb-2">Prestadores</h2>
         <p className="text-muted-foreground">
-          Veja quem estará trabalhando em suas vagas por dia
+          Veja quem estará trabalhando em suas diárias por dia
         </p>
       </div>
 
@@ -359,7 +359,7 @@ export function ClientWorkersPage() {
             <div className="flex items-center gap-3">
               <Users className="w-5 h-5 text-primary" />
               <span className="text-sm">
-                <strong>{applications.length}</strong> {applications.length === 1 ? 'trabalhador atribuído' : 'trabalhadores atribuídos'} em{' '}
+                <strong>{applications.length}</strong> {applications.length === 1 ? 'prestador atribuído' : 'prestadores atribuídos'} em{' '}
                 <strong>{groupedByDate.length}</strong> {groupedByDate.length === 1 ? 'dia' : 'dias'}
               </span>
             </div>
@@ -382,7 +382,7 @@ export function ClientWorkersPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Users className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">Nenhum trabalhador atribuído às suas vagas ainda.</p>
+            <p className="text-muted-foreground">Nenhum prestador atribuído às suas diárias ainda.</p>
           </CardContent>
         </Card>
       )}

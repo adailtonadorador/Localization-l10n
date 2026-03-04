@@ -234,7 +234,7 @@ export function ClientDashboard() {
         <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardDescription className="text-blue-600 font-medium">Vagas Ativas</CardDescription>
+              <CardDescription className="text-blue-600 font-medium">Diárias Ativas</CardDescription>
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Briefcase className="h-4 w-4 text-blue-600" />
               </div>
@@ -244,7 +244,7 @@ export function ClientDashboard() {
           <CardContent className="pt-0">
             <div className="flex items-center gap-1 text-xs text-blue-600">
               <TrendingUp className="h-3 w-3" />
-              <span>Aguardando trabalhadores</span>
+              <span>Aguardando prestadores</span>
             </div>
           </CardContent>
         </Card>
@@ -252,7 +252,7 @@ export function ClientDashboard() {
         <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardDescription className="text-blue-600 font-medium">Trabalhadores Alocados</CardDescription>
+              <CardDescription className="text-blue-600 font-medium">Prestadores Alocados</CardDescription>
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Users className="h-4 w-4 text-blue-600" />
               </div>
@@ -262,7 +262,7 @@ export function ClientDashboard() {
           <CardContent className="pt-0">
             <div className="flex items-center gap-1 text-xs text-blue-600">
               <UserCheck className="h-3 w-3" />
-              <span>Total em suas vagas</span>
+              <span>Total em suas diárias</span>
             </div>
           </CardContent>
         </Card>
@@ -309,8 +309,8 @@ export function ClientDashboard() {
         {/* Chart */}
         <Card className="lg:col-span-1 border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg">Resumo das Vagas</CardTitle>
-            <CardDescription>Trabalhadores por vaga</CardDescription>
+            <CardTitle className="text-lg">Resumo das Diárias</CardTitle>
+            <CardDescription>Prestadores por diária</CardDescription>
           </CardHeader>
           <CardContent>
             {chartData.length > 0 ? (
@@ -319,7 +319,7 @@ export function ClientDashboard() {
                   <div key={index} className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="truncate font-medium">{item.name}</span>
-                      <span className="text-muted-foreground">{item.workers} trab.</span>
+                      <span className="text-muted-foreground">{item.workers} prest.</span>
                     </div>
                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                       <div
@@ -336,7 +336,7 @@ export function ClientDashboard() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">Nenhuma vaga para exibir</p>
+                <p className="text-muted-foreground">Nenhuma diária para exibir</p>
               </div>
             )}
           </CardContent>
@@ -347,8 +347,8 @@ export function ClientDashboard() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Minhas Vagas</CardTitle>
-                <CardDescription>Vagas criadas para sua empresa</CardDescription>
+                <CardTitle className="text-lg">Minhas Diárias</CardTitle>
+                <CardDescription>Diárias criadas para sua empresa</CardDescription>
               </div>
               <Link to="/client/jobs">
                 <Button variant="outline" size="sm" className="gap-1">
@@ -420,8 +420,8 @@ export function ClientDashboard() {
                 <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Briefcase className="h-6 w-6 text-slate-400" />
                 </div>
-                <p className="text-muted-foreground">Nenhuma vaga criada para sua empresa ainda.</p>
-                <p className="text-sm text-muted-foreground mt-1">Entre em contato com o administrador para criar vagas.</p>
+                <p className="text-muted-foreground">Nenhuma diária criada para sua empresa ainda.</p>
+                <p className="text-sm text-muted-foreground mt-1">Entre em contato com o administrador para criar diárias.</p>
               </div>
             )}
           </CardContent>
@@ -469,7 +469,7 @@ export function ClientDashboard() {
                   <div className="bg-white/10 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
                       <Users className="h-3 w-3" />
-                      Vagas
+                      Diárias
                     </div>
                     <p className="font-semibold text-sm">{selectedJob.job_assignments?.length || 0}/{selectedJob.required_workers} preenchidas</p>
                   </div>
@@ -509,7 +509,7 @@ export function ClientDashboard() {
                 <div>
                   <h3 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    Trabalhadores Atribuídos ({selectedJob.job_assignments?.length || 0})
+                    Prestadores Atribuídos ({selectedJob.job_assignments?.length || 0})
                   </h3>
 
                   {selectedJob.work_records && selectedJob.work_records.length > 0 ? (
@@ -635,8 +635,8 @@ export function ClientDashboard() {
                       <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-3">
                         <Users className="h-6 w-6 text-slate-400" />
                       </div>
-                      <p className="text-muted-foreground">Nenhum trabalhador atribuído ainda.</p>
-                      <p className="text-sm text-muted-foreground mt-1">Aguardando trabalhadores pegarem a vaga.</p>
+                      <p className="text-muted-foreground">Nenhum prestador atribuído ainda.</p>
+                      <p className="text-sm text-muted-foreground mt-1">Aguardando prestadores pegarem a diária.</p>
                     </div>
                   )}
                 </div>

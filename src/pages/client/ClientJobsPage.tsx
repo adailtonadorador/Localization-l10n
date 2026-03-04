@@ -202,7 +202,7 @@ export function ClientJobsPage() {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Users className="h-4 w-4" />
-              <span>{job.job_assignments?.length || 0}/{job.required_workers} trabalhador(es)</span>
+              <span>{job.job_assignments?.length || 0}/{job.required_workers} prestador(es)</span>
             </div>
             {job.skills_required?.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
@@ -240,8 +240,8 @@ export function ClientJobsPage() {
   return (
     <DashboardLayout>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Minhas Vagas</h2>
-        <p className="text-muted-foreground">Acompanhe as vagas criadas para sua empresa</p>
+        <h2 className="text-2xl font-bold mb-2">Minhas Diárias</h2>
+        <p className="text-muted-foreground">Acompanhe as diárias criadas para sua empresa</p>
       </div>
 
       <Tabs defaultValue="open">
@@ -262,8 +262,8 @@ export function ClientJobsPage() {
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Nenhuma vaga aberta.</p>
-                <p className="text-sm text-muted-foreground mt-1">Entre em contato com o administrador para criar novas vagas.</p>
+                <p className="text-muted-foreground">Nenhuma diária aberta.</p>
+                <p className="text-sm text-muted-foreground mt-1">Entre em contato com o administrador para criar novas diárias.</p>
               </CardContent>
             </Card>
           )}
@@ -279,7 +279,7 @@ export function ClientJobsPage() {
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Nenhuma vaga em andamento.</p>
+                <p className="text-muted-foreground">Nenhuma diária em andamento.</p>
               </CardContent>
             </Card>
           )}
@@ -295,7 +295,7 @@ export function ClientJobsPage() {
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Nenhuma vaga concluída.</p>
+                <p className="text-muted-foreground">Nenhuma diária concluída.</p>
               </CardContent>
             </Card>
           )}
@@ -311,7 +311,7 @@ export function ClientJobsPage() {
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Nenhuma vaga cancelada.</p>
+                <p className="text-muted-foreground">Nenhuma diária cancelada.</p>
               </CardContent>
             </Card>
           )}
@@ -359,7 +359,7 @@ export function ClientJobsPage() {
                   <div className="bg-white/10 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
                       <Users className="h-3 w-3" />
-                      Vagas
+                      Diárias
                     </div>
                     <p className="font-semibold text-sm">{selectedJob.job_assignments?.length || 0}/{selectedJob.required_workers} preenchidas</p>
                   </div>
@@ -399,7 +399,7 @@ export function ClientJobsPage() {
                 <div>
                   <h3 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    Trabalhadores Atribuídos ({selectedJob.job_assignments?.length || 0})
+                    Prestadores Atribuídos ({selectedJob.job_assignments?.length || 0})
                   </h3>
 
                   {selectedJob.work_records && selectedJob.work_records.length > 0 ? (
@@ -525,8 +525,8 @@ export function ClientJobsPage() {
                       <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-3">
                         <Users className="h-6 w-6 text-slate-400" />
                       </div>
-                      <p className="text-muted-foreground">Nenhum trabalhador atribuído ainda.</p>
-                      <p className="text-sm text-muted-foreground mt-1">Aguardando trabalhadores pegarem a vaga.</p>
+                      <p className="text-muted-foreground">Nenhum prestador atribuído ainda.</p>
+                      <p className="text-sm text-muted-foreground mt-1">Aguardando prestadores pegarem a diária.</p>
                     </div>
                   )}
                 </div>

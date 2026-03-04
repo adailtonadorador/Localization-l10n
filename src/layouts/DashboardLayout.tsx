@@ -47,8 +47,8 @@ const menuItems = {
   ],
   client: [
     { label: 'Dashboard', href: '/client', icon: LayoutDashboard },
-    { label: 'Minhas Vagas', href: '/client/jobs', icon: Briefcase },
-    { label: 'Trabalhadores', href: '/client/workers', icon: Users },
+    { label: 'Minhas Diárias', href: '/client/jobs', icon: Briefcase },
+    { label: 'Prestadores', href: '/client/workers', icon: Users },
     { label: 'Histórico', href: '/client/history', icon: Clock },
   ],
 };

@@ -97,18 +97,18 @@ export function ClientNewJobPage() {
       });
 
       if (insertError) {
-        setError("Erro ao criar vaga. Tente novamente.");
+        setError("Erro ao criar diária. Tente novamente.");
         setLoading(false);
         return;
       }
 
-      // Notifica workers sobre a nova vaga
+      // Notifica workers sobre a nova diária
       notifyNewJob(title.trim(), location.trim());
 
-      toast.success("Vaga criada com sucesso!");
+      toast.success("Diária criada com sucesso!");
       navigate("/client/jobs");
     } catch {
-      setError("Erro ao criar vaga. Tente novamente.");
+      setError("Erro ao criar diária. Tente novamente.");
       setLoading(false);
     }
   }
@@ -119,14 +119,14 @@ export function ClientNewJobPage() {
   return (
     <DashboardLayout>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Nova Vaga</h2>
+        <h2 className="text-2xl font-bold mb-2">Nova Diária</h2>
         <p className="text-muted-foreground">Publique uma nova oportunidade de trabalho</p>
       </div>
 
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle>Informações da Vaga</CardTitle>
-          <CardDescription>Preencha os detalhes da vaga de trabalho</CardDescription>
+          <CardTitle>Informações da Diária</CardTitle>
+          <CardDescription>Preencha os detalhes da diária de trabalho</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -137,7 +137,7 @@ export function ClientNewJobPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="title">Título da Vaga *</Label>
+              <Label htmlFor="title">Título da Diária *</Label>
               <Input
                 id="title"
                 placeholder="Ex: Auxiliar de Carga"
@@ -219,7 +219,7 @@ export function ClientNewJobPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="workers">Nº de Trabalhadores *</Label>
+                <Label htmlFor="workers">Nº de Prestadores *</Label>
                 <Input
                   id="workers"
                   type="number"
@@ -233,7 +233,7 @@ export function ClientNewJobPage() {
 
             <div className="space-y-2">
               <Label>Habilidades Necessárias</Label>
-              <p className="text-sm text-muted-foreground">Selecione as habilidades requeridas para esta vaga</p>
+              <p className="text-sm text-muted-foreground">Selecione as habilidades requeridas para esta diária</p>
               <div className="flex flex-wrap gap-2 mt-2">
                 {AVAILABLE_SKILLS.map((skill) => (
                   <Badge
@@ -250,7 +250,7 @@ export function ClientNewJobPage() {
 
             <div className="flex gap-4 pt-4">
               <Button type="submit" disabled={loading}>
-                {loading ? "Criando..." : "Criar Vaga"}
+                {loading ? "Criando..." : "Criar Diária"}
               </Button>
               <Button type="button" variant="outline" onClick={() => navigate("/client/jobs")} disabled={loading}>
                 Cancelar
