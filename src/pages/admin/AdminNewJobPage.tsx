@@ -30,22 +30,6 @@ import {
   X
 } from "lucide-react";
 
-const AVAILABLE_SKILLS = [
-  'Limpeza',
-  'Carga e Descarga',
-  'Atendimento ao Cliente',
-  'Vendas',
-  'Recepção',
-  'Estoque',
-  'Cozinha',
-  'Garçom',
-  'Segurança',
-  'Motorista',
-  'Entrega',
-  'Montagem',
-  'Eventos',
-  'Promoção',
-];
 
 interface Client {
   id: string;
@@ -89,7 +73,6 @@ export function AdminNewJobPage() {
   const [endTime, setEndTime] = useState("");
   const dailyRate = "110";
   const [requiredWorkers, setRequiredWorkers] = useState("1");
-  const [skills, setSkills] = useState<string[]>([]);
 
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -124,14 +107,6 @@ export function AdminNewJobPage() {
       console.error('Error loading clients:', error);
     } finally {
       setLoadingClients(false);
-    }
-  }
-
-  function toggleSkill(skill: string) {
-    if (skills.includes(skill)) {
-      setSkills(skills.filter(s => s !== skill));
-    } else {
-      setSkills([...skills, skill]);
     }
   }
 
@@ -296,7 +271,7 @@ export function AdminNewJobPage() {
         end_time: endTime,
         daily_rate: parseFloat(dailyRate),
         required_workers: parseInt(requiredWorkers) || 1,
-        skills_required: skills,
+        skills_required: [],
         status: 'open',
       });
 
@@ -617,33 +592,6 @@ export function AdminNewJobPage() {
                     </p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Habilidades</CardTitle>
-                <CardDescription>
-                  Selecione as habilidades necessárias
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {AVAILABLE_SKILLS.map((skill) => (
-                    <Badge
-                      key={skill}
-                      variant={skills.includes(skill) ? 'default' : 'outline'}
-                      className={`cursor-pointer transition-all ${
-                        skills.includes(skill)
-                          ? 'bg-primary hover:bg-primary/90'
-                          : 'hover:bg-slate-100'
-                      }`}
-                      onClick={() => !loading && toggleSkill(skill)}
-                    >
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
               </CardContent>
             </Card>
 

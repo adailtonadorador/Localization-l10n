@@ -17,7 +17,8 @@ const PROFILE_FIELDS: ProfileField[] = [
   { key: 'phone', label: 'Telefone', category: 'contact', required: true },
   { key: 'cpf', label: 'CPF', category: 'basic', required: true },
   { key: 'pix_key', label: 'Chave PIX', category: 'professional', required: true },
-  { key: 'skills', label: 'Habilidades', category: 'professional', required: true },
+  { key: 'funcao', label: 'Função', category: 'professional', required: true },
+  { key: 'availability', label: 'Disponibilidade', category: 'professional' },
   { key: 'cep', label: 'CEP', category: 'address' },
   { key: 'logradouro', label: 'Endereço', category: 'address' },
   { key: 'numero', label: 'Número', category: 'address' },
@@ -31,7 +32,8 @@ interface ProfileData {
   phone?: string | null;
   avatar_url?: string | null;
   cpf?: string | null;
-  skills?: string[] | null;
+  funcao?: string | null;
+  availability?: string[] | null;
   pix_key?: string | null;
   cep?: string | null;
   logradouro?: string | null;

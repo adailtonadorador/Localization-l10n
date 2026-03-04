@@ -26,7 +26,6 @@ import {
   Star,
   Briefcase,
   Shield,
-  CheckCircle,
   Edit3,
   Save,
   X,
@@ -35,7 +34,11 @@ import {
   Loader2,
   Home,
   Map,
-  Wallet
+  Wallet,
+  Clock,
+  Sun,
+  Sunset,
+  Moon
 } from "lucide-react";
 
 interface ViaCepResponse {
@@ -48,21 +51,10 @@ interface ViaCepResponse {
   erro?: boolean;
 }
 
-const AVAILABLE_SKILLS = [
-  'Limpeza',
-  'Carga e Descarga',
-  'Atendimento ao Cliente',
-  'Vendas',
-  'Recepção',
-  'Estoque',
-  'Cozinha',
-  'Garçom',
-  'Segurança',
-  'Motorista',
-  'Entrega',
-  'Montagem',
-  'Eventos',
-  'Promoção',
+const AVAILABILITY_OPTIONS = [
+  { value: 'manha', label: 'Manhã', description: '06:00 - 12:00' },
+  { value: 'tarde', label: 'Tarde', description: '12:00 - 18:00' },
+  { value: 'noite', label: 'Noite', description: '18:00 - 00:00' },
 ];
 
 function formatPhone(value: string) {
@@ -104,7 +96,7 @@ export function WorkerProfilePage() {
   const [phoneRecado, setPhoneRecado] = useState(formatPhone(workerProfile?.phone_recado || ''));
   const [birthDate, setBirthDate] = useState(workerProfile?.birth_date || '');
   const [funcao, setFuncao] = useState(workerProfile?.funcao || '');
-  const [skills, setSkills] = useState<string[]>(workerProfile?.skills || []);
+  const [availability, setAvailability] = useState<string[]>(workerProfile?.availability || []);
   const [pix, setPix] = useState(workerProfile?.pix_key || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
 
@@ -177,6 +169,10 @@ export function WorkerProfilePage() {
   }
 
   async function handleSave() {
+    if (!funcao) {
+      toast.error('A Função é obrigatória.');
+      return;
+    }
     if (phoneRecado && phone.replace(/\D/g, '') === phoneRecado.replace(/\D/g, '')) {
       toast.error('O Telefone para Recado deve ser diferente do Telefone principal.');
       return;
@@ -200,7 +196,7 @@ export function WorkerProfilePage() {
       const { error: workerError } = await supabaseUntyped
         .from('workers')
         .update({
-          skills,
+          availability,
           pix_key: pix || null,
           phone_recado: phoneRecado.replace(/\D/g, '') || null,
           birth_date: birthDate || null,
@@ -229,11 +225,11 @@ export function WorkerProfilePage() {
     }
   }
 
-  function toggleSkill(skill: string) {
-    if (skills.includes(skill)) {
-      setSkills(skills.filter(s => s !== skill));
+  function toggleAvailability(value: string) {
+    if (availability.includes(value)) {
+      setAvailability(availability.filter(v => v !== value));
     } else {
-      setSkills([...skills, skill]);
+      setAvailability([...availability, value]);
     }
   }
 
@@ -247,7 +243,7 @@ export function WorkerProfilePage() {
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Meu Perfil</h2>
-        <p className="text-muted-foreground">Gerencie suas informações pessoais e habilidades</p>
+        <p className="text-muted-foreground">Gerencie suas informações pessoais e disponibilidade</p>
       </div>
 
       {/* Profile Header Card */}
@@ -321,17 +317,17 @@ export function WorkerProfilePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-white">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <CheckCircle className="h-6 w-6 text-blue-600" />
+              <div className="p-3 bg-green-100 rounded-xl">
+                <Clock className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-blue-600">
-                  {workerProfile?.skills?.length || 0}
+                <p className="text-3xl font-bold text-green-600">
+                  {workerProfile?.availability?.length || 0}
                 </p>
-                <p className="text-sm text-muted-foreground">Habilidades</p>
+                <p className="text-sm text-muted-foreground">Turnos</p>
               </div>
             </div>
           </CardContent>
@@ -468,10 +464,10 @@ export function WorkerProfilePage() {
                 <div className="space-y-2">
                   <Label htmlFor="funcao" className="flex items-center gap-2">
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
-                    Função
+                    Função *
                   </Label>
                   <Select value={funcao} onValueChange={setFuncao} disabled={loading}>
-                    <SelectTrigger id="funcao" className="bg-white">
+                    <SelectTrigger id="funcao" className={`bg-white ${!funcao ? 'border-red-300' : ''}`}>
                       <SelectValue placeholder="Selecione sua função" />
                     </SelectTrigger>
                     <SelectContent>
@@ -480,6 +476,37 @@ export function WorkerProfilePage() {
                       <SelectItem value="Empacotador">Empacotador</SelectItem>
                     </SelectContent>
                   </Select>
+                  {!funcao && <p className="text-xs text-red-500">Campo obrigatório</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    Disponibilidade de Horário
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {AVAILABILITY_OPTIONS.map((opt) => {
+                      const isSelected = availability.includes(opt.value);
+                      const Icon = opt.value === 'manha' ? Sun : opt.value === 'tarde' ? Sunset : Moon;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => toggleAvailability(opt.value)}
+                          disabled={loading}
+                          className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-50 text-blue-700'
+                              : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                          }`}
+                        >
+                          <Icon className={`h-5 w-5 ${isSelected ? 'text-blue-500' : 'text-slate-400'}`} />
+                          <span className="text-sm font-medium">{opt.label}</span>
+                          <span className="text-[10px]">{opt.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -565,13 +592,13 @@ export function WorkerProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Skills Card */}
+        {/* Availability Card */}
         <Card className="border-0 shadow-sm">
           <CardHeader className="border-b bg-slate-50/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-slate-600" />
-                <CardTitle className="text-lg">Habilidades Profissionais</CardTitle>
+                <Clock className="h-5 w-5 text-slate-600" />
+                <CardTitle className="text-lg">Disponibilidade</CardTitle>
               </div>
               {!editing && (
                 <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="gap-1">
@@ -581,42 +608,60 @@ export function WorkerProfilePage() {
               )}
             </div>
             <CardDescription>
-              {editing ? 'Clique para selecionar ou remover habilidades' : 'Suas competências profissionais'}
+              {editing ? 'Selecione seus turnos disponíveis' : 'Seus horários de disponibilidade'}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             {editing ? (
-              <div className="flex flex-wrap gap-2">
-                {AVAILABLE_SKILLS.map((skill) => (
-                  <Badge
-                    key={skill}
-                    variant={skills.includes(skill) ? 'default' : 'outline'}
-                    className={`cursor-pointer transition-all ${
-                      skills.includes(skill)
-                        ? 'bg-blue-500 hover:bg-blue-600'
-                        : 'hover:bg-slate-100'
-                    }`}
-                    onClick={() => toggleSkill(skill)}
-                  >
-                    {skills.includes(skill) && <CheckCircle className="h-3 w-3 mr-1" />}
-                    {skill}
-                  </Badge>
-                ))}
+              <div className="grid grid-cols-3 gap-3">
+                {AVAILABILITY_OPTIONS.map((opt) => {
+                  const isSelected = availability.includes(opt.value);
+                  const Icon = opt.value === 'manha' ? Sun : opt.value === 'tarde' ? Sunset : Moon;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => toggleAvailability(opt.value)}
+                      disabled={loading}
+                      className={`flex flex-col items-center gap-1.5 p-4 rounded-xl border-2 transition-all ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                      }`}
+                    >
+                      <Icon className={`h-6 w-6 ${isSelected ? 'text-blue-500' : 'text-slate-400'}`} />
+                      <span className="font-medium">{opt.label}</span>
+                      <span className="text-xs">{opt.description}</span>
+                    </button>
+                  );
+                })}
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {workerProfile?.skills && workerProfile.skills.length > 0 ? (
-                  workerProfile.skills.map((skill) => (
-                    <Badge key={skill} className="bg-blue-100 text-blue-700 hover:bg-blue-100">
-                      {skill}
-                    </Badge>
-                  ))
+              <div className="grid grid-cols-3 gap-3">
+                {workerProfile?.availability && workerProfile.availability.length > 0 ? (
+                  AVAILABILITY_OPTIONS.map((opt) => {
+                    const isSelected = workerProfile.availability.includes(opt.value);
+                    const Icon = opt.value === 'manha' ? Sun : opt.value === 'tarde' ? Sunset : Moon;
+                    return (
+                      <div
+                        key={opt.value}
+                        className={`flex flex-col items-center gap-1.5 p-4 rounded-xl border ${
+                          isSelected
+                            ? 'border-blue-200 bg-blue-50 text-blue-700'
+                            : 'border-slate-100 bg-slate-50 text-slate-300'
+                        }`}
+                      >
+                        <Icon className={`h-6 w-6 ${isSelected ? 'text-blue-500' : 'text-slate-300'}`} />
+                        <span className={`font-medium text-sm ${isSelected ? '' : 'text-slate-400'}`}>{opt.label}</span>
+                      </div>
+                    );
+                  })
                 ) : (
-                  <div className="w-full text-center py-8">
-                    <Briefcase className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-muted-foreground">Nenhuma habilidade cadastrada.</p>
+                  <div className="col-span-3 text-center py-8">
+                    <Clock className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nenhuma disponibilidade cadastrada.</p>
                     <Button variant="outline" size="sm" className="mt-3" onClick={() => setEditing(true)}>
-                      Adicionar Habilidades
+                      Definir Disponibilidade
                     </Button>
                   </div>
                 )}

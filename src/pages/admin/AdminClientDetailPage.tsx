@@ -40,12 +40,6 @@ import {
 } from "lucide-react";
 import { LocationMap } from "@/components/ui/map";
 
-const AVAILABLE_SKILLS = [
-  'Limpeza', 'Carga e Descarga', 'Atendimento ao Cliente', 'Vendas',
-  'Recepção', 'Estoque', 'Cozinha', 'Garçom', 'Segurança',
-  'Motorista', 'Entrega', 'Montagem', 'Eventos', 'Promoção',
-];
-
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
@@ -125,7 +119,6 @@ export function AdminClientDetailPage() {
   const [endTime, setEndTime] = useState("");
   const [dailyRate, setDailyRate] = useState("");
   const [requiredWorkers, setRequiredWorkers] = useState("1");
-  const [skills, setSkills] = useState<string[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
@@ -326,14 +319,6 @@ export function AdminClientDetailPage() {
     return days;
   }
 
-  function toggleSkill(skill: string) {
-    if (skills.includes(skill)) {
-      setSkills(skills.filter(s => s !== skill));
-    } else {
-      setSkills([...skills, skill]);
-    }
-  }
-
   function calculateHours(start: string, end: string): number {
     if (!start || !end) return 0;
     const [startH, startM] = start.split(':').map(Number);
@@ -352,7 +337,6 @@ export function AdminClientDetailPage() {
     setEndTime("");
     setDailyRate("");
     setRequiredWorkers("1");
-    setSkills([]);
     setFormError(null);
   }
 
@@ -402,7 +386,7 @@ export function AdminClientDetailPage() {
         end_time: endTime,
         daily_rate: parseFloat(dailyRate),
         required_workers: parseInt(requiredWorkers) || 1,
-        skills_required: skills,
+        skills_required: [],
         status: 'open',
       });
 
@@ -950,24 +934,6 @@ export function AdminClientDetailPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Habilidades</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {AVAILABLE_SKILLS.map((skill) => (
-                      <Badge
-                        key={skill}
-                        variant={skills.includes(skill) ? 'default' : 'outline'}
-                        className={`cursor-pointer text-xs ${
-                          skills.includes(skill) ? 'bg-primary' : 'hover:bg-slate-100'
-                        }`}
-                        onClick={() => !formLoading && toggleSkill(skill)}
-                      >
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Summary */}
                 {selectedDates.length > 0 && dailyRate && (
                   <Card className="bg-slate-50 border-0">
@@ -1068,17 +1034,6 @@ export function AdminClientDetailPage() {
                     </p>
                   </div>
                 </div>
-
-                {selectedJob.skills_required?.length > 0 && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">Habilidades</p>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedJob.skills_required.map((skill, i) => (
-                        <Badge key={i} variant="secondary" className="text-xs">{skill}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Local</p>

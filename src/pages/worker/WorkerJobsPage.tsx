@@ -107,14 +107,14 @@ export function WorkerJobsPage() {
           .in('status', ['pending', 'confirmed']);
 
         // Count assignments per job
-        const assignmentCounts = new Map();
+        const assignmentCounts: Record<string, number> = {};
         (activeAssignments || []).forEach((a: { job_id: string }) => {
-          assignmentCounts.set(a.job_id, (assignmentCounts.get(a.job_id) || 0) + 1);
+          assignmentCounts[a.job_id] = (assignmentCounts[a.job_id] || 0) + 1;
         });
 
         // Only show jobs with available slots
         const availableJobs = jobsData.filter((j: Job) => {
-          const activeCount = assignmentCounts.get(j.id) || 0;
+          const activeCount = assignmentCounts[j.id] || 0;
           return activeCount < j.required_workers;
         });
 
@@ -574,13 +574,6 @@ export function WorkerJobsPage() {
                     {job.description && (
                       <p className="text-slate-500 mt-2 line-clamp-2">{job.description}</p>
                     )}
-                    {job.skills_required?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {job.skills_required.map((skill, index) => (
-                          <Badge key={index} variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">{skill}</Badge>
-                        ))}
-                      </div>
-                    )}
                   </div>
                   <div className="flex items-center justify-between mt-4 pt-4 border-t">
                     <span className="text-lg font-bold text-blue-700">R$ {job.daily_rate}/dia</span>
@@ -690,17 +683,6 @@ export function WorkerJobsPage() {
                   </div>
                 )}
 
-                {/* Skills */}
-                {selectedJob.skills_required?.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-sm text-muted-foreground mb-2">Habilidades Requeridas</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedJob.skills_required.map((skill, index) => (
-                        <Badge key={index} variant="secondary" className="bg-slate-100">{skill}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* All dates */}
                 <div>

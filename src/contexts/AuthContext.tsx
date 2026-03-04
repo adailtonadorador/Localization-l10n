@@ -19,6 +19,7 @@ interface WorkerProfile {
   id: string
   cpf: string
   skills: string[]
+  availability: string[]
   rating: number
   total_jobs: number
   documents_verified: boolean
