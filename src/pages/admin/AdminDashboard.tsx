@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
-import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNotifications } from "@/hooks/useNotifications";
-import { sendPushNotification } from "@/lib/notifications";
 import { supabaseUntyped } from "@/lib/supabase";
 import { runAutoUpdates } from "@/lib/job-status-updater";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,8 +20,7 @@ import {
   Calendar,
   AlertTriangle,
   Clock,
-  FileText,
-  Bell
+  FileText
 } from "lucide-react";
 
 interface Stats {
@@ -83,30 +78,6 @@ interface RecentWithdrawal {
 export function AdminDashboard() {
   const location = useLocation();
   const { profile } = useAuth();
-  const { isSubscribed } = useNotifications();
-  const [testingNotification, setTestingNotification] = useState(false);
-
-  async function handleTestNotification() {
-    if (!profile?.id) return;
-    setTestingNotification(true);
-    try {
-      const sent = await sendPushNotification({
-        title: '🔔 Teste de Notificação',
-        body: 'As notificações push estão funcionando!',
-        userIds: [profile.id],
-        type: 'general',
-      });
-      if (sent) {
-        toast.success('Notificação enviada! Verifique se chegou.');
-      } else {
-        toast.error('Falha ao enviar. Verifique os logs do Edge Function no Supabase.');
-      }
-    } catch {
-      toast.error('Erro ao testar notificação.');
-    }
-    setTestingNotification(false);
-  }
-
   const [stats, setStats] = useState<Stats>({
     totalWorkers: 0,
     totalClients: 0,
@@ -316,31 +287,6 @@ export function AdminDashboard() {
 
   return (
     <DashboardLayout>
-      {/* Notification Prompt / Test */}
-      {isSubscribed ? (
-        <div className="mb-6 flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-          <div className="flex items-center gap-2 text-sm text-green-700">
-            <Bell className="h-4 w-4 text-green-600" />
-            <span>Notificações push ativas</span>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-green-300 text-green-700 hover:bg-green-100"
-            onClick={handleTestNotification}
-            disabled={testingNotification}
-          >
-            {testingNotification ? 'Enviando...' : 'Testar'}
-          </Button>
-        </div>
-      ) : (
-        <NotificationPrompt
-          variant="banner"
-          className="mb-6 rounded-xl"
-          description="Ative as notificações para ser alertado quando um prestador aceitar uma diária."
-        />
-      )}
-
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-slate-900">Painel Administrativo</h2>

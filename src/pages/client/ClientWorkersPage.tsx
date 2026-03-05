@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/dialog";
 import { Calendar, Star, Briefcase, Phone, Mail, Users, MapPin, Clock } from "lucide-react";
 
-interface JobApplication {
+interface WorkerAssignment {
   id: string;
-  applied_at: string;
+  status: string;
+  created_at: string;
   job_id: string;
   worker_id: string;
   workers: {
@@ -23,7 +24,7 @@ interface JobApplication {
     cpf: string;
     rating: number;
     total_jobs: number;
-    skills: string[];
+    funcao: string | null;
     users: {
       name: string;
       email: string;
@@ -44,18 +45,18 @@ interface JobApplication {
 
 export function ClientWorkersPage() {
   const { profile } = useAuth();
-  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [assignments, setAssignments] = useState<WorkerAssignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedWorker, setSelectedWorker] = useState<JobApplication | null>(null);
+  const [selectedWorker, setSelectedWorker] = useState<WorkerAssignment | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     if (profile?.id) {
-      loadApplications();
+      loadAssignments();
     }
   }, [profile?.id]);
 
-  async function loadApplications() {
+  async function loadAssignments() {
     setLoading(true);
     try {
       // Buscar IDs das vagas do cliente
@@ -67,32 +68,33 @@ export function ClientWorkersPage() {
       const jobIds = (jobsData || []).map((j: { id: string }) => j.id);
 
       if (jobIds.length === 0) {
-        setApplications([]);
+        setAssignments([]);
         setLoading(false);
         return;
       }
 
-      // Buscar trabalhadores atribuídos às vagas
+      // Buscar trabalhadores atribuídos às vagas (confirmed/pending/in_progress)
       const { data } = await supabaseUntyped
-        .from('job_applications')
+        .from('job_assignments')
         .select(`
-          *,
+          id, status, created_at, job_id, worker_id,
           workers (
             id,
             cpf,
             rating,
             total_jobs,
-            skills,
+            funcao,
             users (name, email, phone, avatar_url)
           ),
           jobs (id, title, date, daily_rate, location, start_time, end_time)
         `)
         .in('job_id', jobIds)
-        .order('applied_at', { ascending: false });
+        .in('status', ['pending', 'confirmed', 'in_progress', 'checked_in'])
+        .order('created_at', { ascending: false });
 
-      setApplications(data || []);
+      setAssignments(data || []);
     } catch (error) {
-      console.error('Error loading applications:', error);
+      console.error('Error loading assignments:', error);
     } finally {
       setLoading(false);
     }
@@ -109,21 +111,21 @@ export function ClientWorkersPage() {
     return timeStr?.slice(0, 5) || '';
   }
 
-  function openWorkerDialog(application: JobApplication) {
-    setSelectedWorker(application);
+  function openWorkerDialog(assignment: WorkerAssignment) {
+    setSelectedWorker(assignment);
     setDialogOpen(true);
   }
 
   // Agrupar trabalhadores por data
   const groupedByDate = useMemo(() => {
-    const grouped: Record<string, JobApplication[]> = {};
+    const grouped: Record<string, WorkerAssignment[]> = {};
 
-    applications.forEach(app => {
-      const date = app.jobs?.date || 'sem-data';
+    assignments.forEach(a => {
+      const date = a.jobs?.date || 'sem-data';
       if (!grouped[date]) {
         grouped[date] = [];
       }
-      grouped[date].push(app);
+      grouped[date].push(a);
     });
 
     // Ordenar por data (mais próxima primeiro)
@@ -135,21 +137,21 @@ export function ClientWorkersPage() {
 
     return sortedDates.map(date => ({
       date,
-      applications: grouped[date]
+      assignments: grouped[date]
     }));
-  }, [applications]);
+  }, [assignments]);
 
   // Componente de linha compacta para cada trabalhador
-  function WorkerRow({ application }: { application: JobApplication }) {
-    const worker = application.workers;
-    const job = application.jobs;
+  function WorkerRow({ assignment }: { assignment: WorkerAssignment }) {
+    const worker = assignment.workers;
+    const job = assignment.jobs;
 
     const initials = worker?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??';
 
     return (
       <div
         className="flex items-center gap-4 p-4 bg-card border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-        onClick={() => openWorkerDialog(application)}
+        onClick={() => openWorkerDialog(assignment)}
       >
         {/* Avatar */}
         <Avatar className="h-10 w-10 shrink-0">
@@ -196,9 +198,9 @@ export function ClientWorkersPage() {
   }
 
   // Componente de grupo por data
-  function DateGroup({ date, applications: apps }: {
+  function DateGroup({ date, items }: {
     date: string;
-    applications: JobApplication[];
+    items: WorkerAssignment[];
   }) {
     return (
       <div className="mb-6">
@@ -208,12 +210,12 @@ export function ClientWorkersPage() {
             {date === 'sem-data' ? 'Sem data definida' : formatDateWithWeekday(date)}
           </h3>
           <Badge variant="outline" className="ml-2">
-            {apps.length} {apps.length === 1 ? 'prestador' : 'prestadores'}
+            {items.length} {items.length === 1 ? 'prestador' : 'prestadores'}
           </Badge>
         </div>
         <div className="space-y-2 pl-7">
-          {apps.map((application) => (
-            <WorkerRow key={application.id} application={application} />
+          {items.map((a) => (
+            <WorkerRow key={a.id} assignment={a} />
           ))}
         </div>
       </div>
@@ -278,19 +280,13 @@ export function ClientWorkersPage() {
               </div>
             </div>
 
-            {/* Skills */}
-            {worker?.skills && worker.skills.length > 0 && (
+            {/* Função */}
+            {worker?.funcao && (
               <div className="space-y-3">
                 <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-                  Habilidades
+                  Função
                 </h4>
-                <div className="flex flex-wrap gap-2">
-                  {worker.skills.map((skill, index) => (
-                    <Badge key={index} variant="secondary">
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
+                <Badge variant="secondary">{worker.funcao}</Badge>
               </div>
             )}
 
@@ -353,13 +349,13 @@ export function ClientWorkersPage() {
       </div>
 
       {/* Resumo */}
-      {applications.length > 0 && (
+      {assignments.length > 0 && (
         <Card className="mb-6">
           <CardContent className="py-4">
             <div className="flex items-center gap-3">
               <Users className="w-5 h-5 text-primary" />
               <span className="text-sm">
-                <strong>{applications.length}</strong> {applications.length === 1 ? 'prestador atribuído' : 'prestadores atribuídos'} em{' '}
+                <strong>{assignments.length}</strong> {assignments.length === 1 ? 'prestador atribuído' : 'prestadores atribuídos'} em{' '}
                 <strong>{groupedByDate.length}</strong> {groupedByDate.length === 1 ? 'dia' : 'dias'}
               </span>
             </div>
@@ -374,7 +370,7 @@ export function ClientWorkersPage() {
             <DateGroup
               key={group.date}
               date={group.date}
-              applications={group.applications}
+              items={group.assignments}
             />
           ))}
         </div>
