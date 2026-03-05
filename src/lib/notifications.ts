@@ -135,3 +135,26 @@ export async function notifyWorkerApproved(workerId: string): Promise<void> {
     type: 'approval',
   }).catch(err => console.error('[Notifications] Erro ao notificar aprovação:', err));
 }
+
+/**
+ * Notifica admins sobre saída antecipada de um prestador
+ */
+export async function notifyAdminEarlyCheckout(
+  workerName: string,
+  jobTitle: string,
+  workDate: string,
+  details: string
+): Promise<void> {
+  const formattedDate = new Date(workDate + 'T00:00:00').toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+  });
+
+  sendPushNotification({
+    title: '⚠️ Saída Antecipada',
+    body: `${workerName} — "${jobTitle}" (${formattedDate}). ${details}`,
+    url: '/admin/monitoring',
+    targetRole: 'admin',
+    type: 'general',
+  }).catch(err => console.error('[Notifications] Erro ao notificar saída antecipada:', err));
+}

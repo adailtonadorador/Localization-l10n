@@ -122,11 +122,67 @@ export async function autoCompleteStaleWorkRecords() {
 }
 
 /**
+ * Auto-complete jobs when all work_records for the job's last date are completed or absent.
+ * Changes job status from 'assigned'/'in_progress' to 'completed'.
+ */
+export async function autoCompleteJobsWithFinishedRecords() {
+  try {
+    const { data: activeJobs, error } = await supabaseUntyped
+      .from('jobs')
+      .select('id, date, dates, work_records(id, status, work_date)')
+      .in('status', ['assigned', 'in_progress']);
+
+    if (error || !activeJobs) return;
+
+    const jobsToComplete: string[] = [];
+
+    for (const job of activeJobs) {
+      const records = job.work_records || [];
+      if (records.length === 0) continue;
+
+      // Get the latest date for this job
+      const allDates: string[] = [];
+      if (job.date) allDates.push(job.date);
+      if (job.dates && Array.isArray(job.dates)) {
+        allDates.push(...job.dates);
+      }
+      const latestDate = allDates.sort().pop();
+      if (!latestDate) continue;
+
+      // Get records for the latest date
+      const latestDateRecords = records.filter(
+        (r: { work_date: string }) => r.work_date === latestDate
+      );
+      if (latestDateRecords.length === 0) continue;
+
+      // Check if ALL records for the latest date are completed or absent
+      const allFinished = latestDateRecords.every(
+        (r: { status: string }) => r.status === 'completed' || r.status === 'absent'
+      );
+
+      if (allFinished) {
+        jobsToComplete.push(job.id);
+      }
+    }
+
+    if (jobsToComplete.length > 0) {
+      await supabaseUntyped
+        .from('jobs')
+        .update({ status: 'completed' })
+        .in('id', jobsToComplete);
+    }
+  } catch (err) {
+    console.error('Error auto-completing jobs:', err);
+  }
+}
+
+/**
  * Run all auto-update routines. Call this on page mount.
  */
 export async function runAutoUpdates() {
   await Promise.all([
     autoUpdateJobStatuses(),
     autoCompleteStaleWorkRecords(),
+    autoCompleteJobsWithFinishedRecords(),
   ]);
 }

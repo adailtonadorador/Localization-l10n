@@ -10,7 +10,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Eye, Users, Calendar, Clock, Phone, Mail, Star, FileSignature, User } from "lucide-react";
+import { Eye, Users, Calendar, Clock, Phone, Mail, Star, FileSignature, User, AlertCircle } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface WorkRecord {
@@ -21,6 +21,7 @@ interface WorkRecord {
   signature_data: string | null;
   signed_at: string | null;
   status: string;
+  notes: string | null;
   workers: {
     id: string;
     rating: number;
@@ -80,6 +81,7 @@ export function ClientJobsPage() {
             signature_data,
             signed_at,
             status,
+            notes,
             workers (
               id,
               rating,
@@ -491,6 +493,14 @@ export function ClientJobsPage() {
                                       <span className="font-medium">{formatDateTime(record.check_out)}</span>
                                     </div>
                                   </div>
+
+                                  {/* Observações (saída antecipada, etc) */}
+                                  {record.notes && record.notes.includes('Saída antecipada') && (
+                                    <div className="flex items-center gap-2 mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-xs">
+                                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                                      <span>{record.notes}</span>
+                                    </div>
+                                  )}
 
                                   {/* Assinatura */}
                                   {record.signature_data && (

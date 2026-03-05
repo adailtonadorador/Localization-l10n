@@ -864,6 +864,12 @@ export function AdminMonitoringPage() {
                                         Sem registro de saída
                                       </span>
                                     )}
+                                    {record.notes && record.notes.includes('Saída antecipada') && (
+                                      <span className="text-amber-600 flex items-center gap-1 text-[10px]">
+                                        <AlertCircle className="h-3 w-3" />
+                                        {record.notes}
+                                      </span>
+                                    )}
                                   </div>
                                 ) : record.status === 'absent' || record.status === 'no_show' ? (
                                   <span className="text-red-600 flex items-center gap-1">
@@ -1249,11 +1255,13 @@ export function AdminMonitoringPage() {
                               </div>
                             </div>
 
-                            {/* Observação de registro automático */}
+                            {/* Observações */}
                             {record.notes && (
                               <div className={`p-3 rounded-lg border text-sm ${
                                 record.notes.includes('automaticamente')
                                   ? 'bg-orange-50 border-orange-200 text-orange-700'
+                                  : record.notes.includes('Saída antecipada')
+                                  ? 'bg-amber-50 border-amber-200 text-amber-700'
                                   : 'bg-slate-50 border-slate-200 text-muted-foreground'
                               }`}>
                                 <div className="flex items-center gap-2">

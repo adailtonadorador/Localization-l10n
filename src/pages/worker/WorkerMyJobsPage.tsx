@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PhotoCaptureDialog } from "@/components/PhotoCaptureDialog";
 import { WithdrawalDialog } from "@/components/WithdrawalDialog";
-import { notifyJobAvailableAfterWithdrawal } from "@/lib/notifications";
+import { notifyJobAvailableAfterWithdrawal, notifyAdminEarlyCheckout } from "@/lib/notifications";
 import {
   Clock, MapPin, CheckCircle, Calendar, Building, Play, LogOut,
   Briefcase, ArrowRight, XCircle, ChevronDown, ChevronUp, DollarSign,
@@ -150,20 +150,49 @@ export function WorkerMyJobsPage() {
         if (error) throw error;
         toast.success('Entrada registrada com sucesso!');
       } else {
+        const checkOutTime = new Date();
+        const job = selectedRecord.jobs;
+        let earlyCheckoutNote = '';
+
+        // Detect early checkout
+        if (job?.end_time) {
+          const [endH, endM] = job.end_time.split(':').map(Number);
+          const expectedEnd = new Date();
+          expectedEnd.setHours(endH, endM, 0, 0);
+
+          if (checkOutTime < expectedEnd) {
+            const checkOutStr = checkOutTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const expectedStr = job.end_time.slice(0, 5);
+            earlyCheckoutNote = `Saída antecipada: ${checkOutStr} (previsto: ${expectedStr})`;
+          }
+        }
+
         const { error } = await supabaseUntyped
           .from('work_records')
           .update({
-            check_out: new Date().toISOString(),
+            check_out: checkOutTime.toISOString(),
             signature_data: photoData,
-            signed_at: new Date().toISOString(),
+            signed_at: checkOutTime.toISOString(),
             status: 'completed',
             ...(location && {
               check_out_latitude: location.latitude,
               check_out_longitude: location.longitude,
             }),
+            ...(earlyCheckoutNote && { notes: earlyCheckoutNote }),
           })
           .eq('id', selectedRecord.id);
         if (error) throw error;
+
+        // Notify admin about early checkout
+        if (earlyCheckoutNote) {
+          notifyAdminEarlyCheckout(
+            profile?.name || 'Prestador',
+            job?.title || '',
+            selectedRecord.work_date,
+            earlyCheckoutNote
+          );
+        }
+
         toast.success('Saída registrada com sucesso!');
       }
       setPhotoCaptureOpen(false);
