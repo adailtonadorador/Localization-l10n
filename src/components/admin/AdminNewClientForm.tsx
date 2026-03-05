@@ -51,6 +51,9 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
   const [companyName, setCompanyName] = useState("");
   const [fantasia, setFantasia] = useState("");
 
+  // Branch
+  const [filial, setFilial] = useState("");
+
   // Address
   const [cep, setCep] = useState("");
   const [logradouro, setLogradouro] = useState("");
@@ -220,6 +223,11 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
       return;
     }
 
+    if (!filial || isNaN(parseInt(filial))) {
+      setError("Código da filial é obrigatório");
+      return;
+    }
+
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
       setError("Telefone deve ter pelo menos 10 dígitos");
@@ -334,6 +342,7 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
           cnpj: cleanCnpj,
           company_name: companyName,
           fantasia: fantasia || null,
+          filial: parseInt(filial),
           address: fullAddress,
           cep: cleanCep,
           logradouro,
@@ -520,16 +529,31 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="fantasia" className="text-sm font-medium">Nome Fantasia</Label>
-          <Input
-            id="fantasia"
-            placeholder="Nome Fantasia"
-            value={fantasia}
-            onChange={(e) => setFantasia(e.target.value)}
-            disabled={loading}
-            className="h-10 bg-white"
-          />
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2 space-y-2">
+            <Label htmlFor="fantasia" className="text-sm font-medium">Nome Fantasia</Label>
+            <Input
+              id="fantasia"
+              placeholder="Nome Fantasia"
+              value={fantasia}
+              onChange={(e) => setFantasia(e.target.value)}
+              disabled={loading}
+              className="h-10 bg-white"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="filial" className="text-sm font-medium">Filial *</Label>
+            <Input
+              id="filial"
+              type="number"
+              placeholder="001"
+              value={filial}
+              onChange={(e) => setFilial(e.target.value)}
+              required
+              disabled={loading}
+              className="h-10 bg-white"
+            />
+          </div>
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
-import { notifyNewJob } from "@/lib/notifications";
+import { notifyNewJob, notifyJobAssignment } from "@/lib/notifications";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,10 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  Search,
+  Star,
+  UserPlus,
 } from "lucide-react";
 
 
@@ -46,6 +49,17 @@ interface Client {
   users: {
     name: string;
     email: string;
+  };
+}
+
+interface AvailableWorker {
+  id: string;
+  funcao: string;
+  rating: number;
+  total_jobs: number;
+  users: {
+    name: string;
+    phone: string | null;
   };
 }
 
@@ -73,6 +87,12 @@ export function AdminNewJobPage() {
   const [endTime, setEndTime] = useState("");
   const dailyRate = "110";
   const [requiredWorkers, setRequiredWorkers] = useState("1");
+
+  // Worker assignment state
+  const [availableWorkers, setAvailableWorkers] = useState<AvailableWorker[]>([]);
+  const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
+  const [workerSearch, setWorkerSearch] = useState("");
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
 
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -109,6 +129,54 @@ export function AdminNewJobPage() {
       setLoadingClients(false);
     }
   }
+
+  // Load workers when title or client changes
+  useEffect(() => {
+    const clientUf = clients.find(c => c.id === clientId)?.uf;
+    if (title && clientUf) {
+      loadAvailableWorkers(title, clientUf);
+    } else {
+      setAvailableWorkers([]);
+    }
+    setSelectedWorkerIds([]);
+  }, [title, clientId]);
+
+  async function loadAvailableWorkers(funcao: string, uf: string) {
+    setLoadingWorkers(true);
+    try {
+      const { data } = await supabaseUntyped
+        .from('workers')
+        .select('id, funcao, rating, total_jobs, users(name, phone)')
+        .eq('approval_status', 'approved')
+        .eq('is_active', true)
+        .eq('funcao', funcao)
+        .eq('uf', uf);
+
+      setAvailableWorkers(data || []);
+    } catch (error) {
+      console.error('Error loading workers:', error);
+    } finally {
+      setLoadingWorkers(false);
+    }
+  }
+
+  function toggleWorkerSelection(workerId: string) {
+    setSelectedWorkerIds(prev => {
+      if (prev.includes(workerId)) {
+        return prev.filter(id => id !== workerId);
+      }
+      const maxWorkers = parseInt(requiredWorkers) || 1;
+      if (prev.length >= maxWorkers) {
+        toast.error(`Máximo de ${maxWorkers} prestador(es) para esta vaga`);
+        return prev;
+      }
+      return [...prev, workerId];
+    });
+  }
+
+  const filteredWorkers = availableWorkers.filter(w =>
+    w.users?.name?.toLowerCase().includes(workerSearch.toLowerCase())
+  );
 
   function getDaysInMonth(month: number, year: number) {
     return new Date(year, month + 1, 0).getDate();
@@ -257,33 +325,70 @@ export function AdminNewJobPage() {
     }
 
     try {
-      // Create a single job with multiple dates
-      const { error: insertError } = await supabaseUntyped.from('jobs').insert({
-        client_id: clientId,
-        title: title.trim(),
-        description: description.trim() || null,
-        location: fullLocation,
-        uf: selectedClient?.uf || null,
-        city: selectedClient?.cidade || null,
-        date: selectedDates[0], // Keep first date for backward compatibility
-        dates: selectedDates, // Array with all selected dates
-        start_time: startTime,
-        end_time: endTime,
-        daily_rate: parseFloat(dailyRate),
-        required_workers: parseInt(requiredWorkers) || 1,
-        skills_required: [],
-        status: 'open',
-      });
+      const numRequired = parseInt(requiredWorkers) || 1;
+      const allSlotsFilled = selectedWorkerIds.length >= numRequired;
+      const initialStatus = allSlotsFilled ? 'assigned' : 'open';
 
-      if (insertError) {
+      // Create a single job with multiple dates
+      const { data: newJob, error: insertError } = await supabaseUntyped
+        .from('jobs')
+        .insert({
+          client_id: clientId,
+          title: title.trim(),
+          description: description.trim() || null,
+          location: fullLocation,
+          uf: selectedClient?.uf || null,
+          city: selectedClient?.cidade || null,
+          date: selectedDates[0],
+          dates: selectedDates,
+          start_time: startTime,
+          end_time: endTime,
+          daily_rate: parseFloat(dailyRate),
+          required_workers: numRequired,
+          skills_required: [],
+          status: initialStatus,
+        })
+        .select('id')
+        .single();
+
+      if (insertError || !newJob) {
         console.error('Insert error:', insertError);
         setError("Erro ao criar vaga. Tente novamente.");
         setLoading(false);
         return;
       }
 
-      // Notifica workers sobre a nova vaga
-      notifyNewJob(title.trim(), selectedClient?.cidade || undefined);
+      // Create assignments and work_records for pre-assigned workers
+      if (selectedWorkerIds.length > 0) {
+        // Create job_assignments
+        const assignments = selectedWorkerIds.map(workerId => ({
+          job_id: newJob.id,
+          worker_id: workerId,
+          status: 'confirmed',
+        }));
+        await supabaseUntyped.from('job_assignments').insert(assignments);
+
+        // Create work_records for each worker x each date
+        const workRecords = selectedWorkerIds.flatMap(workerId =>
+          selectedDates.map(date => ({
+            job_id: newJob.id,
+            worker_id: workerId,
+            work_date: date,
+            status: 'pending',
+          }))
+        );
+        await supabaseUntyped.from('work_records').insert(workRecords);
+
+        // Notify each assigned worker
+        for (const workerId of selectedWorkerIds) {
+          notifyJobAssignment(workerId, title.trim(), selectedDates[0]);
+        }
+      }
+
+      // Only notify other workers if there are unfilled slots
+      if (!allSlotsFilled) {
+        notifyNewJob(title.trim(), selectedClient?.cidade || undefined);
+      }
 
       toast.success("Vaga criada com sucesso!");
       navigate("/admin");
@@ -591,6 +696,104 @@ export function AdminNewJobPage() {
                       Jornada: {calculateHours(startTime, endTime).toFixed(1)}h
                     </p>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Worker Assignment (Optional) */}
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <UserPlus className="h-5 w-5 text-primary" />
+                  Atribuir Prestadores
+                </CardTitle>
+                <CardDescription>
+                  Opcional — selecione prestadores para atribuir à vaga
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {!title || !clientId ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Selecione a empresa e o título da vaga para ver prestadores disponíveis
+                  </p>
+                ) : loadingWorkers ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                  </div>
+                ) : availableWorkers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum prestador aprovado com função "{title}"
+                  </p>
+                ) : (
+                  <>
+                    {/* Selected count */}
+                    {selectedWorkerIds.length > 0 && (
+                      <div className="flex items-center justify-between px-3 py-2 bg-blue-50 rounded-lg">
+                        <span className="text-sm font-medium text-blue-700">
+                          {selectedWorkerIds.length} de {requiredWorkers} selecionado(s)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedWorkerIds([])}
+                          className="text-xs text-blue-600 hover:text-blue-800"
+                        >
+                          Limpar
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Search */}
+                    {availableWorkers.length > 3 && (
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar por nome..."
+                          value={workerSearch}
+                          onChange={(e) => setWorkerSearch(e.target.value)}
+                          className="pl-9 bg-white h-9 text-sm"
+                        />
+                      </div>
+                    )}
+
+                    {/* Worker list */}
+                    <div className="max-h-60 overflow-y-auto space-y-1">
+                      {filteredWorkers.map((worker) => {
+                        const isSelected = selectedWorkerIds.includes(worker.id);
+                        return (
+                          <div
+                            key={worker.id}
+                            onClick={() => toggleWorkerSelection(worker.id)}
+                            className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors ${
+                              isSelected ? 'bg-blue-50 border border-blue-200' : 'hover:bg-slate-50 border border-transparent'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 text-[10px] leading-none ${
+                              isSelected ? 'bg-primary border-primary text-white' : 'border-slate-300'
+                            }`}>
+                              {isSelected && '✓'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">
+                                {worker.users?.name}
+                              </p>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-0.5">
+                                  <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                                  {worker.rating?.toFixed(1) || 'N/A'}
+                                </span>
+                                <span>{worker.total_jobs || 0} trabalhos</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {filteredWorkers.length === 0 && workerSearch && (
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                          Nenhum resultado para "{workerSearch}"
+                        </p>
+                      )}
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
