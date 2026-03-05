@@ -6,6 +6,14 @@ import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { PhotoCaptureDialog } from "@/components/PhotoCaptureDialog";
 import { WithdrawalDialog } from "@/components/WithdrawalDialog";
 import { notifyJobAvailableAfterWithdrawal, notifyAdminEarlyCheckout } from "@/lib/notifications";
@@ -52,6 +60,7 @@ export function WorkerMyJobsPage() {
   const [selectedJobForWithdrawal, setSelectedJobForWithdrawal] = useState<{ id: string; title: string; job_id: string } | null>(null);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabFilter>('today');
+  const [earlyCheckoutDialog, setEarlyCheckoutDialog] = useState<{ record: WorkRecord; expectedTime: string } | null>(null);
 
   useEffect(() => {
     if (profile?.id) {
@@ -109,6 +118,24 @@ export function WorkerMyJobsPage() {
   }
 
   function handleCheckOut(record: WorkRecord) {
+    // Check if it's an early checkout
+    const job = record.jobs;
+    if (job?.end_time) {
+      const [endH, endM] = job.end_time.split(':').map(Number);
+      const expectedEnd = new Date();
+      expectedEnd.setHours(endH, endM, 0, 0);
+
+      if (new Date() < expectedEnd) {
+        setEarlyCheckoutDialog({ record, expectedTime: job.end_time.slice(0, 5) });
+        return;
+      }
+    }
+
+    proceedWithCheckOut(record);
+  }
+
+  function proceedWithCheckOut(record: WorkRecord) {
+    setEarlyCheckoutDialog(null);
     setSelectedRecord(record);
     setPhotoType('checkout');
     setPhotoCaptureOpen(true);
@@ -668,6 +695,37 @@ export function WorkerMyJobsPage() {
         onSubmit={handleWithdrawalSubmit}
         jobTitle={selectedJobForWithdrawal?.title || ''}
       />
+
+      {/* Early Checkout Confirmation Dialog */}
+      <Dialog open={!!earlyCheckoutDialog} onOpenChange={(open) => !open && setEarlyCheckoutDialog(null)}>
+        <DialogContent className="max-w-sm mx-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertCircle className="h-5 w-5" />
+              Saída Antecipada
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-base">
+              O horário previsto de término é <strong>{earlyCheckoutDialog?.expectedTime}</strong>.
+              Deseja registrar a saída agora? O administrador será notificado.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setEarlyCheckoutDialog(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="default"
+              className="bg-amber-600 hover:bg-amber-700"
+              onClick={() => earlyCheckoutDialog && proceedWithCheckOut(earlyCheckoutDialog.record)}
+            >
+              Confirmar Saída
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
