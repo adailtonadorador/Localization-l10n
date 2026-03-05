@@ -77,7 +77,7 @@ interface RecentWithdrawal {
 
 export function AdminDashboard() {
   const location = useLocation();
-  const { profile } = useAuth();
+  useAuth();
   const [stats, setStats] = useState<Stats>({
     totalWorkers: 0,
     totalClients: 0,
