@@ -35,6 +35,7 @@ import { AdminNewClientPage } from "@/pages/admin/AdminNewClientPage";
 import { AdminWorkersPage } from "@/pages/admin/AdminWorkersPage";
 import { AdminWithdrawalsPage } from "@/pages/admin/AdminWithdrawalsPage";
 import { AdminReportsPage } from "@/pages/admin/AdminReportsPage";
+import { AdminUsersPage } from "@/pages/admin/AdminUsersPage";
 
 function AuthRedirect({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, isProfileComplete } = useAuth();
@@ -283,6 +284,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminReportsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminUsersPage />
           </ProtectedRoute>
         }
       />

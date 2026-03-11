@@ -19,8 +19,18 @@ import {
   Loader2,
   Home,
   Map,
-  Camera
+  Camera,
+  Calendar,
+  Briefcase,
+  X
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ViaCepResponse {
   cep: string;
@@ -64,6 +74,10 @@ export function CompleteProfilePage() {
   const [cpf, setCpf] = useState("");
   const [pix, setPix] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [funcao, setFuncao] = useState("");
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
 
   // Address fields (worker)
   const [cep, setCep] = useState("");
@@ -327,6 +341,24 @@ export function CompleteProfilePage() {
       return;
     }
 
+    if (!birthDate) {
+      setError("Data de nascimento é obrigatória");
+      setLoading(false);
+      return;
+    }
+
+    if (!funcao) {
+      setError("Função é obrigatória");
+      setLoading(false);
+      return;
+    }
+
+    if (!consentAccepted) {
+      setError("Você deve aceitar o Termo de Consentimento para continuar");
+      setLoading(false);
+      return;
+    }
+
     const cleanCpf = cpf.replace(/\D/g, '');
     if (cleanCpf.length !== 11) {
       setError("CPF deve ter 11 dígitos");
@@ -379,6 +411,9 @@ export function CompleteProfilePage() {
         bairro,
         cidade,
         uf,
+        birth_date: birthDate,
+        funcao,
+        consent_accepted_at: new Date().toISOString(),
       });
 
       if (insertError) {
@@ -629,6 +664,41 @@ export function CompleteProfilePage() {
                   </div>
                 </div>
 
+                {/* Birth Date and Funcao */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="birthDate" className="text-sm font-medium">Data de Nascimento *</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="birthDate"
+                        type="date"
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="pl-10 h-10 bg-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="funcao" className="text-sm font-medium">Função *</Label>
+                    <Select value={funcao} onValueChange={setFuncao}>
+                      <SelectTrigger id="funcao" className="h-10 bg-white">
+                        <div className="flex items-center gap-2">
+                          <Briefcase className="h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Selecione" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Operador Caixa">Operador Caixa</SelectItem>
+                        <SelectItem value="Repositor">Repositor</SelectItem>
+                        <SelectItem value="Empacotador">Empacotador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 {/* PIX */}
                 <div className="space-y-2">
                   <Label htmlFor="pix" className="text-sm font-medium">Chave PIX</Label>
@@ -763,6 +833,30 @@ export function CompleteProfilePage() {
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* Consent Checkbox */}
+                <div className="pt-2 border-t">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={consentAccepted}
+                      onChange={(e) => setConsentAccepted(e.target.checked)}
+                      disabled={loading}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm text-slate-700">
+                      Li e concordo com o{" "}
+                      <button
+                        type="button"
+                        onClick={() => setShowConsentModal(true)}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        Termo de Consentimento
+                      </button>{" "}
+                      para utilização e compartilhamento dos meus dados para fins de intermediação de trabalho temporário. *
+                    </span>
+                  </label>
                 </div>
               </CardContent>
               <CardFooter>
@@ -1017,6 +1111,34 @@ export function CompleteProfilePage() {
           )}
         </Card>
       </div>
+
+      {/* Consent Modal */}
+      {showConsentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowConsentModal(false)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold text-slate-900">Termo de Consentimento</h3>
+              <button
+                type="button"
+                onClick={() => setShowConsentModal(false)}
+                className="p-1 rounded-full hover:bg-slate-100 transition-colors"
+              >
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-slate-700 leading-relaxed">
+                Autorizo que meus dados pessoais cadastrados na plataforma sejam utilizados para fins de intermediação de trabalhos temporários, podendo ser compartilhados com empresas ou contratantes interessados em meus serviços, conforme descrito na política de privacidade da plataforma.
+              </p>
+            </div>
+            <div className="p-4 border-t flex justify-end">
+              <Button type="button" onClick={() => setShowConsentModal(false)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
