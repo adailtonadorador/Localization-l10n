@@ -25,10 +25,8 @@ import {
   DollarSign,
   Users,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   X,
-  Plus,
+  Pencil,
   Briefcase,
   CheckCircle2,
   Mail,
@@ -36,7 +34,9 @@ import {
   FileText,
   Eye,
   Star,
-  Map
+  Map,
+  Save,
+  Loader2,
 } from "lucide-react";
 import { LocationMap } from "@/components/ui/map";
 
@@ -44,8 +44,6 @@ const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
-
-const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 interface Client {
   id: string;
@@ -107,20 +105,21 @@ export function AdminClientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("jobs");
 
-  // Job form state
-  const [showJobForm, setShowJobForm] = useState(false);
-  const [formLoading, setFormLoading] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [addressComplement, setAddressComplement] = useState("");
-  const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [dailyRate, setDailyRate] = useState("");
-  const [requiredWorkers, setRequiredWorkers] = useState("1");
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  // Edit client state
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editCompanyName, setEditCompanyName] = useState("");
+  const [editFantasia, setEditFantasia] = useState("");
+  const [editCnpj, setEditCnpj] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editLogradouro, setEditLogradouro] = useState("");
+  const [editNumero, setEditNumero] = useState("");
+  const [editComplemento, setEditComplemento] = useState("");
+  const [editBairro, setEditBairro] = useState("");
+  const [editCidade, setEditCidade] = useState("");
+  const [editUf, setEditUf] = useState("");
+  const [editCep, setEditCep] = useState("");
 
   // Job details modal
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -135,19 +134,14 @@ export function AdminClientDetailPage() {
   async function loadClientData() {
     setLoading(true);
     try {
-      // Load client
       const { data: clientData } = await supabaseUntyped
         .from('clients')
-        .select(`
-          *,
-          users (name, email, phone)
-        `)
+        .select(`*, users (name, email, phone)`)
         .eq('id', id)
         .single();
 
       setClient(clientData);
 
-      // Load jobs with worker info
       const { data: jobsData } = await supabaseUntyped
         .from('jobs')
         .select(`
@@ -170,6 +164,74 @@ export function AdminClientDetailPage() {
       console.error('Error loading client data:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  function openEditForm() {
+    if (!client) return;
+    setEditCompanyName(client.company_name || "");
+    setEditFantasia(client.fantasia || "");
+    setEditCnpj(client.cnpj || "");
+    setEditPhone(client.users?.phone || "");
+    setEditLogradouro(client.logradouro || "");
+    setEditNumero(client.numero || "");
+    setEditComplemento(client.complemento || "");
+    setEditBairro(client.bairro || "");
+    setEditCidade(client.cidade || "");
+    setEditUf(client.uf || "");
+    setEditCep(client.cep || "");
+    setEditError(null);
+    setShowEditForm(true);
+  }
+
+  async function handleSaveClient(e: React.FormEvent) {
+    e.preventDefault();
+    setEditError(null);
+
+    if (!editCompanyName.trim()) {
+      setEditError("Razão social é obrigatória");
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      const { error: updateError } = await supabaseUntyped
+        .from('clients')
+        .update({
+          company_name: editCompanyName.trim(),
+          fantasia: editFantasia.trim() || null,
+          cnpj: editCnpj.trim(),
+          logradouro: editLogradouro.trim() || null,
+          numero: editNumero.trim() || null,
+          complemento: editComplemento.trim() || null,
+          bairro: editBairro.trim() || null,
+          cidade: editCidade.trim() || null,
+          uf: editUf.trim() || null,
+          cep: editCep.trim() || null,
+        })
+        .eq('id', id);
+
+      if (updateError) {
+        setEditError("Erro ao salvar. Tente novamente.");
+        setEditLoading(false);
+        return;
+      }
+
+      // Update phone in users table
+      if (editPhone.trim() && client?.users) {
+        await supabaseUntyped
+          .from('users')
+          .update({ phone: editPhone.trim() })
+          .eq('id', id);
+      }
+
+      toast.success("Cliente atualizado com sucesso!");
+      setShowEditForm(false);
+      loadClientData();
+    } catch {
+      setEditError("Erro ao salvar. Tente novamente.");
+    } finally {
+      setEditLoading(false);
     }
   }
 
@@ -227,187 +289,6 @@ export function AdminClientDetailPage() {
     return 'Endereço não cadastrado';
   }
 
-  // Calendar functions
-  function getDaysInMonth(month: number, year: number) {
-    return new Date(year, month + 1, 0).getDate();
-  }
-
-  function getFirstDayOfMonth(month: number, year: number) {
-    return new Date(year, month, 1).getDay();
-  }
-
-  function formatDateKey(day: number, month: number, year: number) {
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  }
-
-  function isDateSelectable(day: number, month: number, year: number) {
-    const date = new Date(year, month, day);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date >= today;
-  }
-
-  function toggleDate(day: number, month: number, year: number) {
-    if (!isDateSelectable(day, month, year)) return;
-    const dateKey = formatDateKey(day, month, year);
-    if (selectedDates.includes(dateKey)) {
-      setSelectedDates(selectedDates.filter(d => d !== dateKey));
-    } else {
-      setSelectedDates([...selectedDates, dateKey].sort());
-    }
-  }
-
-  function formatDisplayDate(dateKey: string) {
-    const [year, month, day] = dateKey.split('-').map(Number);
-    return new Date(year, month - 1, day).toLocaleDateString('pt-BR', {
-      day: '2-digit', month: 'short', weekday: 'short'
-    });
-  }
-
-  function prevMonth() {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
-  }
-
-  function nextMonth() {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
-  }
-
-  function renderCalendar() {
-    const daysInMonth = getDaysInMonth(currentMonth, currentYear);
-    const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
-    const days = [];
-
-    for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-9" />);
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateKey = formatDateKey(day, currentMonth, currentYear);
-      const isSelected = selectedDates.includes(dateKey);
-      const isSelectable = isDateSelectable(day, currentMonth, currentYear);
-
-      days.push(
-        <button
-          key={day}
-          type="button"
-          onClick={() => toggleDate(day, currentMonth, currentYear)}
-          disabled={!isSelectable}
-          className={`
-            h-9 w-9 rounded-full text-sm font-medium transition-all
-            ${isSelected
-              ? 'bg-primary text-primary-foreground shadow-md'
-              : isSelectable
-                ? 'hover:bg-slate-100 text-slate-700'
-                : 'text-slate-300 cursor-not-allowed'
-            }
-          `}
-        >
-          {day}
-        </button>
-      );
-    }
-    return days;
-  }
-
-  function calculateHours(start: string, end: string): number {
-    if (!start || !end) return 0;
-    const [startH, startM] = start.split(':').map(Number);
-    const [endH, endM] = end.split(':').map(Number);
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
-    return Math.max(0, (endMinutes - startMinutes) / 60);
-  }
-
-  function resetForm() {
-    setTitle("");
-    setDescription("");
-    setAddressComplement("");
-    setSelectedDates([]);
-    setStartTime("");
-    setEndTime("");
-    setDailyRate("");
-    setRequiredWorkers("1");
-    setFormError(null);
-  }
-
-  async function handleCreateJob(e: React.FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-
-    if (!title.trim()) {
-      setFormError("Título é obrigatório");
-      return;
-    }
-    if (!client?.address && !client?.logradouro) {
-      setFormError("A empresa não possui endereço cadastrado");
-      return;
-    }
-    if (selectedDates.length === 0) {
-      setFormError("Selecione pelo menos uma data");
-      return;
-    }
-    if (!startTime || !endTime) {
-      setFormError("Horário de início e fim são obrigatórios");
-      return;
-    }
-    if (!dailyRate || parseFloat(dailyRate) <= 0) {
-      setFormError("Valor por dia deve ser maior que zero");
-      return;
-    }
-
-    setFormLoading(true);
-
-    let fullLocation = getClientAddress();
-    if (addressComplement.trim()) {
-      fullLocation = `${addressComplement.trim()} - ${fullLocation}`;
-    }
-
-    try {
-      const { error: insertError } = await supabaseUntyped.from('jobs').insert({
-        client_id: id,
-        title: title.trim(),
-        description: description.trim() || null,
-        location: fullLocation,
-        uf: client?.uf || null,
-        city: client?.cidade || null,
-        date: selectedDates[0],
-        dates: selectedDates,
-        start_time: startTime,
-        end_time: endTime,
-        daily_rate: parseFloat(dailyRate),
-        required_workers: parseInt(requiredWorkers) || 1,
-        skills_required: [],
-        status: 'open',
-      });
-
-      if (insertError) {
-        setFormError("Erro ao criar vaga. Tente novamente.");
-        setFormLoading(false);
-        return;
-      }
-
-      resetForm();
-      setShowJobForm(false);
-      loadClientData();
-      toast.success("Vaga criada com sucesso!");
-    } catch {
-      setFormError("Erro ao criar vaga. Tente novamente.");
-    } finally {
-      setFormLoading(false);
-    }
-  }
-
-  // Stats
   const jobStats = {
     total: jobs.length,
     open: jobs.filter(j => j.status === 'open').length,
@@ -463,9 +344,9 @@ export function AdminClientDetailPage() {
             </div>
           </div>
         </div>
-        <Button onClick={() => setShowJobForm(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Nova Vaga
+        <Button onClick={openEditForm} variant="outline" className="gap-2">
+          <Pencil className="h-4 w-4" />
+          Editar Cliente
         </Button>
       </div>
 
@@ -638,7 +519,6 @@ export function AdminClientDetailPage() {
                         </div>
                       </div>
 
-                      {/* Workers assigned */}
                       {job.job_assignments && job.job_assignments.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-slate-200">
                           <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
@@ -652,7 +532,6 @@ export function AdminClientDetailPage() {
                                 className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border"
                               >
                                 <Avatar className="h-8 w-8">
-                                  <AvatarImage src={assignment.workers?.users?.avatar_url || ''} />
                                   <AvatarFallback className="bg-purple-500 text-white text-xs">
                                     {assignment.workers?.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                                   </AvatarFallback>
@@ -679,14 +558,8 @@ export function AdminClientDetailPage() {
                   <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Briefcase className="h-8 w-8 text-slate-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-slate-900 mb-1">Nenhuma vaga cadastrada</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Crie a primeira vaga para esta empresa.
-                  </p>
-                  <Button onClick={() => setShowJobForm(true)} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Criar Vaga
-                  </Button>
+                  <h3 className="text-lg font-medium text-slate-900 mb-1">Nenhuma diária cadastrada</h3>
+                  <p className="text-muted-foreground">As diárias deste cliente aparecerão aqui.</p>
                 </div>
               )}
             </TabsContent>
@@ -756,7 +629,6 @@ export function AdminClientDetailPage() {
                 </div>
               </div>
 
-              {/* Mapa da Localização */}
               <div className="mt-6 pt-6 border-t">
                 <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
                   <Map className="h-4 w-4 text-primary" />
@@ -775,220 +647,132 @@ export function AdminClientDetailPage() {
         </Tabs>
       </Card>
 
-      {/* Job Form Modal */}
-      <Dialog open={showJobForm} onOpenChange={setShowJobForm}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
-          <DialogHeader className="p-6 pb-0">
+      {/* Edit Client Modal */}
+      <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" />
-              Nova Vaga para {client.company_name}
+              <Pencil className="h-5 w-5 text-primary" />
+              Editar Cliente
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleCreateJob} className="p-6 pt-4">
-            {formError && (
-              <div className="mb-4 p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
-                {formError}
+          <form onSubmit={handleSaveClient} className="space-y-4 pt-2">
+            {editError && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+                {editError}
               </div>
             )}
 
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Left Column */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Título da Vaga *</Label>
-                  <Input
-                    id="title"
-                    placeholder="Ex: Auxiliar de Carga e Descarga"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    disabled={formLoading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Descreva as atividades e requisitos..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    disabled={formLoading}
-                    rows={3}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    Local de Trabalho
-                  </Label>
-                  <div className="p-3 bg-slate-50 rounded-lg border text-sm">
-                    <p className="font-medium">{getClientAddress()}</p>
-                  </div>
-                  <Input
-                    placeholder="Complemento adicional (opcional)"
-                    value={addressComplement}
-                    onChange={(e) => setAddressComplement(e.target.value)}
-                    disabled={formLoading}
-                  />
-                </div>
-
-                {/* Calendar */}
-                <div className="space-y-2">
-                  <Label>Datas de Trabalho *</Label>
-                  <div className="bg-slate-50 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-3">
-                      <button type="button" onClick={prevMonth} className="p-1 hover:bg-white rounded">
-                        <ChevronLeft className="h-4 w-4" />
-                      </button>
-                      <span className="font-medium text-sm">{MONTHS[currentMonth]} {currentYear}</span>
-                      <button type="button" onClick={nextMonth} className="p-1 hover:bg-white rounded">
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 mb-1">
-                      {WEEKDAYS.map((day) => (
-                        <div key={day} className="h-8 flex items-center justify-center text-xs text-slate-500">
-                          {day}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1">
-                      {renderCalendar()}
-                    </div>
-                  </div>
-                  {selectedDates.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {selectedDates.map((dateKey) => (
-                        <Badge key={dateKey} variant="secondary" className="text-xs">
-                          {formatDisplayDate(dateKey)}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedDates(selectedDates.filter(d => d !== dateKey))}
-                            className="ml-1"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Time */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1 text-sm">
-                      <Clock className="h-3 w-3" /> Início *
-                    </Label>
-                    <Input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      disabled={formLoading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1 text-sm">
-                      <Clock className="h-3 w-3" /> Término *
-                    </Label>
-                    <Input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      disabled={formLoading}
-                    />
-                  </div>
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 space-y-2">
+                <Label>Razão Social *</Label>
+                <Input
+                  value={editCompanyName}
+                  onChange={(e) => setEditCompanyName(e.target.value)}
+                  disabled={editLoading}
+                />
               </div>
+              <div className="space-y-2">
+                <Label>Nome Fantasia</Label>
+                <Input
+                  value={editFantasia}
+                  onChange={(e) => setEditFantasia(e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>CNPJ</Label>
+                <Input
+                  value={editCnpj}
+                  onChange={(e) => setEditCnpj(e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefone</Label>
+                <Input
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>CEP</Label>
+                <Input
+                  value={editCep}
+                  onChange={(e) => setEditCep(e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Logradouro</Label>
+                <Input
+                  value={editLogradouro}
+                  onChange={(e) => setEditLogradouro(e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Número</Label>
+                <Input
+                  value={editNumero}
+                  onChange={(e) => setEditNumero(e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Complemento</Label>
+                <Input
+                  value={editComplemento}
+                  onChange={(e) => setEditComplemento(e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Bairro</Label>
+                <Input
+                  value={editBairro}
+                  onChange={(e) => setEditBairro(e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cidade</Label>
+                <Input
+                  value={editCidade}
+                  onChange={(e) => setEditCidade(e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>UF</Label>
+                <Input
+                  value={editUf}
+                  maxLength={2}
+                  onChange={(e) => setEditUf(e.target.value.toUpperCase())}
+                  disabled={editLoading}
+                />
+              </div>
+            </div>
 
-              {/* Right Column */}
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <DollarSign className="h-4 w-4" /> Valor/Dia *
-                    </Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="150.00"
-                      value={dailyRate}
-                      onChange={(e) => setDailyRate(e.target.value)}
-                      disabled={formLoading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <Users className="h-4 w-4" /> Prestadores *
-                    </Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={requiredWorkers}
-                      onChange={(e) => setRequiredWorkers(e.target.value)}
-                      disabled={formLoading}
-                    />
-                  </div>
-                </div>
-
-                {/* Summary */}
-                {selectedDates.length > 0 && dailyRate && (
-                  <Card className="bg-slate-50 border-0">
-                    <CardContent className="pt-4">
-                      <h4 className="font-semibold mb-3">Resumo</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Dias:</span>
-                          <span className="font-medium">{selectedDates.length}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Prestadores:</span>
-                          <span className="font-medium">{requiredWorkers}</span>
-                        </div>
-                        {startTime && endTime && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Jornada:</span>
-                            <span className="font-medium">{calculateHours(startTime, endTime).toFixed(1)}h</span>
-                          </div>
-                        )}
-                        <div className="border-t pt-2 mt-2">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Custo Total:</span>
-                            <span className="font-bold text-primary">
-                              R$ {(selectedDates.length * parseInt(requiredWorkers) * parseFloat(dailyRate)).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowEditForm(false)}
+                disabled={editLoading}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={editLoading} className="flex-1 gap-2">
+                {editLoading ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Salvando...</>
+                ) : (
+                  <><Save className="h-4 w-4" /> Salvar</>
                 )}
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      resetForm();
-                      setShowJobForm(false);
-                    }}
-                    disabled={formLoading}
-                    className="flex-1"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={formLoading || selectedDates.length === 0}
-                    className="flex-1"
-                  >
-                    {formLoading ? "Criando..." : "Criar Vaga"}
-                  </Button>
-                </div>
-              </div>
+              </Button>
             </div>
           </form>
         </DialogContent>
