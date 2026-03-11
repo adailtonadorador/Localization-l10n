@@ -8,9 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -22,10 +21,8 @@ import {
   Building2,
   MapPin,
   Clock,
-  DollarSign,
   Users,
   Calendar,
-  X,
   Pencil,
   Briefcase,
   CheckCircle2,
@@ -39,11 +36,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { LocationMap } from "@/components/ui/map";
-
-const MONTHS = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-];
 
 interface Client {
   id: string;
