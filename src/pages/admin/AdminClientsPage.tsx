@@ -31,6 +31,7 @@ interface Client {
   cnpj: string;
   company_name: string;
   fantasia: string | null;
+  filial: number | null;
   uf: string | null;
   cidade: string | null;
   created_at: string;
@@ -66,6 +67,7 @@ export function AdminClientsPage() {
           cnpj,
           company_name,
           fantasia,
+          filial,
           uf,
           cidade,
           created_at,
@@ -238,14 +240,17 @@ export function AdminClientsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="font-bold text-lg text-slate-900 truncate">
-                              {client.company_name}
+                              {client.fantasia || client.company_name}
                             </h3>
-                            {client.fantasia && client.fantasia !== client.company_name && (
-                              <Badge variant="outline" className="text-xs">
-                                {client.fantasia}
-                              </Badge>
+                            {client.filial != null && (
+                              <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-semibold">
+                                Filial {client.filial}
+                              </span>
                             )}
                           </div>
+                          {client.fantasia && (
+                            <p className="text-xs text-muted-foreground truncate">{client.company_name}</p>
+                          )}
                           <p className="text-sm text-muted-foreground">
                             CNPJ: {formatCnpj(client.cnpj)}
                           </p>
