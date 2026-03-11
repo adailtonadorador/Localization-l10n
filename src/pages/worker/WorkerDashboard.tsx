@@ -56,6 +56,8 @@ interface Job {
   status: string;
   clients: {
     company_name: string;
+    fantasia: string | null;
+    filial: number | null;
   };
 }
 
@@ -205,7 +207,7 @@ export function WorkerDashboard() {
         .from('jobs')
         .select(`
           *,
-          clients (company_name)
+          clients (company_name, fantasia, filial)
         `)
         .eq('status', 'open')
         .gte('date', getLocalToday())
@@ -248,7 +250,7 @@ export function WorkerDashboard() {
             *,
             jobs (
               *,
-              clients (company_name)
+              clients (company_name, fantasia, filial)
             )
           `)
           .eq('worker_id', user?.id)
@@ -284,7 +286,7 @@ export function WorkerDashboard() {
           *,
           jobs (
             *,
-            clients (company_name)
+            clients (company_name, fantasia, filial)
           )
         `)
         .eq('worker_id', user?.id)
@@ -386,7 +388,7 @@ export function WorkerDashboard() {
             end_time,
             title,
             location,
-            clients (company_name)
+            clients (company_name, fantasia, filial)
           )
         `)
         .eq('worker_id', user?.id)
@@ -840,7 +842,10 @@ export function WorkerDashboard() {
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-slate-900 truncate text-sm">{assignment.jobs.title}</h4>
-                      <p className="text-xs text-muted-foreground truncate">{assignment.jobs.clients?.company_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {assignment.jobs.clients?.fantasia || assignment.jobs.clients?.company_name}
+                        {assignment.jobs.clients?.filial != null && ` · Filial ${assignment.jobs.clients.filial}`}
+                      </p>
                     </div>
                     <Badge
                       variant={assignment.status === 'confirmed' ? 'default' : 'secondary'}
@@ -899,7 +904,10 @@ export function WorkerDashboard() {
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-slate-900 truncate">{assignment.jobs.title}</h4>
-                            <p className="text-sm text-muted-foreground">{assignment.jobs.clients?.company_name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {assignment.jobs.clients?.fantasia || assignment.jobs.clients?.company_name}
+                              {assignment.jobs.clients?.filial != null && ` · Filial ${assignment.jobs.clients.filial}`}
+                            </p>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-slate-500">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3.5 w-3.5" />
@@ -994,7 +1002,10 @@ export function WorkerDashboard() {
                           {job.required_workers} diária(s)
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">{job.clients?.company_name}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {job.clients?.fantasia || job.clients?.company_name}
+                        {job.clients?.filial != null && ` · Filial ${job.clients.filial}`}
+                      </p>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-slate-500">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
@@ -1037,7 +1048,10 @@ export function WorkerDashboard() {
                     <div className="hidden sm:flex sm:items-start sm:justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-slate-900 truncate">{job.title}</h4>
-                        <p className="text-sm text-muted-foreground">{job.clients?.company_name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {job.clients?.fantasia || job.clients?.company_name}
+                          {job.clients?.filial != null && ` · Filial ${job.clients.filial}`}
+                        </p>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-slate-500">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3.5 w-3.5" />
@@ -1118,7 +1132,10 @@ export function WorkerDashboard() {
                     className="p-4 bg-amber-50/50 border border-amber-100 rounded-xl"
                   >
                     <h4 className="font-semibold text-slate-900 truncate">{application.jobs.title}</h4>
-                    <p className="text-sm text-muted-foreground">{application.jobs.clients?.company_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {application.jobs.clients?.fantasia || application.jobs.clients?.company_name}
+                      {application.jobs.clients?.filial != null && ` · Filial ${application.jobs.clients.filial}`}
+                    </p>
                     <div className="flex items-center gap-2 mt-2 text-sm text-slate-500">
                       <Calendar className="h-3.5 w-3.5" />
                       <span>{formatDate(application.jobs.date)}</span>
@@ -1150,7 +1167,12 @@ export function WorkerDashboard() {
                     <h2 className="text-xl font-bold mb-1">{selectedJob.title}</h2>
                     <p className="text-white/80 text-sm flex items-center gap-1">
                       <Building className="h-3.5 w-3.5" />
-                      {selectedJob.clients?.company_name}
+                      {selectedJob.clients?.fantasia || selectedJob.clients?.company_name}
+                      {selectedJob.clients?.filial != null && (
+                        <span className="ml-1 px-1.5 py-0.5 rounded bg-white/20 text-xs font-semibold">
+                          Filial {selectedJob.clients.filial}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <Badge className="bg-white/20 text-white border-white/30">
@@ -1281,7 +1303,12 @@ export function WorkerDashboard() {
                     <h2 className="text-xl font-bold">{selectedAssignment.jobs.title}</h2>
                     <p className="text-white/80 text-sm flex items-center gap-1 mt-1">
                       <Building className="h-3.5 w-3.5" />
-                      {selectedAssignment.jobs.clients?.company_name}
+                      {selectedAssignment.jobs.clients?.fantasia || selectedAssignment.jobs.clients?.company_name}
+                      {selectedAssignment.jobs.clients?.filial != null && (
+                        <span className="ml-1 px-1.5 py-0.5 rounded bg-white/20 text-xs font-semibold">
+                          Filial {selectedAssignment.jobs.clients.filial}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="text-right">
@@ -1447,7 +1474,8 @@ export function WorkerDashboard() {
                   <h3 className="font-semibold text-slate-900">{conflictInfo.selectedJob.title}</h3>
                   <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                     <Building className="h-3.5 w-3.5" />
-                    {conflictInfo.selectedJob.clients?.company_name}
+                    {conflictInfo.selectedJob.clients?.fantasia || conflictInfo.selectedJob.clients?.company_name}
+                    {conflictInfo.selectedJob.clients?.filial != null && ` · Filial ${conflictInfo.selectedJob.clients.filial}`}
                   </p>
                   <div className="grid grid-cols-2 gap-3 mt-3">
                     <div className="flex items-center gap-2 text-sm">
