@@ -42,6 +42,7 @@ interface Client {
   cnpj: string;
   company_name: string;
   fantasia: string | null;
+  filial: number | null;
   address: string | null;
   logradouro: string | null;
   numero: string | null;
@@ -329,9 +330,18 @@ export function AdminClientDetailPage() {
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">{client.company_name}</h2>
-              {client.fantasia && client.fantasia !== client.company_name && (
-                <p className="text-sm text-muted-foreground">{client.fantasia}</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-bold text-slate-900">
+                  {client.fantasia || client.company_name}
+                </h2>
+                {client.filial != null && (
+                  <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-sm font-semibold">
+                    Filial {client.filial}
+                  </span>
+                )}
+              </div>
+              {client.fantasia && (
+                <p className="text-sm text-muted-foreground">{client.company_name}</p>
               )}
             </div>
           </div>
