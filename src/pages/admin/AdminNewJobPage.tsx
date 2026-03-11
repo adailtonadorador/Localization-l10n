@@ -37,6 +37,8 @@ import {
 interface Client {
   id: string;
   company_name: string;
+  fantasia: string | null;
+  filial: number | null;
   cnpj: string;
   address: string | null;
   logradouro: string | null;
@@ -109,6 +111,8 @@ export function AdminNewJobPage() {
         .select(`
           id,
           company_name,
+          fantasia,
+          filial,
           cnpj,
           address,
           logradouro,
@@ -443,7 +447,10 @@ export function AdminNewJobPage() {
                     <Select value={clientId} onValueChange={setClientId}>
                       <SelectTrigger className="bg-white">
                         {selectedClient ? (
-                          <span>{selectedClient.company_name}</span>
+                          <span>
+                            {selectedClient.fantasia || selectedClient.company_name}
+                            {selectedClient.filial != null && ` · Filial ${selectedClient.filial}`}
+                          </span>
                         ) : (
                           <SelectValue placeholder="Selecione uma empresa" />
                         )}
@@ -451,7 +458,8 @@ export function AdminNewJobPage() {
                       <SelectContent>
                         {clients.map((client) => (
                           <SelectItem key={client.id} value={client.id}>
-                            {client.company_name}
+                            {client.fantasia || client.company_name}
+                            {client.filial != null && ` · Filial ${client.filial}`}
                           </SelectItem>
                         ))}
                       </SelectContent>
