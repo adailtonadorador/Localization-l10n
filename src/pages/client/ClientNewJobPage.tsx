@@ -10,7 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getLocalToday } from "@/lib/date-utils";
+
+const DAILY_RATE = 110;
+const JOB_TITLES = ["Operador Caixa", "Repositor", "Empacotador"];
 
 const AVAILABLE_SKILLS = [
   'Limpeza',
@@ -42,7 +46,6 @@ export function ClientNewJobPage() {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [dailyRate, setDailyRate] = useState("");
   const [requiredWorkers, setRequiredWorkers] = useState("1");
   const [skills, setSkills] = useState<string[]>([]);
 
@@ -75,11 +78,6 @@ export function ClientNewJobPage() {
       setError("Horário de início e fim são obrigatórios");
       return;
     }
-    if (!dailyRate || parseFloat(dailyRate) <= 0) {
-      setError("Valor por dia deve ser maior que zero");
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -91,7 +89,7 @@ export function ClientNewJobPage() {
         date,
         start_time: startTime,
         end_time: endTime,
-        daily_rate: parseFloat(dailyRate),
+        daily_rate: DAILY_RATE,
         required_workers: parseInt(requiredWorkers) || 1,
         skills_required: skills,
         status: 'open',
@@ -138,14 +136,17 @@ export function ClientNewJobPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="title">Título da Diária *</Label>
-              <Input
-                id="title"
-                placeholder="Ex: Auxiliar de Carga"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                disabled={loading}
-              />
+              <Label htmlFor="title">Título da Vaga *</Label>
+              <Select value={title} onValueChange={setTitle} disabled={loading}>
+                <SelectTrigger id="title">
+                  <SelectValue placeholder="Selecione o título da vaga" />
+                </SelectTrigger>
+                <SelectContent>
+                  {JOB_TITLES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -207,17 +208,10 @@ export function ClientNewJobPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="daily-rate">Valor por Dia (R$) *</Label>
-                <Input
-                  id="daily-rate"
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="150.00"
-                  value={dailyRate}
-                  onChange={(e) => setDailyRate(e.target.value)}
-                  disabled={loading}
-                />
+                <Label>Valor por Dia</Label>
+                <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm font-medium text-muted-foreground">
+                  R$ {DAILY_RATE.toFixed(2)}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="workers">Nº de Prestadores *</Label>
