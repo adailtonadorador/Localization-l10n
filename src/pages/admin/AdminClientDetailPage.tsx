@@ -105,7 +105,9 @@ export function AdminClientDetailPage() {
   const [editCompanyName, setEditCompanyName] = useState("");
   const [editFantasia, setEditFantasia] = useState("");
   const [editCnpj, setEditCnpj] = useState("");
+  const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editFilial, setEditFilial] = useState<string>("");
   const [editLogradouro, setEditLogradouro] = useState("");
   const [editNumero, setEditNumero] = useState("");
   const [editComplemento, setEditComplemento] = useState("");
@@ -165,7 +167,9 @@ export function AdminClientDetailPage() {
     setEditCompanyName(client.company_name || "");
     setEditFantasia(client.fantasia || "");
     setEditCnpj(client.cnpj || "");
+    setEditName(client.users?.name || "");
     setEditPhone(client.users?.phone || "");
+    setEditFilial(client.filial != null ? String(client.filial) : "");
     setEditLogradouro(client.logradouro || "");
     setEditNumero(client.numero || "");
     setEditComplemento(client.complemento || "");
@@ -194,6 +198,7 @@ export function AdminClientDetailPage() {
           company_name: editCompanyName.trim(),
           fantasia: editFantasia.trim() || null,
           cnpj: editCnpj.trim(),
+          filial: editFilial.trim() !== "" ? parseInt(editFilial.trim(), 10) : null,
           logradouro: editLogradouro.trim() || null,
           numero: editNumero.trim() || null,
           complemento: editComplemento.trim() || null,
@@ -210,11 +215,14 @@ export function AdminClientDetailPage() {
         return;
       }
 
-      // Update phone in users table
-      if (editPhone.trim() && client?.users) {
+      // Update name and phone in users table
+      if (client?.users) {
         await supabaseUntyped
           .from('users')
-          .update({ phone: editPhone.trim() })
+          .update({
+            name: editName.trim() || undefined,
+            phone: editPhone.trim() || null,
+          })
           .eq('id', id);
       }
 
@@ -688,6 +696,25 @@ export function AdminClientDetailPage() {
                 <Input
                   value={editCnpj}
                   onChange={(e) => setEditCnpj(e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Filial</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={editFilial}
+                  onChange={(e) => setEditFilial(e.target.value)}
+                  placeholder="Nº da filial"
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Nome do Responsável</Label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
                   disabled={editLoading}
                 />
               </div>
