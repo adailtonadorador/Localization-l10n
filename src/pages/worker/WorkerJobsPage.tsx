@@ -42,6 +42,8 @@ interface Job {
   status: string;
   clients: {
     company_name: string;
+    fantasia: string | null;
+    filial: number | null;
   };
 }
 
@@ -85,7 +87,7 @@ export function WorkerJobsPage() {
         .from('jobs')
         .select(`
           *,
-          clients (company_name)
+          clients (company_name, fantasia, filial)
         `)
         .eq('status', 'open')
         .gte('date', getLocalToday())
@@ -551,7 +553,12 @@ export function WorkerJobsPage() {
                       <CardTitle className="text-lg text-slate-900">{job.title}</CardTitle>
                       <CardDescription className="flex items-center gap-1 mt-1">
                         <Building className="h-3.5 w-3.5" />
-                        {job.clients?.company_name}
+                        {job.clients?.fantasia || job.clients?.company_name}
+                        {job.clients?.filial != null && (
+                          <span className="ml-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold">
+                            Filial {job.clients.filial}
+                          </span>
+                        )}
                       </CardDescription>
                     </div>
                     <Badge className="whitespace-nowrap flex-shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">{job.required_workers} diária(s)</Badge>
@@ -618,7 +625,12 @@ export function WorkerJobsPage() {
                     <h2 className="text-xl font-bold mb-1">{selectedJob.title}</h2>
                     <p className="text-white/80 text-sm flex items-center gap-1">
                       <Building className="h-3.5 w-3.5" />
-                      {selectedJob.clients?.company_name}
+                      {selectedJob.clients?.fantasia || selectedJob.clients?.company_name}
+                      {selectedJob.clients?.filial != null && (
+                        <span className="ml-1 px-1.5 py-0.5 rounded bg-white/20 text-white text-xs font-semibold">
+                          Filial {selectedJob.clients.filial}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <Badge className="bg-white/20 text-white border-white/30">
@@ -799,7 +811,12 @@ export function WorkerJobsPage() {
                   <h3 className="font-semibold text-slate-900">{conflictInfo.selectedJob.title}</h3>
                   <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                     <Building className="h-3.5 w-3.5" />
-                    {conflictInfo.selectedJob.clients?.company_name}
+                    {conflictInfo.selectedJob.clients?.fantasia || conflictInfo.selectedJob.clients?.company_name}
+                    {conflictInfo.selectedJob.clients?.filial != null && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold">
+                        Filial {conflictInfo.selectedJob.clients.filial}
+                      </span>
+                    )}
                   </p>
                   <div className="grid grid-cols-2 gap-3 mt-3">
                     <div className="flex items-center gap-2 text-sm">
