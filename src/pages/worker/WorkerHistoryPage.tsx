@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabaseUntyped } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, Star, MapPin, Clock, Calendar, Award } from "lucide-react";
+import { Briefcase, Star, MapPin, Clock, Calendar, Award, ShieldAlert } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface WorkRecord {
   id: string;
@@ -30,7 +31,7 @@ interface WorkRecord {
 }
 
 export function WorkerHistoryPage() {
-  const { profile } = useAuth();
+  const { profile, workerProfile } = useAuth();
   const [records, setRecords] = useState<WorkRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -117,6 +118,42 @@ export function WorkerHistoryPage() {
   // Calculate stats
   const completedRecords = records.filter(r => r.status === 'completed');
   const avgRating = completedRecords.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating || 0) / arr.length, 0);
+
+  // Block access for unapproved workers
+  if (workerProfile && workerProfile.approval_status !== 'approved') {
+    return (
+      <DashboardLayout>
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Histórico de Diárias</h2>
+          <p className="text-muted-foreground">Acompanhe seu desempenho na plataforma</p>
+        </div>
+        <Alert className={`mb-6 ${workerProfile.approval_status === 'rejected' ? 'border-red-300 bg-red-50' : 'border-blue-300 bg-blue-50'}`}>
+          <ShieldAlert className={`h-5 w-5 ${workerProfile.approval_status === 'rejected' ? 'text-red-600' : 'text-blue-600'}`} />
+          <AlertTitle className={workerProfile.approval_status === 'rejected' ? 'text-red-800' : 'text-blue-800'}>
+            {workerProfile.approval_status === 'pending' ? 'Conta em Análise' : 'Conta Rejeitada'}
+          </AlertTitle>
+          <AlertDescription className={workerProfile.approval_status === 'rejected' ? 'text-red-700' : 'text-blue-700'}>
+            {workerProfile.approval_status === 'pending'
+              ? 'Sua conta está sendo analisada pelo administrador. Aguarde a aprovação para acessar seu histórico.'
+              : 'Sua conta foi rejeitada. Entre em contato com o suporte para mais informações.'}
+          </AlertDescription>
+        </Alert>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShieldAlert className="h-8 w-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-medium text-slate-900 mb-2">Acesso Restrito</h3>
+            <p className="text-muted-foreground">
+              {workerProfile.approval_status === 'pending'
+                ? 'Aguarde a aprovação da sua conta para acessar seu histórico.'
+                : 'Sua conta foi rejeitada. Entre em contato com o suporte.'}
+            </p>
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
 
   if (loading) {
     return (

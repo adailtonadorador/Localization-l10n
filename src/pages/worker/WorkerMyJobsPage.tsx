@@ -20,8 +20,9 @@ import { notifyJobAvailableAfterWithdrawal, notifyAdminEarlyCheckout } from "@/l
 import {
   Clock, MapPin, CheckCircle, Calendar, Building, Play, LogOut,
   Briefcase, ArrowRight, XCircle, ChevronDown, ChevronUp, DollarSign,
-  AlertCircle, Eye
+  AlertCircle, Eye, ShieldAlert
 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getLocalToday } from "@/lib/date-utils";
 
 interface WorkRecord {
@@ -50,7 +51,7 @@ interface WorkRecord {
 type TabFilter = 'today' | 'upcoming' | 'history';
 
 export function WorkerMyJobsPage() {
-  const { profile } = useAuth();
+  const { profile, workerProfile } = useAuth();
   const [records, setRecords] = useState<WorkRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false);
@@ -399,6 +400,42 @@ export function WorkerMyJobsPage() {
   const totalEarnings = records
     .filter(r => r.status === 'completed')
     .reduce((sum, r) => sum + (r.jobs?.daily_rate || 0), 0);
+
+  // Block access for unapproved workers
+  if (workerProfile && workerProfile.approval_status !== 'approved') {
+    return (
+      <DashboardLayout>
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-slate-900 mb-1">Minhas Diárias</h2>
+          <p className="text-sm text-muted-foreground">Gerencie seus dias de trabalho e registre presença</p>
+        </div>
+        <Alert className={`mb-6 ${workerProfile.approval_status === 'rejected' ? 'border-red-300 bg-red-50' : 'border-blue-300 bg-blue-50'}`}>
+          <ShieldAlert className={`h-5 w-5 ${workerProfile.approval_status === 'rejected' ? 'text-red-600' : 'text-blue-600'}`} />
+          <AlertTitle className={workerProfile.approval_status === 'rejected' ? 'text-red-800' : 'text-blue-800'}>
+            {workerProfile.approval_status === 'pending' ? 'Conta em Análise' : 'Conta Rejeitada'}
+          </AlertTitle>
+          <AlertDescription className={workerProfile.approval_status === 'rejected' ? 'text-red-700' : 'text-blue-700'}>
+            {workerProfile.approval_status === 'pending'
+              ? 'Sua conta está sendo analisada pelo administrador. Aguarde a aprovação para acessar suas diárias.'
+              : 'Sua conta foi rejeitada. Entre em contato com o suporte para mais informações.'}
+          </AlertDescription>
+        </Alert>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShieldAlert className="h-8 w-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-medium text-slate-900 mb-2">Acesso Restrito</h3>
+            <p className="text-muted-foreground">
+              {workerProfile.approval_status === 'pending'
+                ? 'Aguarde a aprovação da sua conta para acessar suas diárias.'
+                : 'Sua conta foi rejeitada. Entre em contato com o suporte.'}
+            </p>
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
 
   if (loading) {
     return (

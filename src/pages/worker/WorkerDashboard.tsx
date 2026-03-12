@@ -822,7 +822,7 @@ export function WorkerDashboard() {
       )}
 
       {/* Próximos Trabalhos - Mobile: Cards horizontais clicáveis */}
-      {isMobile && upcomingJobs.length > 0 && (
+      {workerProfile?.approval_status === 'approved' && isMobile && upcomingJobs.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-slate-700">Próximos Trabalhos</h3>
@@ -879,6 +879,7 @@ export function WorkerDashboard() {
         </div>
       )}
 
+      {workerProfile?.approval_status === 'approved' && (
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Próximos Trabalhos - Desktop */}
         {!isMobile && (
@@ -1154,6 +1155,7 @@ export function WorkerDashboard() {
           </Card>
         )}
       </div>
+      )}
 
       {/* Job Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
