@@ -39,12 +39,14 @@ interface RecentJob {
   created_at: string;
   clients: {
     company_name: string;
+    fantasia: string | null;
   };
 }
 
 interface RecentClient {
   id: string;
   company_name: string;
+  fantasia: string | null;
   cidade: string | null;
   uf: string | null;
   created_at: string;
@@ -71,6 +73,7 @@ interface RecentWithdrawal {
     title: string;
     clients: {
       company_name: string;
+      fantasia: string | null;
     };
   };
 }
@@ -106,37 +109,44 @@ export function AdminDashboard() {
     setLoading(true);
     try {
       // Load stats
-      const [workersRes, clientsRes, jobsRes, openJobsRes, pendingRes, completedRes] = await Promise.all([
+      const [workersRes, clientsRes, allJobsRes, pendingRes] = await Promise.all([
         supabaseUntyped.from('workers').select('id', { count: 'exact', head: true }),
         supabaseUntyped.from('clients').select('id', { count: 'exact', head: true }),
-        supabaseUntyped.from('jobs').select('id', { count: 'exact', head: true }),
-        supabaseUntyped.from('jobs').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+        supabaseUntyped.from('jobs').select('id, status, dates, date, required_workers'),
         supabaseUntyped.from('workers').select('id', { count: 'exact', head: true }).eq('documents_verified', false),
-        supabaseUntyped.from('jobs').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
       ]);
+
+      // Calculate diárias: each job = number of dates × required_workers
+      const allJobs: { status: string; dates: string[] | null; date: string; required_workers: number }[] = allJobsRes.data || [];
+      const countDiarias = (jobs: typeof allJobs) =>
+        jobs.reduce((sum, job) => {
+          const numDates = job.dates && job.dates.length > 0 ? job.dates.length : 1;
+          return sum + numDates * (job.required_workers || 1);
+        }, 0);
+
+      const openJobs = allJobs.filter(j => j.status === 'open');
+      const completedJobs = allJobs.filter(j => j.status === 'completed');
 
       setStats({
         totalWorkers: workersRes.count || 0,
         totalClients: clientsRes.count || 0,
-        totalJobs: jobsRes.count || 0,
-        openJobs: openJobsRes.count || 0,
+        totalJobs: countDiarias(allJobs),
+        openJobs: countDiarias(openJobs),
         pendingVerifications: pendingRes.count || 0,
-        completedJobs: completedRes.count || 0,
+        completedJobs: countDiarias(completedJobs),
       });
 
       // Load jobs by status for chart
-      const [assignedRes, inProgressRes, cancelledRes] = await Promise.all([
-        supabaseUntyped.from('jobs').select('id', { count: 'exact', head: true }).eq('status', 'assigned'),
-        supabaseUntyped.from('jobs').select('id', { count: 'exact', head: true }).eq('status', 'in_progress'),
-        supabaseUntyped.from('jobs').select('id', { count: 'exact', head: true }).eq('status', 'cancelled'),
-      ]);
+      const assignedJobs = allJobs.filter(j => j.status === 'assigned');
+      const inProgressJobs = allJobs.filter(j => j.status === 'in_progress');
+      const cancelledJobs = allJobs.filter(j => j.status === 'cancelled');
 
       setJobsByStatus({
-        open: openJobsRes.count || 0,
-        assigned: assignedRes.count || 0,
-        in_progress: inProgressRes.count || 0,
-        completed: completedRes.count || 0,
-        cancelled: cancelledRes.count || 0,
+        open: countDiarias(openJobs),
+        assigned: countDiarias(assignedJobs),
+        in_progress: countDiarias(inProgressJobs),
+        completed: countDiarias(completedJobs),
+        cancelled: countDiarias(cancelledJobs),
       });
 
       // Load recent jobs
@@ -147,7 +157,7 @@ export function AdminDashboard() {
           title,
           status,
           created_at,
-          clients (company_name)
+          clients (company_name, fantasia)
         `)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -160,6 +170,7 @@ export function AdminDashboard() {
         .select(`
           id,
           company_name,
+          fantasia,
           cidade,
           uf,
           created_at
@@ -184,7 +195,8 @@ export function AdminDashboard() {
           jobs (
             title,
             clients (
-              company_name
+              company_name,
+              fantasia
             )
           )
         `)
@@ -426,7 +438,7 @@ export function AdminDashboard() {
                   <div key={job.id} className="flex items-center justify-between py-2 border-b last:border-0">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{job.title}</p>
-                      <p className="text-xs text-muted-foreground">{job.clients?.company_name}</p>
+                      <p className="text-xs text-muted-foreground">{job.clients?.fantasia || job.clients?.company_name}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(job.status)}
@@ -473,7 +485,7 @@ export function AdminDashboard() {
                       {withdrawal.workers?.users?.name || 'Trabalhador'}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {withdrawal.jobs?.title} - {withdrawal.jobs?.clients?.company_name}
+                      {withdrawal.jobs?.title} - {withdrawal.jobs?.clients?.fantasia || withdrawal.jobs?.clients?.company_name}
                     </p>
                     <div className="mt-2 p-2 bg-white rounded border border-red-100">
                       <p className="text-xs text-red-700 flex items-start gap-1">
@@ -525,7 +537,7 @@ export function AdminDashboard() {
                           <Building2 className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-sm">{client.company_name}</p>
+                          <p className="font-medium text-sm">{client.fantasia || client.company_name}</p>
                           {client.cidade && client.uf && (
                             <p className="text-xs text-muted-foreground flex items-center gap-1">
                               <MapPin className="h-3 w-3" />

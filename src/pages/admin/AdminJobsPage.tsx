@@ -53,6 +53,7 @@ interface Job {
   clients: {
     id: string;
     company_name: string;
+    fantasia: string | null;
   };
   job_assignments: {
     id: string;
@@ -92,7 +93,7 @@ export function AdminJobsPage() {
         .from('jobs')
         .select(`
           *,
-          clients (id, company_name),
+          clients (id, company_name, fantasia),
           job_assignments (
             id,
             status,
@@ -233,7 +234,8 @@ export function AdminJobsPage() {
     const matchesSearch =
       job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.clients?.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      job.clients?.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.clients?.fantasia?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === "all" || job.status === statusFilter;
 
@@ -389,7 +391,7 @@ export function AdminJobsPage() {
                           </div>
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
                             <Building2 className="h-3.5 w-3.5" />
-                            {job.clients?.company_name}
+                            {job.clients?.fantasia || job.clients?.company_name}
                           </p>
                         </div>
                       </div>
@@ -466,7 +468,7 @@ export function AdminJobsPage() {
                     <DialogTitle className="text-xl">{selectedJob.title}</DialogTitle>
                     <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                       <Building2 className="h-3.5 w-3.5" />
-                      {selectedJob.clients?.company_name}
+                      {selectedJob.clients?.fantasia || selectedJob.clients?.company_name}
                     </p>
                   </div>
                 </div>
