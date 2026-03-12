@@ -70,6 +70,7 @@ interface JobAssignment {
     location: string;
     clients: {
       company_name: string;
+      fantasia: string | null;
     };
   };
 }
@@ -162,7 +163,7 @@ export function AdminWorkersPage() {
               daily_rate,
               status,
               location,
-              clients (company_name)
+              clients (company_name, fantasia)
             )
           )
         `)
@@ -802,7 +803,7 @@ export function AdminWorkersPage() {
                                     {assignment.jobs?.title}
                                   </p>
                                   <p className="text-xs text-muted-foreground truncate">
-                                    {assignment.jobs?.clients?.company_name}
+                                    {assignment.jobs?.clients?.fantasia || assignment.jobs?.clients?.company_name}
                                   </p>
                                 </div>
                               </div>
@@ -1224,7 +1225,7 @@ export function AdminWorkersPage() {
                             <div className="min-w-0">
                               <p className="font-medium text-sm truncate">{assignment.jobs?.title}</p>
                               <p className="text-xs text-muted-foreground truncate">
-                                {assignment.jobs?.clients?.company_name}
+                                {assignment.jobs?.clients?.fantasia || assignment.jobs?.clients?.company_name}
                               </p>
                               <p className="text-xs text-muted-foreground flex items-center gap-2">
                                 <span className="flex items-center gap-1">
