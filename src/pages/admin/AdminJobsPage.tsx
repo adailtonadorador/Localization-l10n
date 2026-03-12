@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
@@ -35,6 +35,7 @@ import {
   CheckCircle,
   UserMinus,
   AlertTriangle,
+  Pencil,
 } from "lucide-react";
 
 interface Job {
@@ -70,6 +71,7 @@ interface Job {
 
 export function AdminJobsPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -242,11 +244,39 @@ export function AdminJobsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Estatísticas
-  const totalJobs = jobs.length;
-  const openJobs = jobs.filter(j => j.status === 'open').length;
-  const assignedJobs = jobs.filter(j => j.status === 'assigned').length;
-  const completedJobs = jobs.filter(j => j.status === 'completed').length;
+  // Estatísticas - calcular diárias (datas × prestadores necessários)
+  const getNumDates = (job: Job) =>
+    job.dates && job.dates.length > 0 ? job.dates.length : 1;
+
+  let totalOpen = 0;
+  let totalAssigned = 0;
+  let totalCompleted = 0;
+  let totalAll = 0;
+
+  for (const job of jobs) {
+    const numDates = getNumDates(job);
+    const required = job.required_workers || 1;
+    const totalJobDiarias = numDates * required;
+    totalAll += totalJobDiarias;
+
+    if (job.status === 'completed') {
+      totalCompleted += totalJobDiarias;
+    } else if (job.status === 'in_progress' || job.status === 'cancelled') {
+      // counted in total only
+    } else {
+      const activeAssignments = (job.job_assignments || []).filter(
+        a => ['pending', 'confirmed', 'in_progress', 'checked_in'].includes(a.status)
+      ).length;
+      const assignedDiarias = numDates * Math.min(activeAssignments, required);
+      totalAssigned += assignedDiarias;
+      totalOpen += totalJobDiarias - assignedDiarias;
+    }
+  }
+
+  const totalJobs = totalAll;
+  const openJobs = totalOpen;
+  const assignedJobs = totalAssigned;
+  const completedJobs = totalCompleted;
 
   if (loading) {
     return (
@@ -425,10 +455,16 @@ export function AdminJobsPage() {
                         </div>
                       </div>
 
-                      <Button variant="outline" size="sm" onClick={() => openDetails(job)}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        Detalhes
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openDetails(job)}>
+                          <Eye className="h-4 w-4 mr-1" />
+                          Detalhes
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/admin/jobs/${job.id}/edit`)}>
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -464,13 +500,24 @@ export function AdminJobsPage() {
                   <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
                     <Briefcase className="h-7 w-7 text-white" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <DialogTitle className="text-xl">{selectedJob.title}</DialogTitle>
                     <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                       <Building2 className="h-3.5 w-3.5" />
                       {selectedJob.clients?.fantasia || selectedJob.clients?.company_name}
                     </p>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDetailsOpen(false);
+                      navigate(`/admin/jobs/${selectedJob.id}/edit`);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Editar
+                  </Button>
                 </div>
               </DialogHeader>
 
