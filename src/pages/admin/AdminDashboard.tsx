@@ -112,41 +112,64 @@ export function AdminDashboard() {
       const [workersRes, clientsRes, allJobsRes, pendingRes] = await Promise.all([
         supabaseUntyped.from('workers').select('id', { count: 'exact', head: true }),
         supabaseUntyped.from('clients').select('id', { count: 'exact', head: true }),
-        supabaseUntyped.from('jobs').select('id, status, dates, date, required_workers'),
+        supabaseUntyped.from('jobs').select('id, status, dates, date, required_workers, job_assignments(id, status)'),
         supabaseUntyped.from('workers').select('id', { count: 'exact', head: true }).eq('documents_verified', false),
       ]);
 
-      // Calculate diárias: each job = number of dates × required_workers
-      const allJobs: { status: string; dates: string[] | null; date: string; required_workers: number }[] = allJobsRes.data || [];
-      const countDiarias = (jobs: typeof allJobs) =>
-        jobs.reduce((sum, job) => {
-          const numDates = job.dates && job.dates.length > 0 ? job.dates.length : 1;
-          return sum + numDates * (job.required_workers || 1);
-        }, 0);
+      // Calculate diárias considering actual assignments
+      const allJobs: { id: string; status: string; dates: string[] | null; date: string; required_workers: number; job_assignments: { id: string; status: string }[] }[] = allJobsRes.data || [];
 
-      const openJobs = allJobs.filter(j => j.status === 'open');
-      const completedJobs = allJobs.filter(j => j.status === 'completed');
+      const getNumDates = (job: typeof allJobs[0]) =>
+        job.dates && job.dates.length > 0 ? job.dates.length : 1;
+
+      const countDiarias = (jobs: typeof allJobs) =>
+        jobs.reduce((sum, job) => sum + getNumDates(job) * (job.required_workers || 1), 0);
+
+      // Count diárias based on assignments, not just job status
+      let totalOpen = 0;
+      let totalAssigned = 0;
+      let totalInProgress = 0;
+      let totalCompleted = 0;
+      let totalCancelled = 0;
+
+      for (const job of allJobs) {
+        const numDates = getNumDates(job);
+        const required = job.required_workers || 1;
+        const totalJobDiarias = numDates * required;
+
+        if (job.status === 'completed') {
+          totalCompleted += totalJobDiarias;
+        } else if (job.status === 'cancelled') {
+          totalCancelled += totalJobDiarias;
+        } else if (job.status === 'in_progress') {
+          totalInProgress += totalJobDiarias;
+        } else {
+          // For open/assigned jobs, split by actual active assignments
+          const activeAssignments = (job.job_assignments || []).filter(
+            a => ['pending', 'confirmed', 'in_progress', 'checked_in'].includes(a.status)
+          ).length;
+          const assignedDiarias = numDates * Math.min(activeAssignments, required);
+          const openDiarias = totalJobDiarias - assignedDiarias;
+          totalAssigned += assignedDiarias;
+          totalOpen += openDiarias;
+        }
+      }
 
       setStats({
         totalWorkers: workersRes.count || 0,
         totalClients: clientsRes.count || 0,
         totalJobs: countDiarias(allJobs),
-        openJobs: countDiarias(openJobs),
+        openJobs: totalOpen,
         pendingVerifications: pendingRes.count || 0,
-        completedJobs: countDiarias(completedJobs),
+        completedJobs: totalCompleted,
       });
 
-      // Load jobs by status for chart
-      const assignedJobs = allJobs.filter(j => j.status === 'assigned');
-      const inProgressJobs = allJobs.filter(j => j.status === 'in_progress');
-      const cancelledJobs = allJobs.filter(j => j.status === 'cancelled');
-
       setJobsByStatus({
-        open: countDiarias(openJobs),
-        assigned: countDiarias(assignedJobs),
-        in_progress: countDiarias(inProgressJobs),
-        completed: countDiarias(completedJobs),
-        cancelled: countDiarias(cancelledJobs),
+        open: totalOpen,
+        assigned: totalAssigned,
+        in_progress: totalInProgress,
+        completed: totalCompleted,
+        cancelled: totalCancelled,
       });
 
       // Load recent jobs
