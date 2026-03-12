@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton, SkeletonStatsCard } from "@/components/ui/skeleton";
+import { NotificationPrompt } from "@/components/NotificationPrompt";
 import {
   Users,
   Building2,
@@ -322,6 +323,9 @@ export function AdminDashboard() {
 
   return (
     <DashboardLayout>
+      {/* Notification Prompt */}
+      <NotificationPrompt variant="banner" />
+
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-slate-900">Painel Administrativo</h2>
