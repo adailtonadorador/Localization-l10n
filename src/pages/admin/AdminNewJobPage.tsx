@@ -136,7 +136,7 @@ export function AdminNewJobPage() {
     }
   }
 
-  // Check for duplicate jobs when client, title, or dates change
+  // Check for duplicate jobs when client, title, dates, or times change
   useEffect(() => {
     async function checkDuplicates() {
       if (!clientId || !title || selectedDates.length === 0) {
@@ -146,7 +146,7 @@ export function AdminNewJobPage() {
 
       const { data } = await supabaseUntyped
         .from('jobs')
-        .select('dates, date')
+        .select('dates, date, start_time, end_time')
         .eq('client_id', clientId)
         .eq('title', title.trim());
 
@@ -155,22 +155,36 @@ export function AdminNewJobPage() {
         return;
       }
 
-      // Collect all existing dates for this client+title
-      const existingDates = new Set<string>();
+      // Collect existing dates with their time ranges for this client+title
+      const existingSlots: { date: string; start: string; end: string }[] = [];
       for (const job of data) {
+        const jobDates: string[] = [];
         if (job.dates && Array.isArray(job.dates)) {
-          job.dates.forEach((d: string) => existingDates.add(d));
+          jobDates.push(...job.dates);
         } else if (job.date) {
-          existingDates.add(job.date);
+          jobDates.push(job.date);
+        }
+        for (const d of jobDates) {
+          existingSlots.push({ date: d, start: job.start_time, end: job.end_time });
         }
       }
 
-      const overlapping = selectedDates.filter(d => existingDates.has(d));
+      // Only flag dates where times overlap
+      const overlapping = selectedDates.filter(d => {
+        const slotsOnDate = existingSlots.filter(s => s.date === d);
+        if (slotsOnDate.length === 0) return false;
+        // If no times set yet, flag as potential conflict
+        if (!startTime || !endTime) return true;
+        // Check if any existing slot overlaps with the new time range
+        return slotsOnDate.some(slot =>
+          startTime < slot.end && endTime > slot.start
+        );
+      });
       setDuplicateDates(overlapping);
     }
 
     checkDuplicates();
-  }, [clientId, title, selectedDates]);
+  }, [clientId, title, selectedDates, startTime, endTime]);
 
   // Load workers when title or client changes
   useEffect(() => {
@@ -315,7 +329,7 @@ export function AdminNewJobPage() {
                   : 'text-slate-300 cursor-not-allowed'
             }
           `}
-          title={isDuplicate ? 'Diária já cadastrada para esta data' : undefined}
+          title={isDuplicate ? 'Conflito de horário com diária existente' : undefined}
         >
           {day}
         </button>
@@ -355,7 +369,7 @@ export function AdminNewJobPage() {
       return;
     }
     if (duplicateDates.length > 0) {
-      setError("Existem datas duplicadas para esta empresa e vaga. Remova as datas destacadas antes de continuar.");
+      setError("Existem datas com horários conflitantes para esta empresa e vaga. Remova as datas destacadas ou ajuste o horário.");
       return;
     }
 
@@ -678,12 +692,12 @@ export function AdminNewJobPage() {
                     <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-semibold text-amber-800">
-                        Diária duplicada detectada
+                        Conflito de horário detectado
                       </p>
                       <p className="text-sm text-amber-700 mt-1">
                         Já existe uma diária cadastrada para a empresa <strong>{selectedClient?.fantasia || selectedClient?.company_name}</strong> com
-                        a vaga <strong>{title}</strong> na(s) data(s) destacada(s) em vermelho.
-                        Remova essas datas ou escolha datas diferentes.
+                        a vaga <strong>{title}</strong> na(s) data(s) destacada(s) em vermelho com horário conflitante.
+                        Remova essas datas, escolha datas diferentes ou ajuste o horário para não haver sobreposição.
                       </p>
                     </div>
                   </div>
