@@ -22,6 +22,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Briefcase,
   Search,
   MapPin,
@@ -36,6 +42,12 @@ import {
   UserMinus,
   AlertTriangle,
   Pencil,
+  CircleDot,
+  UserCheck,
+  Play,
+  Ban,
+  CircleOff,
+  Info,
 } from "lucide-react";
 
 interface Job {
@@ -139,21 +151,90 @@ export function AdminJobsPage() {
     return timeStr.slice(0, 5);
   }
 
-  function getStatusBadge(status: string) {
+  function getStatusConfig(status: string) {
     switch (status) {
       case 'open':
-        return <Badge className="bg-blue-500">Aberta</Badge>;
+        return {
+          label: 'Aberta',
+          icon: CircleDot,
+          className: 'bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200',
+          tooltip: 'Aguardando prestadores se candidatarem para esta diária',
+        };
       case 'assigned':
-        return <Badge className="bg-purple-500">Atribuída</Badge>;
+        return {
+          label: 'Atribuída',
+          icon: UserCheck,
+          className: 'bg-purple-100 text-purple-700 border border-purple-200 hover:bg-purple-200',
+          tooltip: 'Todos os prestadores necessários já foram atribuídos',
+        };
       case 'in_progress':
-        return <Badge className="bg-amber-500">Em Andamento</Badge>;
+        return {
+          label: 'Em Andamento',
+          icon: Play,
+          className: 'bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200',
+          tooltip: 'A diária está sendo executada — prestadores em atividade',
+        };
       case 'completed':
-        return <Badge className="bg-green-500">Concluída</Badge>;
+        return {
+          label: 'Concluída',
+          icon: CheckCircle,
+          className: 'bg-green-100 text-green-700 border border-green-200 hover:bg-green-200',
+          tooltip: 'Diária finalizada com sucesso',
+        };
       case 'cancelled':
-        return <Badge variant="destructive">Cancelada</Badge>;
+        return {
+          label: 'Cancelada',
+          icon: Ban,
+          className: 'bg-red-100 text-red-700 border border-red-200 hover:bg-red-200',
+          tooltip: 'Esta diária foi cancelada',
+        };
+      case 'unfilled':
+        return {
+          label: 'Não Preenchida',
+          icon: CircleOff,
+          className: 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200',
+          tooltip: 'A diária expirou sem preencher todas as vagas necessárias',
+        };
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return {
+          label: status,
+          icon: Info,
+          className: 'bg-slate-100 text-slate-600 border border-slate-200',
+          tooltip: status,
+        };
     }
+  }
+
+  function getStatusBadge(status: string, assignmentInfo?: { active: number; required: number }) {
+    const config = getStatusConfig(status);
+    const Icon = config.icon;
+    const showCount = status === 'open' && assignmentInfo && assignmentInfo.active > 0;
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-default transition-colors ${config.className}`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {config.label}
+            {showCount && (
+              <span className="ml-0.5 text-[10px] opacity-75">
+                ({assignmentInfo.active}/{assignmentInfo.required})
+              </span>
+            )}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="max-w-[220px]">{config.tooltip}</p>
+          {showCount && (
+            <p className="text-[10px] opacity-75 mt-0.5">
+              {assignmentInfo.active} de {assignmentInfo.required} prestadores atribuídos
+            </p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    );
   }
 
   function getAssignmentStats(assignments: Job['job_assignments']) {
@@ -292,6 +373,7 @@ export function AdminJobsPage() {
   }
 
   return (
+    <TooltipProvider delayDuration={300}>
     <DashboardLayout>
       {/* Header */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -391,6 +473,7 @@ export function AdminJobsPage() {
                   <SelectItem value="assigned">Atribuídas</SelectItem>
                   <SelectItem value="in_progress">Em Andamento</SelectItem>
                   <SelectItem value="completed">Concluídas</SelectItem>
+                  <SelectItem value="unfilled">Não Preenchidas</SelectItem>
                   <SelectItem value="cancelled">Canceladas</SelectItem>
                 </SelectContent>
               </Select>
@@ -417,7 +500,7 @@ export function AdminJobsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-bold text-lg text-slate-900 truncate">{job.title}</h3>
-                            {getStatusBadge(job.status)}
+                            {getStatusBadge(job.status, { active: stats.active, required: job.required_workers })}
                           </div>
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
                             <Building2 className="h-3.5 w-3.5" />
@@ -524,7 +607,10 @@ export function AdminJobsPage() {
               <div className="space-y-6 mt-4">
                 {/* Status e Info */}
                 <div className="flex flex-wrap gap-2">
-                  {getStatusBadge(selectedJob.status)}
+                  {(() => {
+                    const detailStats = getAssignmentStats(selectedJob.job_assignments);
+                    return getStatusBadge(selectedJob.status, { active: detailStats.active, required: selectedJob.required_workers });
+                  })()}
                   <Badge variant="outline">{selectedJob.required_workers} diárias</Badge>
                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                     R$ {selectedJob.daily_rate}/dia
@@ -680,5 +766,6 @@ export function AdminJobsPage() {
         </DialogContent>
       </Dialog>
     </DashboardLayout>
+    </TooltipProvider>
   );
 }

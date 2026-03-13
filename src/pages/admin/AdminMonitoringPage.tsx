@@ -18,7 +18,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, CalendarDays, Eye, Mail, Phone, Star, Camera, MapPin, Building, Building2, ClipboardCheck, ZoomIn, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, CalendarDays, Eye, Mail, Phone, Star, Camera, MapPin, Building, Building2, ClipboardCheck, ZoomIn, RefreshCw } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RatingDialog, RatingDisplay } from "@/components/RatingDialog";
 import { getLocalToday } from "@/lib/date-utils";
@@ -65,6 +65,7 @@ interface JobWithRecords {
   status: string;
   clients: {
     company_name: string;
+    fantasia?: string | null;
   };
   work_records: WorkRecord[];
 }
@@ -109,7 +110,9 @@ export function AdminMonitoringPage() {
   const [completedRecords, setCompletedRecords] = useState<CompletedWorkRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterDate, setFilterDate] = useState<string>(getLocalToday());
+  const [dateFrom, setDateFrom] = useState<string>(getLocalToday());
+  const [dateTo, setDateTo] = useState<string>(getLocalToday());
+  const [activeFilter, setActiveFilter] = useState<'today' | 'week' | 'month' | 'all' | 'custom'>('today');
   const [selectedJob, setSelectedJob] = useState<JobWithRecords | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [ratingFilter, setRatingFilter] = useState<"all" | "pending" | "rated">("all");
@@ -128,6 +131,43 @@ export function AdminMonitoringPage() {
   const [clientsList, setClientsList] = useState<{ id: string; company_name: string; fantasia: string | null }[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
 
+  const isDateRangeInvalid = dateFrom && dateTo && dateTo < dateFrom;
+
+  function getCurrentWeekStart(): string {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(now.setDate(diff));
+    return monday.toISOString().split('T')[0];
+  }
+
+  function getCurrentWeekEnd(): string {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? 0 : 7);
+    const sunday = new Date(now.setDate(diff));
+    return sunday.toISOString().split('T')[0];
+  }
+
+  function formatDateLabel(dateStr: string) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    const date = new Date(Number(y), Number(m) - 1, Number(d));
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  }
+
+  function getFilterLabel() {
+    if (activeFilter === 'all') return 'Todos os registros';
+    if (!dateFrom && !dateTo) return 'Todos os registros';
+    if (dateFrom && dateTo) {
+      if (dateFrom === dateTo) return formatDateLabel(dateFrom);
+      return `${formatDateLabel(dateFrom)} — ${formatDateLabel(dateTo)}`;
+    }
+    if (dateFrom) return `A partir de ${formatDateLabel(dateFrom)}`;
+    if (dateTo) return `Até ${formatDateLabel(dateTo)}`;
+    return '';
+  }
+
   // Auto-update stale records on mount, then allow data load
   useEffect(() => {
     loadClientsList();
@@ -144,24 +184,21 @@ export function AdminMonitoringPage() {
 
   // Recarrega dados quando navega para esta página ou muda a data/tab/client
   useEffect(() => {
-    if (!autoUpdated) return;
+    if (!autoUpdated || isDateRangeInvalid) return;
     if (activeTab === "monitoring") {
       loadJobs();
     } else {
       loadCompletedAssignments();
     }
-  }, [filterDate, location.pathname, activeTab, autoUpdated, selectedClientId]);
+  }, [dateFrom, dateTo, location.pathname, activeTab, autoUpdated, selectedClientId]);
 
   async function loadJobs() {
     setLoading(true);
     try {
-      console.log('[AdminMonitoring] Loading jobs for date:', filterDate);
+      console.log('[AdminMonitoring] Loading jobs for range:', dateFrom, '-', dateTo);
 
-      // Estratégia: buscar work_records do dia e depois os jobs relacionados
-      // Isso garante que encontramos todos os prestadores escalados para o dia
-
-      // 1. Buscar todos os work_records do dia selecionado
-      const { data: workRecordsData, error: workRecordsError } = await supabaseUntyped
+      // 1. Buscar work_records no intervalo de datas
+      let workRecordsQuery = supabaseUntyped
         .from('work_records')
         .select(`
           id,
@@ -185,29 +222,39 @@ export function AdminMonitoringPage() {
             total_jobs,
             users (name, email, phone)
           )
-        `)
-        .eq('work_date', filterDate);
+        `);
+
+      if (dateFrom) {
+        workRecordsQuery = workRecordsQuery.gte('work_date', dateFrom);
+      }
+      if (dateTo) {
+        workRecordsQuery = workRecordsQuery.lte('work_date', dateTo);
+      }
+
+      const { data: workRecordsData, error: workRecordsError } = await workRecordsQuery;
 
       if (workRecordsError) {
         console.error('[AdminMonitoring] Error loading work_records:', workRecordsError);
       }
 
-      console.log('[AdminMonitoring] Work records found for date:', workRecordsData?.length || 0);
-      console.log('[AdminMonitoring] Work records status values:', workRecordsData?.map((wr: { id: string; status: string; check_in: string | null; check_out: string | null }) => ({
-        id: wr.id,
-        status: wr.status,
-        check_in: wr.check_in,
-        check_out: wr.check_out
-      })));
+      console.log('[AdminMonitoring] Work records found:', workRecordsData?.length || 0);
 
       // 2. Pegar os job_ids únicos dos work_records
       const jobIdsFromRecords = [...new Set((workRecordsData || []).map((wr: { job_id: string }) => wr.job_id))];
 
-      // 3. Buscar também jobs que têm a data mas podem não ter work_records ainda
-      const { data: jobsByDate, error: jobsByDateError } = await supabaseUntyped
+      // 3. Buscar jobs no intervalo de datas
+      let jobsByDateQuery = supabaseUntyped
         .from('jobs')
-        .select('id')
-        .or(`date.eq.${filterDate},dates.cs.{"${filterDate}"}`);
+        .select('id');
+
+      if (dateFrom) {
+        jobsByDateQuery = jobsByDateQuery.gte('date', dateFrom);
+      }
+      if (dateTo) {
+        jobsByDateQuery = jobsByDateQuery.lte('date', dateTo);
+      }
+
+      const { data: jobsByDate, error: jobsByDateError } = await jobsByDateQuery;
 
       if (jobsByDateError) {
         console.error('[AdminMonitoring] Error loading jobs by date:', jobsByDateError);
@@ -231,7 +278,7 @@ export function AdminMonitoringPage() {
         .from('jobs')
         .select(`
           *,
-          clients (company_name)
+          clients (company_name, fantasia)
         `)
         .in('id', allJobIds)
         .order('start_time', { ascending: true });
@@ -312,7 +359,7 @@ export function AdminMonitoringPage() {
           }) => {
             jobWorkRecords.push({
               id: `virtual-${assignment.id}`,
-              work_date: filterDate,
+              work_date: job.date,
               check_in: null,
               check_out: null,
               check_in_photo: null,
@@ -462,7 +509,7 @@ export function AdminMonitoringPage() {
   }
 
   function getJobStats(job: JobWithRecords) {
-    const todayRecords = job.work_records.filter(r => r.work_date === filterDate);
+    const todayRecords = job.work_records;
     const total = todayRecords.length;
     // Conta como "concluído" se status é completed OU se tem check_in E check_out
     const completed = todayRecords.filter(r =>
@@ -588,109 +635,119 @@ export function AdminMonitoringPage() {
         </TabsList>
 
         <TabsContent value="monitoring" className="space-y-5">
-          {/* Filter Card */}
+          {/* Filter Card - same style as dashboard */}
           <Card className="border-0 shadow-sm overflow-hidden">
             <div className="border-l-4 border-l-blue-500">
               <CardContent className="py-4">
                 <div className="flex flex-col gap-4">
-                  {/* Header row with title and quick day buttons */}
+                  {/* Header row with title and quick filters */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 bg-blue-100 rounded-lg">
                         <CalendarDays className="h-4 w-4 text-blue-600" />
                       </div>
-                      <span className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Filtros</span>
+                      <span className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Período</span>
                     </div>
 
-                    {/* Day quick-select segmented control */}
+                    {/* Segmented control */}
                     <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden bg-slate-50">
                       {([
-                        { key: 'yesterday', label: 'Ontem' },
-                        { key: 'today', label: 'Hoje' },
-                        { key: 'tomorrow', label: 'Amanhã' },
-                      ]).map((item, idx) => {
-                        const d = new Date();
-                        if (item.key === 'yesterday') d.setDate(d.getDate() - 1);
-                        if (item.key === 'tomorrow') d.setDate(d.getDate() + 1);
-                        const dateStr = d.toISOString().split('T')[0];
-                        const isActive = filterDate === dateStr;
-                        return (
-                          <button
-                            key={item.key}
-                            className={`px-4 py-2 text-sm font-medium transition-all ${
-                              idx < 2 ? 'border-r border-slate-200' : ''
-                            } ${
-                              isActive
-                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm'
-                                : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                            onClick={() => setFilterDate(dateStr)}
-                          >
-                            {item.label}
-                          </button>
-                        );
-                      })}
+                        { key: 'today' as const, label: 'Hoje' },
+                        { key: 'week' as const, label: 'Semana' },
+                        { key: 'month' as const, label: 'Mês' },
+                        { key: 'all' as const, label: 'Tudo' },
+                      ]).map((item, idx) => (
+                        <button
+                          key={item.key}
+                          className={`px-4 py-2 text-sm font-medium transition-all ${
+                            idx < 3 ? 'border-r border-slate-200' : ''
+                          } ${
+                            activeFilter === item.key
+                              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm'
+                              : 'text-slate-600 hover:bg-slate-100'
+                          }`}
+                          onClick={() => {
+                            setActiveFilter(item.key);
+                            const today = getLocalToday();
+                            if (item.key === 'today') {
+                              setDateFrom(today);
+                              setDateTo(today);
+                            } else if (item.key === 'week') {
+                              setDateFrom(getCurrentWeekStart());
+                              setDateTo(getCurrentWeekEnd());
+                            } else if (item.key === 'month') {
+                              const now = new Date();
+                              setDateFrom(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]);
+                              setDateTo(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]);
+                            } else {
+                              setDateFrom('');
+                              setDateTo('');
+                            }
+                          }}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Date + Client + Search row */}
+                  {/* Date inputs + Client + Search row */}
                   <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                     <div className="grid grid-cols-2 gap-3 sm:flex sm:gap-3">
-                      {/* Date with arrows */}
                       <div className="flex flex-col gap-1">
-                        <Label htmlFor="monitorDate" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Data</Label>
-                        <div className="flex items-center gap-0.5">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-10 w-8 shrink-0"
-                            onClick={() => {
-                              const d = new Date(filterDate + 'T00:00:00');
-                              d.setDate(d.getDate() - 1);
-                              setFilterDate(d.toISOString().split('T')[0]);
-                            }}
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                          <Input
-                            id="monitorDate"
-                            type="date"
-                            value={filterDate}
-                            onChange={(e) => setFilterDate(e.target.value)}
-                            className="w-full sm:w-40 h-10 rounded-lg border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/30 transition-colors"
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-10 w-8 shrink-0"
-                            onClick={() => {
-                              const d = new Date(filterDate + 'T00:00:00');
-                              d.setDate(d.getDate() + 1);
-                              setFilterDate(d.toISOString().split('T')[0]);
-                            }}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Label htmlFor="monitorDateFrom" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Início</Label>
+                        <Input
+                          id="monitorDateFrom"
+                          type="date"
+                          value={dateFrom}
+                          onChange={(e) => {
+                            setDateFrom(e.target.value);
+                            setActiveFilter('custom');
+                            if (dateTo && e.target.value && dateTo < e.target.value) {
+                              setDateTo(e.target.value);
+                            }
+                          }}
+                          className="w-full sm:w-44 h-10 rounded-lg border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                        />
                       </div>
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="monitorDateTo" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Fim</Label>
+                        <Input
+                          id="monitorDateTo"
+                          type="date"
+                          value={dateTo}
+                          min={dateFrom || undefined}
+                          onChange={(e) => {
+                            setDateTo(e.target.value);
+                            setActiveFilter('custom');
+                          }}
+                          className={`w-full sm:w-44 h-10 rounded-lg transition-colors ${
+                            isDateRangeInvalid
+                              ? 'border-red-400 ring-2 ring-red-400/30 bg-red-50 focus:ring-red-500/30'
+                              : 'border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/30'
+                          }`}
+                        />
+                        {isDateRangeInvalid && (
+                          <p className="text-xs text-red-500 mt-0.5">Data final deve ser após a data inicial</p>
+                        )}
+                      </div>
+                    </div>
 
-                      {/* Client filter */}
-                      <div className="flex flex-col gap-1">
-                        <Label htmlFor="monitorClient" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Cliente</Label>
-                        <select
-                          id="monitorClient"
-                          value={selectedClientId}
-                          onChange={(e) => setSelectedClientId(e.target.value)}
-                          className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:outline-none transition-colors min-w-[180px] sm:w-52"
-                        >
-                          <option value="">Todos os clientes</option>
-                          {clientsList.map((client) => (
-                            <option key={client.id} value={client.id}>
-                              {client.fantasia || client.company_name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor="monitorClient" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Cliente</Label>
+                      <select
+                        id="monitorClient"
+                        value={selectedClientId}
+                        onChange={(e) => setSelectedClientId(e.target.value)}
+                        className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:outline-none transition-colors min-w-[180px] sm:w-52"
+                      >
+                        <option value="">Todos os clientes</option>
+                        {clientsList.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.fantasia || client.company_name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     {/* Search */}
@@ -713,9 +770,7 @@ export function AdminMonitoringPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 rounded-full px-3 py-1.5 text-xs font-medium">
                       <CalendarDays className="h-3.5 w-3.5" />
-                      {filterDate === getLocalToday()
-                        ? 'Hoje'
-                        : new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {getFilterLabel()}
                     </span>
                     {selectedClientId && (
                       <span className="inline-flex items-center gap-1.5 bg-purple-50 text-purple-700 rounded-full px-3 py-1.5 text-xs font-medium">
@@ -802,7 +857,7 @@ export function AdminMonitoringPage() {
         <div className="grid gap-4">
           {filteredJobs.map((job) => {
             const stats = getJobStats(job);
-            const todayRecords = job.work_records.filter(r => r.work_date === filterDate);
+            const todayRecords = job.work_records;
             const cardAccent = stats.absent > 0
               ? 'border-l-4 border-l-red-500 bg-red-50/30'
               : stats.total > 0 && stats.completed === stats.total
@@ -821,7 +876,7 @@ export function AdminMonitoringPage() {
                       <div className="flex items-center gap-3 flex-wrap mt-1">
                         <span className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Building className="h-3 w-3" />
-                          {job.clients?.company_name}
+                          {job.clients?.fantasia || job.clients?.company_name}
                         </span>
                         <span className="flex items-center gap-1 text-sm text-muted-foreground">
                           <MapPin className="h-3 w-3" />
@@ -1013,7 +1068,7 @@ export function AdminMonitoringPage() {
               </>
             ) : (
               <p className="text-muted-foreground">
-                Nenhuma diária agendada para {new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}.
+                Nenhuma diária encontrada para o período selecionado.
               </p>
             )}
           </CardContent>
@@ -1122,7 +1177,7 @@ export function AdminMonitoringPage() {
                             <Badge className="bg-green-500">Concluído</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground truncate">
-                            {record.jobs?.title} - {record.jobs?.clients?.company_name}
+                            {record.jobs?.title} - {record.jobs?.clients?.company_name || ''}
                           </p>
                           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
@@ -1205,7 +1260,7 @@ export function AdminMonitoringPage() {
                     <div className="flex items-center gap-3 text-white/80 text-sm">
                       <span className="flex items-center gap-1">
                         <Building className="h-3.5 w-3.5" />
-                        {selectedJob.clients?.company_name}
+                        {selectedJob.clients?.fantasia || selectedJob.clients?.company_name}
                       </span>
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3.5 w-3.5" />
@@ -1224,7 +1279,7 @@ export function AdminMonitoringPage() {
                       <Calendar className="h-3 w-3" />
                       Data
                     </div>
-                    <p className="font-semibold text-sm">{new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                    <p className="font-semibold text-sm">{new Date(selectedJob.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
                   </div>
                   <div className="bg-white/10 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-white/70 text-xs mb-1">
@@ -1254,11 +1309,11 @@ export function AdminMonitoringPage() {
               <div className="p-6">
                 <h3 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  Registros de Trabalho - {new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  Registros de Trabalho
                 </h3>
 
                 {(() => {
-                  const todayRecords = selectedJob.work_records.filter(r => r.work_date === filterDate);
+                  const todayRecords = selectedJob.work_records;
 
                   if (todayRecords.length === 0) {
                     return (

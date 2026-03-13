@@ -177,10 +177,51 @@ export async function autoCompleteJobsWithFinishedRecords() {
 }
 
 /**
+ * Auto-fix jobs that are 'open' but have all required workers assigned.
+ * Changes status from 'open' to 'assigned'.
+ */
+export async function autoFixOpenJobsWithFullAssignments() {
+  try {
+    const { data: openJobs, error } = await supabaseUntyped
+      .from('jobs')
+      .select('id, required_workers, job_assignments(id, status)')
+      .eq('status', 'open');
+
+    if (error || !openJobs) return;
+
+    const jobsToAssign: string[] = [];
+
+    for (const job of openJobs) {
+      const required = job.required_workers || 1;
+      const activeAssignments = (job.job_assignments || []).filter(
+        (a: { status: string }) =>
+          ['pending', 'confirmed', 'in_progress', 'checked_in'].includes(a.status)
+      ).length;
+
+      if (activeAssignments >= required) {
+        jobsToAssign.push(job.id);
+      }
+    }
+
+    if (jobsToAssign.length > 0) {
+      await supabaseUntyped
+        .from('jobs')
+        .update({ status: 'assigned' })
+        .in('id', jobsToAssign);
+
+      console.log(`[AutoUpdate] Fixed ${jobsToAssign.length} jobs: open → assigned`);
+    }
+  } catch (err) {
+    console.error('Error auto-fixing open jobs with full assignments:', err);
+  }
+}
+
+/**
  * Run all auto-update routines. Call this on page mount.
  */
 export async function runAutoUpdates() {
   await Promise.all([
+    autoFixOpenJobsWithFullAssignments(),
     autoUpdateJobStatuses(),
     autoCompleteStaleWorkRecords(),
     autoCompleteJobsWithFinishedRecords(),
