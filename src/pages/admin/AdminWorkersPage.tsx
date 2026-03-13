@@ -529,9 +529,17 @@ export function AdminWorkersPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por nome, email ou CPF..."
+                  placeholder="Buscar por nome, email, CPF ou função..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    // Clear card filter when user types in search
+                    if (activeCardFilter) {
+                      setActiveCardFilter(null);
+                      setApprovalFilter("all");
+                      setStatusFilter("all");
+                    }
+                  }}
                   className="pl-10 bg-white"
                 />
               </div>
