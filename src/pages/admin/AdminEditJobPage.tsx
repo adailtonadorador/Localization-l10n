@@ -28,7 +28,18 @@ import {
   ChevronRight,
   X,
   Save,
+  UserPlus,
+  Search,
+  Star,
+  UserMinus,
+  AlertTriangle,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Client {
   id: string;
@@ -60,6 +71,27 @@ interface JobData {
   status: string;
 }
 
+interface JobAssignment {
+  id: string;
+  status: string;
+  worker_id: string;
+  workers: {
+    id: string;
+    users: { name: string };
+  };
+}
+
+interface AvailableWorker {
+  id: string;
+  funcao: string;
+  rating: number;
+  total_jobs: number;
+  users: {
+    name: string;
+    phone: string | null;
+  };
+}
+
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
@@ -86,6 +118,19 @@ export function AdminEditJobPage() {
   const [requiredWorkers, setRequiredWorkers] = useState("1");
   const [jobStatus, setJobStatus] = useState("");
 
+  // Worker assignment state
+  const [assignments, setAssignments] = useState<JobAssignment[]>([]);
+  const [availableWorkers, setAvailableWorkers] = useState<AvailableWorker[]>([]);
+  const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([]);
+  const [workerSearch, setWorkerSearch] = useState("");
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
+  const [assigningWorkers, setAssigningWorkers] = useState(false);
+
+  // Unassign dialog state
+  const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<JobAssignment | null>(null);
+  const [unassignLoading, setUnassignLoading] = useState(false);
+
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -97,7 +142,7 @@ export function AdminEditJobPage() {
   async function loadData() {
     setLoadingJob(true);
     try {
-      const [jobRes, clientsRes] = await Promise.all([
+      const [jobRes, clientsRes, assignmentsRes] = await Promise.all([
         supabaseUntyped
           .from('jobs')
           .select('*')
@@ -107,6 +152,10 @@ export function AdminEditJobPage() {
           .from('clients')
           .select('id, company_name, fantasia, filial, address, logradouro, numero, complemento, bairro, cidade, uf, cep')
           .order('company_name'),
+        supabaseUntyped
+          .from('job_assignments')
+          .select('id, status, worker_id, workers(id, users(name))')
+          .eq('job_id', id),
       ]);
 
       if (jobRes.error || !jobRes.data) {
@@ -117,6 +166,7 @@ export function AdminEditJobPage() {
 
       const job: JobData = jobRes.data;
       setClients(clientsRes.data || []);
+      setAssignments(assignmentsRes.data || []);
 
       // Populate form
       setClientId(job.client_id);
@@ -242,6 +292,162 @@ export function AdminEditJobPage() {
     }
 
     return days;
+  }
+
+  // Load available workers when title or client changes
+  useEffect(() => {
+    const clientUf = clients.find(c => c.id === clientId)?.uf;
+    if (title && clientUf) {
+      loadAvailableWorkers(title, clientUf);
+    } else {
+      setAvailableWorkers([]);
+    }
+    setSelectedWorkerIds([]);
+  }, [title, clientId]);
+
+  async function loadAvailableWorkers(funcao: string, uf: string) {
+    setLoadingWorkers(true);
+    try {
+      const { data } = await supabaseUntyped
+        .from('workers')
+        .select('id, funcao, rating, total_jobs, users(name, phone)')
+        .eq('approval_status', 'approved')
+        .eq('is_active', true)
+        .eq('funcao', funcao)
+        .eq('uf', uf);
+
+      setAvailableWorkers(data || []);
+    } catch (error) {
+      console.error('Error loading workers:', error);
+    } finally {
+      setLoadingWorkers(false);
+    }
+  }
+
+  const activeAssignments = assignments.filter(a =>
+    ['pending', 'confirmed', 'in_progress', 'checked_in'].includes(a.status)
+  );
+  const inactiveAssignments = assignments.filter(a =>
+    !['pending', 'confirmed', 'in_progress', 'checked_in'].includes(a.status)
+  );
+
+  // Filter out already-assigned workers from available list
+  const assignedWorkerIds = new Set(activeAssignments.map(a => a.worker_id));
+  const unassignedWorkers = availableWorkers.filter(w => !assignedWorkerIds.has(w.id));
+  const filteredWorkers = unassignedWorkers.filter(w =>
+    w.users?.name?.toLowerCase().includes(workerSearch.toLowerCase())
+  );
+
+  const maxWorkers = parseInt(requiredWorkers) || 1;
+  const remainingSlots = maxWorkers - activeAssignments.length;
+
+  function toggleWorkerSelection(workerId: string) {
+    setSelectedWorkerIds(prev => {
+      if (prev.includes(workerId)) {
+        return prev.filter(id => id !== workerId);
+      }
+      if (prev.length >= remainingSlots) {
+        toast.error(`Apenas ${remainingSlots} vaga(s) disponível(is)`);
+        return prev;
+      }
+      return [...prev, workerId];
+    });
+  }
+
+  async function handleAssignWorkers() {
+    if (selectedWorkerIds.length === 0 || !id) return;
+
+    setAssigningWorkers(true);
+    try {
+      // Create job_assignments
+      const newAssignments = selectedWorkerIds.map(workerId => ({
+        job_id: id,
+        worker_id: workerId,
+        status: 'confirmed',
+      }));
+      await supabaseUntyped.from('job_assignments').insert(newAssignments);
+
+      // Create work_records for each worker x each date
+      const dates = selectedDates.length > 0 ? selectedDates : [];
+      const workRecords = selectedWorkerIds.flatMap(workerId =>
+        dates.map(date => ({
+          job_id: id,
+          worker_id: workerId,
+          work_date: date,
+          status: 'pending',
+        }))
+      );
+      if (workRecords.length > 0) {
+        await supabaseUntyped.from('work_records').insert(workRecords);
+      }
+
+      // Check if all slots are now filled → update job status to 'assigned'
+      const newActiveCount = activeAssignments.length + selectedWorkerIds.length;
+      if (newActiveCount >= maxWorkers && jobStatus === 'open') {
+        await supabaseUntyped
+          .from('jobs')
+          .update({ status: 'assigned' })
+          .eq('id', id);
+        setJobStatus('assigned');
+      }
+
+      toast.success(`${selectedWorkerIds.length} prestador(es) atribuído(s) com sucesso!`);
+      setSelectedWorkerIds([]);
+      // Reload assignments
+      const { data } = await supabaseUntyped
+        .from('job_assignments')
+        .select('id, status, worker_id, workers(id, users(name))')
+        .eq('job_id', id);
+      setAssignments(data || []);
+    } catch (error) {
+      console.error('Error assigning workers:', error);
+      toast.error('Erro ao atribuir prestadores');
+    } finally {
+      setAssigningWorkers(false);
+    }
+  }
+
+  async function handleUnassignWorker() {
+    if (!selectedAssignment || !id) return;
+
+    setUnassignLoading(true);
+    try {
+      await supabaseUntyped
+        .from('job_assignments')
+        .update({ status: 'unassigned_by_admin' })
+        .eq('id', selectedAssignment.id);
+
+      await supabaseUntyped
+        .from('work_records')
+        .delete()
+        .eq('job_id', id)
+        .eq('worker_id', selectedAssignment.worker_id);
+
+      // If active count drops below required, reopen job
+      const newActiveCount = activeAssignments.length - 1;
+      if (newActiveCount < maxWorkers && jobStatus !== 'open') {
+        await supabaseUntyped
+          .from('jobs')
+          .update({ status: 'open' })
+          .eq('id', id);
+        setJobStatus('open');
+      }
+
+      toast.success('Prestador removido com sucesso!');
+      setUnassignDialogOpen(false);
+
+      // Reload assignments
+      const { data } = await supabaseUntyped
+        .from('job_assignments')
+        .select('id, status, worker_id, workers(id, users(name))')
+        .eq('job_id', id);
+      setAssignments(data || []);
+    } catch (error) {
+      console.error('Error unassigning worker:', error);
+      toast.error('Erro ao remover prestador');
+    } finally {
+      setUnassignLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -617,6 +823,179 @@ export function AdminEditJobPage() {
               </CardContent>
             </Card>
 
+            {/* Worker Assignment */}
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <UserPlus className="h-5 w-5 text-primary" />
+                  Prestadores
+                </CardTitle>
+                <CardDescription>
+                  {activeAssignments.length}/{maxWorkers} atribuído(s)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Current assignments */}
+                {activeAssignments.length > 0 && (
+                  <div className="space-y-1.5">
+                    {activeAssignments.map(a => (
+                      <div
+                        key={a.id}
+                        className="flex items-center justify-between p-2.5 rounded-lg bg-blue-50 border border-blue-200"
+                      >
+                        <span className="text-sm font-medium">{a.workers?.users?.name || 'Prestador'}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Badge
+                            variant="secondary"
+                            className={
+                              a.status === 'confirmed' ? 'bg-blue-100 text-blue-700 text-[10px]' :
+                              a.status === 'pending' ? 'bg-amber-100 text-amber-700 text-[10px]' :
+                              'text-[10px]'
+                            }
+                          >
+                            {a.status === 'pending' ? 'Pendente' : a.status === 'confirmed' ? 'Confirmado' : a.status}
+                          </Badge>
+                          <button
+                            type="button"
+                            onClick={() => { setSelectedAssignment(a); setUnassignDialogOpen(true); }}
+                            className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
+                            title="Remover prestador"
+                          >
+                            <UserMinus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Inactive (removed/withdrawn) */}
+                {inactiveAssignments.length > 0 && (
+                  <div className="space-y-1">
+                    {inactiveAssignments.map(a => (
+                      <div
+                        key={a.id}
+                        className="flex items-center justify-between p-2 rounded-lg bg-red-50 border border-red-100 opacity-60"
+                      >
+                        <span className="text-sm text-red-600 line-through">{a.workers?.users?.name || 'Prestador'}</span>
+                        <Badge variant="destructive" className="text-[10px]">
+                          {a.status === 'withdrawn' ? 'Desistiu' : a.status === 'unassigned_by_admin' ? 'Removido' : a.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add workers - only if slots available */}
+                {remainingSlots > 0 && (
+                  <>
+                    <div className="border-t pt-3 mt-2">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {remainingSlots} vaga(s) disponível(is) — selecione prestadores:
+                      </p>
+                    </div>
+
+                    {!title || !clientId ? (
+                      <p className="text-sm text-muted-foreground text-center py-3">
+                        Selecione a empresa e título para ver prestadores
+                      </p>
+                    ) : loadingWorkers ? (
+                      <div className="flex items-center justify-center py-3">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                      </div>
+                    ) : unassignedWorkers.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-3">
+                        Nenhum prestador disponível com função "{title}"
+                      </p>
+                    ) : (
+                      <>
+                        {selectedWorkerIds.length > 0 && (
+                          <div className="flex items-center justify-between px-3 py-2 bg-blue-50 rounded-lg">
+                            <span className="text-sm font-medium text-blue-700">
+                              {selectedWorkerIds.length} selecionado(s)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedWorkerIds([])}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              Limpar
+                            </button>
+                          </div>
+                        )}
+
+                        {unassignedWorkers.length > 3 && (
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Buscar por nome..."
+                              value={workerSearch}
+                              onChange={(e) => setWorkerSearch(e.target.value)}
+                              className="pl-9 bg-white h-9 text-sm"
+                            />
+                          </div>
+                        )}
+
+                        <div className="max-h-48 overflow-y-auto space-y-1">
+                          {filteredWorkers.map((worker) => {
+                            const isSelected = selectedWorkerIds.includes(worker.id);
+                            return (
+                              <div
+                                key={worker.id}
+                                onClick={() => toggleWorkerSelection(worker.id)}
+                                className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors ${
+                                  isSelected ? 'bg-blue-50 border border-blue-200' : 'hover:bg-slate-50 border border-transparent'
+                                }`}
+                              >
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 text-[10px] leading-none ${
+                                  isSelected ? 'bg-primary border-primary text-white' : 'border-slate-300'
+                                }`}>
+                                  {isSelected && '✓'}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{worker.users?.name}</p>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="flex items-center gap-0.5">
+                                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                                      {worker.rating?.toFixed(1) || 'N/A'}
+                                    </span>
+                                    <span>{worker.total_jobs || 0} trabalhos</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {filteredWorkers.length === 0 && workerSearch && (
+                            <p className="text-sm text-muted-foreground text-center py-2">
+                              Nenhum resultado para "{workerSearch}"
+                            </p>
+                          )}
+                        </div>
+
+                        {selectedWorkerIds.length > 0 && (
+                          <Button
+                            type="button"
+                            onClick={handleAssignWorkers}
+                            disabled={assigningWorkers}
+                            className="w-full mt-2"
+                            size="sm"
+                          >
+                            {assigningWorkers ? 'Atribuindo...' : `Atribuir ${selectedWorkerIds.length} Prestador(es)`}
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+
+                {remainingSlots <= 0 && activeAssignments.length > 0 && (
+                  <p className="text-xs text-green-600 text-center py-1">
+                    Todas as vagas estão preenchidas
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Summary & Submit */}
             <Card className="border-0 shadow-sm bg-slate-50">
               <CardContent className="pt-6">
@@ -689,6 +1068,37 @@ export function AdminEditJobPage() {
           </div>
         </div>
       </form>
+
+      {/* Unassign Confirmation Dialog */}
+      <Dialog open={unassignDialogOpen} onOpenChange={setUnassignDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Remover Prestador
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Remover <strong className="text-foreground">{selectedAssignment?.workers?.users?.name}</strong> desta diária?
+            </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm">
+              <ul className="list-disc list-inside space-y-1">
+                <li>Registros de trabalho pendentes serão excluídos</li>
+                <li>A vaga será reaberta para outros prestadores</li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setUnassignDialogOpen(false)} disabled={unassignLoading}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUnassignWorker} disabled={unassignLoading} className="bg-red-500 hover:bg-red-600">
+              {unassignLoading ? 'Removendo...' : 'Confirmar Remoção'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
