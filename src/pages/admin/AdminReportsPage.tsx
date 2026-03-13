@@ -83,7 +83,7 @@ interface WorkRecordRaw {
     end_time: string;
     required_workers: number;
     status: string;
-    clients: { id: string; company_name: string } | null;
+    clients: { id: string; company_name: string; fantasia?: string | null } | null;
   } | null;
 }
 
@@ -99,7 +99,7 @@ interface JobRaw {
   required_workers: number;
   status: string;
   created_at: string;
-  clients: { id: string; company_name: string } | null;
+  clients: { id: string; company_name: string; fantasia?: string | null } | null;
   job_assignments: { id: string; status: string; worker_id: string }[];
 }
 
@@ -112,6 +112,7 @@ interface WorkerOption {
 interface ClientOption {
   id: string;
   company_name: string;
+  fantasia?: string | null;
 }
 
 const CHART_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#ec4899', '#14b8a6'];
@@ -185,7 +186,7 @@ export function AdminReportsPage() {
   async function loadFilterOptions() {
     const [w, c] = await Promise.all([
       supabaseUntyped.from('workers').select('id, funcao, users(name)').eq('is_active', true).order('id'),
-      supabaseUntyped.from('clients').select('id, company_name').order('company_name'),
+      supabaseUntyped.from('clients').select('id, company_name, fantasia').order('company_name'),
     ]);
     setWorkerOptions(w.data || []);
     setClientOptions(c.data || []);
@@ -202,7 +203,7 @@ export function AdminReportsPage() {
             check_in_latitude, check_in_longitude, check_out_latitude, check_out_longitude,
             workers(id, funcao, rating, users(name, email, phone)),
             jobs(id, title, daily_rate, date, start_time, end_time, required_workers, status,
-              clients(id, company_name))
+              clients(id, company_name, fantasia))
           `)
           .gte('work_date', startDate)
           .lte('work_date', endDate)
@@ -212,7 +213,7 @@ export function AdminReportsPage() {
           .select(`
             id, title, location, date, dates, start_time, end_time, daily_rate,
             required_workers, status, created_at,
-            clients(id, company_name),
+            clients(id, company_name, fantasia),
             job_assignments(id, status, worker_id)
           `)
           .gte('date', startDate)
@@ -356,7 +357,7 @@ export function AdminReportsPage() {
       totalPaid += rate;
 
       const cId = r.jobs?.clients?.id || 'unknown';
-      const cName = r.jobs?.clients?.company_name || 'Desconhecido';
+      const cName = r.jobs?.clients?.fantasia || r.jobs?.clients?.company_name || 'Desconhecido';
       if (!byClient.has(cId)) byClient.set(cId, { name: cName, total: 0, count: 0 });
       const cs = byClient.get(cId)!;
       cs.total += rate;
@@ -484,7 +485,7 @@ export function AdminReportsPage() {
           const active = j.job_assignments.filter(a => ['pending', 'confirmed', 'completed'].includes(a.status)).length;
           return {
             title: j.title,
-            client: j.clients?.company_name || '-',
+            client: j.clients?.fantasia || j.clients?.company_name || '-',
             date: formatDateBR(j.date),
             time: `${j.start_time.slice(0, 5)} - ${j.end_time.slice(0, 5)}`,
             rate: formatCurrency(j.daily_rate),
@@ -525,7 +526,7 @@ export function AdminReportsPage() {
           date: formatDateBR(r.work_date),
           worker: r.workers?.users?.name || '-',
           job: r.jobs?.title || '-',
-          client: r.jobs?.clients?.company_name || '-',
+          client: r.jobs?.clients?.fantasia || r.jobs?.clients?.company_name || '-',
           checkIn: formatTimeBR(r.check_in),
           checkOut: formatTimeBR(r.check_out),
           hours: calcHours(r.check_in, r.check_out).toFixed(1),
@@ -580,7 +581,7 @@ export function AdminReportsPage() {
                 <SelectContent>
                   <SelectItem value="all">Todos os Clientes</SelectItem>
                   {clientOptions.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>{c.fantasia || c.company_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -841,7 +842,7 @@ export function AdminReportsPage() {
                           return (
                             <tr key={j.id} className="border-b hover:bg-slate-50 transition-colors">
                               <td className="p-3 font-medium">{j.title}</td>
-                              <td className="p-3 text-muted-foreground">{j.clients?.company_name || '-'}</td>
+                              <td className="p-3 text-muted-foreground">{j.clients?.fantasia || j.clients?.company_name || '-'}</td>
                               <td className="p-3 text-center">{formatDateBR(j.date)}</td>
                               <td className="p-3 text-center">{j.start_time.slice(0, 5)} - {j.end_time.slice(0, 5)}</td>
                               <td className="p-3 text-right font-medium text-blue-700">{formatCurrency(j.daily_rate)}</td>
@@ -1051,7 +1052,7 @@ export function AdminReportsPage() {
                               <td className="p-3">{formatDateBR(r.work_date)}</td>
                               <td className="p-3 font-medium">{r.workers?.users?.name || '-'}</td>
                               <td className="p-3 text-muted-foreground">{r.jobs?.title || '-'}</td>
-                              <td className="p-3 text-muted-foreground">{r.jobs?.clients?.company_name || '-'}</td>
+                              <td className="p-3 text-muted-foreground">{r.jobs?.clients?.fantasia || r.jobs?.clients?.company_name || '-'}</td>
                               <td className="p-3 text-center">{formatTimeBR(r.check_in)}</td>
                               <td className="p-3 text-center">{formatTimeBR(r.check_out)}</td>
                               <td className="p-3 text-center">{hours > 0 ? `${hours}h` : '-'}</td>
