@@ -320,14 +320,32 @@ export function AdminWorkersPage() {
     return new Date(dateStr).toLocaleDateString('pt-BR');
   }
 
+  // Helper: safely extract user data (handles both object and array from Supabase)
+  function getUserData(worker: Worker): { name: string; email: string; phone: string; avatar_url: string | null } | null {
+    if (!worker.users) return null;
+    // Supabase may return array for some FK configs
+    if (Array.isArray(worker.users)) {
+      return (worker.users as unknown as { name: string; email: string; phone: string; avatar_url: string | null }[])[0] || null;
+    }
+    return worker.users;
+  }
+
   // Filters
   const filteredWorkers = workers.filter(worker => {
     const term = searchTerm.trim().toLowerCase();
+
+    const user = getUserData(worker);
+    const workerName = (user?.name || '').toLowerCase();
+    const workerEmail = (user?.email || '').toLowerCase();
+    const workerCpf = worker.cpf || '';
+    const workerFuncao = (worker.funcao || '').toLowerCase();
+    const cpfDigits = searchTerm.replace(/\D/g, '');
+
     const matchesSearch = !term ||
-      worker.users?.name?.toLowerCase().includes(term) ||
-      worker.users?.email?.toLowerCase().includes(term) ||
-      worker.cpf?.includes(searchTerm.replace(/\D/g, '')) ||
-      worker.funcao?.toLowerCase().includes(term);
+      workerName.includes(term) ||
+      workerEmail.includes(term) ||
+      (cpfDigits.length > 0 && workerCpf.includes(cpfDigits)) ||
+      workerFuncao.includes(term);
 
     const matchesUf = selectedUf === "all" || worker.uf === selectedUf;
 
