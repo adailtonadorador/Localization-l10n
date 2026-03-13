@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { useAdminPermissions, getModuleForRoute } from '@/hooks/useAdminPermissions'
 import type { Database } from '@/types/database'
 
 type UserRole = Database['public']['Enums']['user_role']
@@ -16,6 +17,7 @@ export function ProtectedRoute({
   requireCompleteProfile = true
 }: ProtectedRouteProps) {
   const { user, profile, loading, isProfileComplete } = useAuth()
+  const { canAccessRoute, loading: permLoading } = useAdminPermissions()
   const location = useLocation()
 
   // Se está carregando e não tem profile em cache, mostrar loading
@@ -55,6 +57,15 @@ export function ProtectedRoute({
         ? '/client'
         : '/admin'
     return <Navigate to={redirectPath} replace />
+  }
+
+  // Check admin module permissions
+  if (profile.role === 'admin' && !permLoading) {
+    const module = getModuleForRoute(location.pathname)
+    if (module && !canAccessRoute(location.pathname)) {
+      // Redirect to admin dashboard or first allowed page
+      return <Navigate to="/admin" replace />
+    }
   }
 
   return <>{children}</>

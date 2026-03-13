@@ -13,6 +13,7 @@ interface UserProfile {
   role: UserRole
   phone: string | null
   avatar_url: string | null
+  is_super_admin: boolean
 }
 
 interface WorkerProfile {

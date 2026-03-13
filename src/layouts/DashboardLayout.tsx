@@ -24,8 +24,10 @@ import {
   Building2,
   AlertTriangle,
   FileBarChart,
-  Shield
+  Shield,
+  Crown,
 } from "lucide-react";
+import { useAdminPermissions, type AdminModule } from "@/hooks/useAdminPermissions";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -40,14 +42,14 @@ const menuItems = {
     { label: 'Meu Perfil', href: '/worker/profile', icon: User },
   ],
   admin: [
-    { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { label: 'Diárias', href: '/admin/jobs', icon: Briefcase },
-    { label: 'Clientes', href: '/admin/clients', icon: Building2 },
-    { label: 'Prestadores', href: '/admin/workers', icon: Users },
-    { label: 'Monitoramento', href: '/admin/monitoring', icon: Activity },
-    { label: 'Desistências', href: '/admin/withdrawals', icon: AlertTriangle },
-    { label: 'Relatórios', href: '/admin/reports', icon: FileBarChart },
-    { label: 'Usuários', href: '/admin/users', icon: Shield },
+    { label: 'Dashboard', href: '/admin', icon: LayoutDashboard, module: 'dashboard' as AdminModule },
+    { label: 'Diárias', href: '/admin/jobs', icon: Briefcase, module: 'jobs' as AdminModule },
+    { label: 'Clientes', href: '/admin/clients', icon: Building2, module: 'clients' as AdminModule },
+    { label: 'Prestadores', href: '/admin/workers', icon: Users, module: 'workers' as AdminModule },
+    { label: 'Monitoramento', href: '/admin/monitoring', icon: Activity, module: 'monitoring' as AdminModule },
+    { label: 'Desistências', href: '/admin/withdrawals', icon: AlertTriangle, module: 'withdrawals' as AdminModule },
+    { label: 'Relatórios', href: '/admin/reports', icon: FileBarChart, module: 'reports' as AdminModule },
+    { label: 'Usuários', href: '/admin/users', icon: Shield, module: 'users' as AdminModule },
   ],
   client: [
     { label: 'Dashboard', href: '/client', icon: LayoutDashboard },
@@ -70,6 +72,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [newWithdrawalsCount, setNewWithdrawalsCount] = useState(0);
+  const { hasPermission, isSuperAdmin } = useAdminPermissions();
 
   // Buscar contagem de desistências recentes (últimas 24h) para admin
   useEffect(() => {
@@ -107,7 +110,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
-  const items = menuItems[profile.role];
+  const allItems = menuItems[profile.role];
+  // Filter admin menu items by permissions
+  const items = profile.role === 'admin'
+    ? allItems.filter(item => {
+        const mod = (item as { module?: AdminModule }).module;
+        return !mod || hasPermission(mod);
+      })
+    : allItems;
   const userName = profile.name;
   const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
@@ -144,6 +154,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {profile.role === 'admin' && isSuperAdmin && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 mb-1 text-xs font-semibold text-amber-700 bg-amber-50 rounded-lg border border-amber-200">
+              <Crown className="h-3.5 w-3.5" />
+              Super Admin
+            </div>
+          )}
           <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Menu Principal
           </p>

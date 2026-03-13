@@ -97,6 +97,14 @@ export function WorkerJobsPage() {
         query = query.ilike('title', workerProfile.funcao);
       }
 
+      if (workerProfile?.uf) {
+        query = query.eq('uf', workerProfile.uf);
+      }
+
+      if (workerProfile?.cidade) {
+        query = query.eq('city', workerProfile.cidade);
+      }
+
       const { data: jobsData } = await query;
 
       if (jobsData && jobsData.length > 0) {

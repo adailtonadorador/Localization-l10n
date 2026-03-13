@@ -218,6 +218,14 @@ export function WorkerDashboard() {
         jobsQuery = jobsQuery.ilike('title', workerProfile.funcao);
       }
 
+      if (workerProfile?.uf) {
+        jobsQuery = jobsQuery.eq('uf', workerProfile.uf);
+      }
+
+      if (workerProfile?.cidade) {
+        jobsQuery = jobsQuery.eq('city', workerProfile.cidade);
+      }
+
       const { data: jobsData } = await jobsQuery;
 
       // Fetch job IDs where this worker already has an active assignment or pending application

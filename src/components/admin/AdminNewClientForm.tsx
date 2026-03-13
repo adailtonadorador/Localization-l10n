@@ -14,6 +14,7 @@ import {
   Home,
   Map,
   MapPin,
+  AlertTriangle,
 } from "lucide-react";
 
 interface ViaCepResponse {
@@ -36,6 +37,7 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
   const [error, setError] = useState<string | null>(null);
   const [fetchingCnpj, setFetchingCnpj] = useState(false);
   const [fetchingCep, setFetchingCep] = useState(false);
+  const [cnpjDuplicate, setCnpjDuplicate] = useState<{ fantasia: string | null; company_name: string; filial: number | null } | null>(null);
 
   // User credentials
   const [email, setEmail] = useState("");
@@ -95,7 +97,19 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
 
     setFetchingCnpj(true);
     setError(null);
+    setCnpjDuplicate(null);
+
     try {
+      // Check if CNPJ already exists in the database
+      const { data: existing } = await supabaseUntyped
+        .from('clients')
+        .select('company_name, fantasia, filial')
+        .eq('cnpj', cleanCnpj)
+        .single();
+
+      if (existing) {
+        setCnpjDuplicate(existing);
+      }
       // Usar BrasilAPI como fonte primária (gratuita e confiável)
       const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
 
@@ -155,6 +169,8 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
     const cleanCnpj = value.replace(/\D/g, '');
     if (cleanCnpj.length === 14) {
       fetchCompanyByCnpj(cleanCnpj);
+    } else {
+      setCnpjDuplicate(null);
     }
   }
 
@@ -215,6 +231,11 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
     const cleanCnpj = cnpj.replace(/\D/g, '');
     if (cleanCnpj.length !== 14) {
       setError("CNPJ deve ter 14 dígitos");
+      return;
+    }
+
+    if (cnpjDuplicate) {
+      setError("Este CNPJ já está cadastrado no sistema");
       return;
     }
 
@@ -508,9 +529,22 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
               <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Digite o CNPJ para buscar os dados da empresa automaticamente
-          </p>
+          {cnpjDuplicate ? (
+            <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">CNPJ já cadastrado</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Empresa: <strong>{cnpjDuplicate.fantasia || cnpjDuplicate.company_name}</strong>
+                  {cnpjDuplicate.filial != null && ` (Filial ${cnpjDuplicate.filial})`}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Digite o CNPJ para buscar os dados da empresa automaticamente
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -686,7 +720,7 @@ export function AdminNewClientForm({ onSuccess, onCancel }: AdminNewClientFormPr
         )}
         <Button
           type="submit"
-          disabled={loading || fetchingCnpj || fetchingCep}
+          disabled={loading || fetchingCnpj || fetchingCep || !!cnpjDuplicate}
           className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
         >
           {loading ? (

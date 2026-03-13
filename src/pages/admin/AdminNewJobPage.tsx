@@ -31,6 +31,7 @@ import {
   Search,
   Star,
   UserPlus,
+  AlertTriangle,
 } from "lucide-react";
 
 
@@ -89,6 +90,7 @@ export function AdminNewJobPage() {
   const [endTime, setEndTime] = useState("");
   const dailyRate = "110";
   const [requiredWorkers, setRequiredWorkers] = useState("1");
+  const [duplicateDates, setDuplicateDates] = useState<string[]>([]);
 
   // Worker assignment state
   const [availableWorkers, setAvailableWorkers] = useState<AvailableWorker[]>([]);
@@ -133,6 +135,42 @@ export function AdminNewJobPage() {
       setLoadingClients(false);
     }
   }
+
+  // Check for duplicate jobs when client, title, or dates change
+  useEffect(() => {
+    async function checkDuplicates() {
+      if (!clientId || !title || selectedDates.length === 0) {
+        setDuplicateDates([]);
+        return;
+      }
+
+      const { data } = await supabaseUntyped
+        .from('jobs')
+        .select('dates, date')
+        .eq('client_id', clientId)
+        .eq('title', title.trim());
+
+      if (!data || data.length === 0) {
+        setDuplicateDates([]);
+        return;
+      }
+
+      // Collect all existing dates for this client+title
+      const existingDates = new Set<string>();
+      for (const job of data) {
+        if (job.dates && Array.isArray(job.dates)) {
+          job.dates.forEach((d: string) => existingDates.add(d));
+        } else if (job.date) {
+          existingDates.add(job.date);
+        }
+      }
+
+      const overlapping = selectedDates.filter(d => existingDates.has(d));
+      setDuplicateDates(overlapping);
+    }
+
+    checkDuplicates();
+  }, [clientId, title, selectedDates]);
 
   // Load workers when title or client changes
   useEffect(() => {
@@ -257,6 +295,7 @@ export function AdminNewJobPage() {
     for (let day = 1; day <= daysInMonth; day++) {
       const dateKey = formatDateKey(day, currentMonth, currentYear);
       const isSelected = selectedDates.includes(dateKey);
+      const isDuplicate = isSelected && duplicateDates.includes(dateKey);
       const isSelectable = isDateSelectable(day, currentMonth, currentYear);
 
       days.push(
@@ -267,13 +306,16 @@ export function AdminNewJobPage() {
           disabled={!isSelectable}
           className={`
             h-10 w-10 rounded-full text-sm font-medium transition-all
-            ${isSelected
-              ? 'bg-primary text-primary-foreground shadow-md'
-              : isSelectable
-                ? 'hover:bg-slate-100 text-slate-700'
-                : 'text-slate-300 cursor-not-allowed'
+            ${isDuplicate
+              ? 'bg-red-500 text-white shadow-md ring-2 ring-red-300'
+              : isSelected
+                ? 'bg-primary text-primary-foreground shadow-md'
+                : isSelectable
+                  ? 'hover:bg-slate-100 text-slate-700'
+                  : 'text-slate-300 cursor-not-allowed'
             }
           `}
+          title={isDuplicate ? 'Diária já cadastrada para esta data' : undefined}
         >
           {day}
         </button>
@@ -310,6 +352,10 @@ export function AdminNewJobPage() {
     }
     if (!dailyRate || parseFloat(dailyRate) <= 0) {
       setError("Valor por dia deve ser maior que zero");
+      return;
+    }
+    if (duplicateDates.length > 0) {
+      setError("Existem datas duplicadas para esta empresa e vaga. Remova as datas destacadas antes de continuar.");
       return;
     }
 
@@ -602,22 +648,43 @@ export function AdminNewJobPage() {
                       {selectedDates.length} data(s) selecionada(s):
                     </Label>
                     <div className="flex flex-wrap gap-2">
-                      {selectedDates.map((dateKey) => (
-                        <Badge
-                          key={dateKey}
-                          variant="secondary"
-                          className="pl-3 pr-1 py-1 flex items-center gap-1"
-                        >
-                          {formatDisplayDate(dateKey)}
-                          <button
-                            type="button"
-                            onClick={() => removeDate(dateKey)}
-                            className="ml-1 p-0.5 hover:bg-slate-300 rounded"
+                      {selectedDates.map((dateKey) => {
+                        const isDup = duplicateDates.includes(dateKey);
+                        return (
+                          <Badge
+                            key={dateKey}
+                            variant={isDup ? "destructive" : "secondary"}
+                            className={`pl-3 pr-1 py-1 flex items-center gap-1 ${isDup ? 'animate-pulse' : ''}`}
                           >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
+                            {isDup && <AlertTriangle className="h-3 w-3 mr-1" />}
+                            {formatDisplayDate(dateKey)}
+                            <button
+                              type="button"
+                              onClick={() => removeDate(dateKey)}
+                              className={`ml-1 p-0.5 rounded ${isDup ? 'hover:bg-red-700' : 'hover:bg-slate-300'}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Duplicate warning */}
+                {duplicateDates.length > 0 && (
+                  <div className="mt-4 p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800">
+                        Diária duplicada detectada
+                      </p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        Já existe uma diária cadastrada para a empresa <strong>{selectedClient?.fantasia || selectedClient?.company_name}</strong> com
+                        a vaga <strong>{title}</strong> na(s) data(s) destacada(s) em vermelho.
+                        Remova essas datas ou escolha datas diferentes.
+                      </p>
                     </div>
                   </div>
                 )}
