@@ -20,11 +20,11 @@ import {
   ChevronRight,
   Activity,
   MapPin,
-  Calendar,
+  Calendar as CalendarIcon,
   AlertTriangle,
   Clock,
   FileText,
-  Filter
+  CalendarDays
 } from "lucide-react";
 
 interface Stats {
@@ -120,6 +120,25 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState(getCurrentWeekStart());
   const [dateTo, setDateTo] = useState(getCurrentWeekEnd());
+  const [activeFilter, setActiveFilter] = useState<'week' | 'month' | 'all' | 'custom'>('week');
+
+  const isDateRangeInvalid = dateFrom && dateTo && dateTo < dateFrom;
+
+  function formatDateLabel(dateStr: string) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    const date = new Date(Number(y), Number(m) - 1, Number(d));
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  }
+
+  function getFilterLabel() {
+    if (activeFilter === 'all') return 'Todos os registros';
+    if (!dateFrom && !dateTo) return 'Todos os registros';
+    if (dateFrom && dateTo) return `${formatDateLabel(dateFrom)} — ${formatDateLabel(dateTo)}`;
+    if (dateFrom) return `A partir de ${formatDateLabel(dateFrom)}`;
+    if (dateTo) return `Até ${formatDateLabel(dateTo)}`;
+    return '';
+  }
 
   useEffect(() => {
     runAutoUpdates().then(() => loadData());
@@ -127,7 +146,7 @@ export function AdminDashboard() {
 
   // Reload stats when date filters change
   useEffect(() => {
-    if (!loading) {
+    if (!loading && !isDateRangeInvalid) {
       loadData();
     }
   }, [dateFrom, dateTo]);
@@ -372,73 +391,110 @@ export function AdminDashboard() {
       </div>
 
       {/* Date Range Filter */}
-      <Card className="border-0 shadow-sm mb-6">
-        <CardContent className="py-4">
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
-              <Filter className="h-4 w-4" />
-              Período:
+      <Card className="border-0 shadow-sm mb-6 overflow-hidden">
+        <div className="border-l-4 border-l-blue-500">
+          <CardContent className="py-4">
+            <div className="flex flex-col gap-4">
+              {/* Header row with title and quick filters */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-blue-100 rounded-lg">
+                    <CalendarDays className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Período</span>
+                </div>
+
+                {/* Segmented control */}
+                <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden bg-slate-50">
+                  {([
+                    { key: 'week' as const, label: 'Semana' },
+                    { key: 'month' as const, label: 'Mês' },
+                    { key: 'all' as const, label: 'Tudo' },
+                  ]).map((item, idx) => (
+                    <button
+                      key={item.key}
+                      className={`px-4 py-2 text-sm font-medium transition-all ${
+                        idx < 2 ? 'border-r border-slate-200' : ''
+                      } ${
+                        activeFilter === item.key
+                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                      onClick={() => {
+                        setActiveFilter(item.key);
+                        if (item.key === 'week') {
+                          setDateFrom(getCurrentWeekStart());
+                          setDateTo(getCurrentWeekEnd());
+                        } else if (item.key === 'month') {
+                          const now = new Date();
+                          setDateFrom(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]);
+                          setDateTo(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]);
+                        } else {
+                          setDateFrom('');
+                          setDateTo('');
+                        }
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Date inputs row */}
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:flex sm:gap-3">
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="dateFrom" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Início</Label>
+                    <Input
+                      id="dateFrom"
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => {
+                        setDateFrom(e.target.value);
+                        setActiveFilter('custom');
+                        // Auto-advance end date if it's before new start date
+                        if (dateTo && e.target.value && dateTo < e.target.value) {
+                          setDateTo(e.target.value);
+                        }
+                      }}
+                      className="w-full sm:w-44 h-10 rounded-lg border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="dateTo" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Fim</Label>
+                    <Input
+                      id="dateTo"
+                      type="date"
+                      value={dateTo}
+                      min={dateFrom || undefined}
+                      onChange={(e) => {
+                        setDateTo(e.target.value);
+                        setActiveFilter('custom');
+                      }}
+                      className={`w-full sm:w-44 h-10 rounded-lg transition-colors ${
+                        isDateRangeInvalid
+                          ? 'border-red-400 ring-2 ring-red-400/30 bg-red-50 focus:ring-red-500/30'
+                          : 'border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/30'
+                      }`}
+                    />
+                    {isDateRangeInvalid && (
+                      <p className="text-xs text-red-500 mt-0.5">Data final deve ser após a data inicial</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Active range pill */}
+                <div className="sm:ml-2">
+                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 rounded-full px-3 py-2 text-xs font-medium">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {getFilterLabel()}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-wrap items-end gap-3">
-              <div>
-                <Label htmlFor="dateFrom" className="text-xs text-muted-foreground">De</Label>
-                <Input
-                  id="dateFrom"
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-40 h-9"
-                />
-              </div>
-              <div>
-                <Label htmlFor="dateTo" className="text-xs text-muted-foreground">Até</Label>
-                <Input
-                  id="dateTo"
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="w-40 h-9"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9"
-                  onClick={() => {
-                    setDateFrom(getCurrentWeekStart());
-                    setDateTo(getCurrentWeekEnd());
-                  }}
-                >
-                  Semana
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9"
-                  onClick={() => {
-                    const now = new Date();
-                    setDateFrom(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]);
-                    setDateTo(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]);
-                  }}
-                >
-                  Mês
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9"
-                  onClick={() => {
-                    setDateFrom('');
-                    setDateTo('');
-                  }}
-                >
-                  Tudo
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
+          </CardContent>
+        </div>
       </Card>
 
       {/* Stats Cards */}
@@ -655,7 +711,7 @@ export function AdminDashboard() {
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
+                          <CalendarIcon className="h-3 w-3" />
                           {formatDate(client.created_at)}
                         </p>
                       </div>
