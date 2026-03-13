@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, Eye, Mail, Phone, Star, Camera, MapPin, Building, ClipboardCheck, ZoomIn, RefreshCw, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, CalendarDays, Eye, Mail, Phone, Star, Camera, MapPin, Building, Building2, ClipboardCheck, ZoomIn, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RatingDialog, RatingDisplay } from "@/components/RatingDialog";
 import { getLocalToday } from "@/lib/date-utils";
@@ -124,13 +125,24 @@ export function AdminMonitoringPage() {
   const [selectedWorkRecord, setSelectedWorkRecord] = useState<CompletedWorkRecord | null>(null);
 
   const [autoUpdated, setAutoUpdated] = useState(false);
+  const [clientsList, setClientsList] = useState<{ id: string; company_name: string; fantasia: string | null }[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
 
   // Auto-update stale records on mount, then allow data load
   useEffect(() => {
+    loadClientsList();
     runAutoUpdates().then(() => setAutoUpdated(true));
   }, []);
 
-  // Recarrega dados quando navega para esta página ou muda a data/tab
+  async function loadClientsList() {
+    const { data } = await supabaseUntyped
+      .from('clients')
+      .select('id, company_name, fantasia')
+      .order('company_name');
+    setClientsList(data || []);
+  }
+
+  // Recarrega dados quando navega para esta página ou muda a data/tab/client
   useEffect(() => {
     if (!autoUpdated) return;
     if (activeTab === "monitoring") {
@@ -138,7 +150,7 @@ export function AdminMonitoringPage() {
     } else {
       loadCompletedAssignments();
     }
-  }, [filterDate, location.pathname, activeTab, autoUpdated]);
+  }, [filterDate, location.pathname, activeTab, autoUpdated, selectedClientId]);
 
   async function loadJobs() {
     setLoading(true);
@@ -215,7 +227,7 @@ export function AdminMonitoringPage() {
       }
 
       // 4. Buscar detalhes completos dos jobs
-      const { data: jobsData, error: jobsError } = await supabaseUntyped
+      let jobsDetailQuery = supabaseUntyped
         .from('jobs')
         .select(`
           *,
@@ -223,6 +235,12 @@ export function AdminMonitoringPage() {
         `)
         .in('id', allJobIds)
         .order('start_time', { ascending: true });
+
+      if (selectedClientId) {
+        jobsDetailQuery = jobsDetailQuery.eq('client_id', selectedClientId);
+      }
+
+      const { data: jobsData, error: jobsError } = await jobsDetailQuery;
 
       if (jobsError) {
         console.error('[AdminMonitoring] Error loading jobs:', jobsError);
@@ -570,106 +588,178 @@ export function AdminMonitoringPage() {
         </TabsList>
 
         <TabsContent value="monitoring" className="space-y-5">
-          {/* Date navigation + Search */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Date navigator */}
-            <div className="flex items-center gap-1 bg-white border rounded-lg p-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => {
-                  const d = new Date(filterDate + 'T00:00:00');
-                  d.setDate(d.getDate() - 1);
-                  setFilterDate(d.toISOString().split('T')[0]);
-                }}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="relative">
-                <button
-                  onClick={() => (document.getElementById('date-picker-hidden') as HTMLInputElement)?.showPicker?.()}
-                  className="px-3 py-1 text-sm font-medium min-w-[130px] text-center hover:bg-slate-50 rounded"
-                >
-                  {filterDate === getLocalToday()
-                    ? `Hoje, ${new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`
-                    : (() => {
-                        const yesterday = new Date();
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        const yStr = yesterday.toISOString().split('T')[0];
-                        return filterDate === yStr
-                          ? `Ontem, ${new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`
-                          : new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                      })()
-                  }
-                </button>
-                <input
-                  id="date-picker-hidden"
-                  type="date"
-                  value={filterDate}
-                  onChange={(e) => setFilterDate(e.target.value)}
-                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                />
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                disabled={filterDate >= getLocalToday()}
-                onClick={() => {
-                  const d = new Date(filterDate + 'T00:00:00');
-                  d.setDate(d.getDate() + 1);
-                  setFilterDate(d.toISOString().split('T')[0]);
-                }}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+          {/* Filter Card */}
+          <Card className="border-0 shadow-sm overflow-hidden">
+            <div className="border-l-4 border-l-blue-500">
+              <CardContent className="py-4">
+                <div className="flex flex-col gap-4">
+                  {/* Header row with title and quick day buttons */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-blue-100 rounded-lg">
+                        <CalendarDays className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Filtros</span>
+                    </div>
 
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por vaga, empresa ou local..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
+                    {/* Day quick-select segmented control */}
+                    <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden bg-slate-50">
+                      {([
+                        { key: 'yesterday', label: 'Ontem' },
+                        { key: 'today', label: 'Hoje' },
+                        { key: 'tomorrow', label: 'Amanhã' },
+                      ]).map((item, idx) => {
+                        const d = new Date();
+                        if (item.key === 'yesterday') d.setDate(d.getDate() - 1);
+                        if (item.key === 'tomorrow') d.setDate(d.getDate() + 1);
+                        const dateStr = d.toISOString().split('T')[0];
+                        const isActive = filterDate === dateStr;
+                        return (
+                          <button
+                            key={item.key}
+                            className={`px-4 py-2 text-sm font-medium transition-all ${
+                              idx < 2 ? 'border-r border-slate-200' : ''
+                            } ${
+                              isActive
+                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm'
+                                : 'text-slate-600 hover:bg-slate-100'
+                            }`}
+                            onClick={() => setFilterDate(dateStr)}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-          {/* Status filter pills */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-            {([
-              { value: 'all', label: 'Todos', count: jobs.length },
-              { value: 'pending', label: 'Aguardando', count: jobs.filter(j => { const s = getJobStats(j); return s.checkedIn === 0 && s.absent === 0; }).length },
-              { value: 'in_progress', label: 'Em andamento', count: jobs.filter(j => { const s = getJobStats(j); return s.checkedIn > 0 && s.completed !== s.total; }).length },
-              { value: 'completed', label: 'Concluídos', count: jobs.filter(j => { const s = getJobStats(j); return s.total > 0 && s.completed === s.total; }).length },
-              { value: 'has_absent', label: 'Com faltas', count: jobs.filter(j => getJobStats(j).absent > 0).length },
-            ] as const).map((f) => (
-              <Button
-                key={f.value}
-                variant={statusFilter === f.value ? 'default' : 'outline'}
-                size="sm"
-                className={`h-7 text-xs gap-1.5 ${
-                  statusFilter === f.value
-                    ? f.value === 'has_absent' ? 'bg-red-500 hover:bg-red-600' : ''
-                    : f.value === 'has_absent' && f.count > 0 ? 'border-red-200 text-red-700 hover:bg-red-50' : ''
-                }`}
-                onClick={() => setStatusFilter(f.value)}
-              >
-                {f.label}
-                {f.count > 0 && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                    statusFilter === f.value ? 'bg-white/20' : 'bg-slate-100'
-                  }`}>
-                    {f.count}
-                  </span>
-                )}
-              </Button>
-            ))}
-          </div>
+                  {/* Date + Client + Search row */}
+                  <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                    <div className="grid grid-cols-2 gap-3 sm:flex sm:gap-3">
+                      {/* Date with arrows */}
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="monitorDate" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Data</Label>
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-8 shrink-0"
+                            onClick={() => {
+                              const d = new Date(filterDate + 'T00:00:00');
+                              d.setDate(d.getDate() - 1);
+                              setFilterDate(d.toISOString().split('T')[0]);
+                            }}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <Input
+                            id="monitorDate"
+                            type="date"
+                            value={filterDate}
+                            onChange={(e) => setFilterDate(e.target.value)}
+                            className="w-full sm:w-40 h-10 rounded-lg border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-8 shrink-0"
+                            onClick={() => {
+                              const d = new Date(filterDate + 'T00:00:00');
+                              d.setDate(d.getDate() + 1);
+                              setFilterDate(d.toISOString().split('T')[0]);
+                            }}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Client filter */}
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="monitorClient" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Cliente</Label>
+                        <select
+                          id="monitorClient"
+                          value={selectedClientId}
+                          onChange={(e) => setSelectedClientId(e.target.value)}
+                          className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:outline-none transition-colors min-w-[180px] sm:w-52"
+                        >
+                          <option value="">Todos os clientes</option>
+                          {clientsList.map((client) => (
+                            <option key={client.id} value={client.id}>
+                              {client.fantasia || client.company_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Search */}
+                    <div className="flex-1 flex flex-col gap-1">
+                      <Label htmlFor="monitorSearch" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Busca</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="monitorSearch"
+                          placeholder="Buscar por vaga, empresa ou local..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 h-10 rounded-lg border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Active filter pills + Status pills */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 rounded-full px-3 py-1.5 text-xs font-medium">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {filterDate === getLocalToday()
+                        ? 'Hoje'
+                        : new Date(filterDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </span>
+                    {selectedClientId && (
+                      <span className="inline-flex items-center gap-1.5 bg-purple-50 text-purple-700 rounded-full px-3 py-1.5 text-xs font-medium">
+                        <Building2 className="h-3.5 w-3.5" />
+                        {clientsList.find(c => c.id === selectedClientId)?.fantasia ||
+                         clientsList.find(c => c.id === selectedClientId)?.company_name}
+                      </span>
+                    )}
+
+                    <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block" />
+
+                    {([
+                      { value: 'all', label: 'Todos', count: jobs.length },
+                      { value: 'pending', label: 'Aguardando', count: jobs.filter(j => { const s = getJobStats(j); return s.checkedIn === 0 && s.absent === 0; }).length },
+                      { value: 'in_progress', label: 'Em andamento', count: jobs.filter(j => { const s = getJobStats(j); return s.checkedIn > 0 && s.completed !== s.total; }).length },
+                      { value: 'completed', label: 'Concluídos', count: jobs.filter(j => { const s = getJobStats(j); return s.total > 0 && s.completed === s.total; }).length },
+                      { value: 'has_absent', label: 'Com faltas', count: jobs.filter(j => getJobStats(j).absent > 0).length },
+                    ] as const).map((f) => (
+                      <Button
+                        key={f.value}
+                        variant={statusFilter === f.value ? 'default' : 'outline'}
+                        size="sm"
+                        className={`h-7 text-xs gap-1.5 ${
+                          statusFilter === f.value
+                            ? f.value === 'has_absent' ? 'bg-red-500 hover:bg-red-600' : ''
+                            : f.value === 'has_absent' && f.count > 0 ? 'border-red-200 text-red-700 hover:bg-red-50' : ''
+                        }`}
+                        onClick={() => setStatusFilter(f.value)}
+                      >
+                        {f.label}
+                        {f.count > 0 && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                            statusFilter === f.value ? 'bg-white/20' : 'bg-slate-100'
+                          }`}>
+                            {f.count}
+                          </span>
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </div>
+          </Card>
 
           {/* KPI Summary */}
           {(() => {

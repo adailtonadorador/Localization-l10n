@@ -121,6 +121,8 @@ export function AdminDashboard() {
   const [dateFrom, setDateFrom] = useState(getCurrentWeekStart());
   const [dateTo, setDateTo] = useState(getCurrentWeekEnd());
   const [activeFilter, setActiveFilter] = useState<'week' | 'month' | 'all' | 'custom'>('week');
+  const [clientsList, setClientsList] = useState<{ id: string; company_name: string; fantasia: string | null }[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
 
   const isDateRangeInvalid = dateFrom && dateTo && dateTo < dateFrom;
 
@@ -141,15 +143,24 @@ export function AdminDashboard() {
   }
 
   useEffect(() => {
+    loadClientsList();
     runAutoUpdates().then(() => loadData());
   }, [location.pathname]);
 
-  // Reload stats when date filters change
+  // Reload stats when date filters or client filter change
   useEffect(() => {
     if (!loading && !isDateRangeInvalid) {
       loadData();
     }
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, selectedClientId]);
+
+  async function loadClientsList() {
+    const { data } = await supabaseUntyped
+      .from('clients')
+      .select('id, company_name, fantasia')
+      .order('company_name');
+    setClientsList(data || []);
+  }
 
   async function loadData() {
     setLoading(true);
@@ -164,6 +175,9 @@ export function AdminDashboard() {
       }
       if (dateTo) {
         jobsQuery = jobsQuery.lte('date', dateTo);
+      }
+      if (selectedClientId) {
+        jobsQuery = jobsQuery.eq('client_id', selectedClientId);
       }
 
       const [allJobsRes, pendingRes] = await Promise.all([
@@ -441,7 +455,7 @@ export function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Date inputs row */}
+              {/* Date inputs + Client filter row */}
               <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                 <div className="grid grid-cols-2 gap-3 sm:flex sm:gap-3">
                   <div className="flex flex-col gap-1">
@@ -453,7 +467,6 @@ export function AdminDashboard() {
                       onChange={(e) => {
                         setDateFrom(e.target.value);
                         setActiveFilter('custom');
-                        // Auto-advance end date if it's before new start date
                         if (dateTo && e.target.value && dateTo < e.target.value) {
                           setDateTo(e.target.value);
                         }
@@ -484,12 +497,36 @@ export function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Active range pill */}
-                <div className="sm:ml-2">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="clientFilter" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Cliente</Label>
+                  <select
+                    id="clientFilter"
+                    value={selectedClientId}
+                    onChange={(e) => setSelectedClientId(e.target.value)}
+                    className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:outline-none transition-colors min-w-[180px] sm:w-52"
+                  >
+                    <option value="">Todos os clientes</option>
+                    {clientsList.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.fantasia || client.company_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Active filter pills */}
+                <div className="sm:ml-2 flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 rounded-full px-3 py-2 text-xs font-medium">
                     <CalendarDays className="h-3.5 w-3.5" />
                     {getFilterLabel()}
                   </span>
+                  {selectedClientId && (
+                    <span className="inline-flex items-center gap-1.5 bg-purple-50 text-purple-700 rounded-full px-3 py-2 text-xs font-medium">
+                      <Building2 className="h-3.5 w-3.5" />
+                      {clientsList.find(c => c.id === selectedClientId)?.fantasia ||
+                       clientsList.find(c => c.id === selectedClientId)?.company_name}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
