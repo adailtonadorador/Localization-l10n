@@ -7,6 +7,8 @@ import { runAutoUpdates } from "@/lib/job-status-updater";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton, SkeletonStatsCard } from "@/components/ui/skeleton";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import {
@@ -21,12 +23,11 @@ import {
   Calendar,
   AlertTriangle,
   Clock,
-  FileText
+  FileText,
+  Filter
 } from "lucide-react";
 
 interface Stats {
-  totalWorkers: number;
-  totalClients: number;
   totalJobs: number;
   openJobs: number;
   pendingVerifications: number;
@@ -79,12 +80,28 @@ interface RecentWithdrawal {
   };
 }
 
+// Helper to get Monday of current week
+function getCurrentWeekStart(): string {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  const monday = new Date(now.setDate(diff));
+  return monday.toISOString().split('T')[0];
+}
+
+// Helper to get Sunday of current week
+function getCurrentWeekEnd(): string {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? 0 : 7); // Sunday
+  const sunday = new Date(now.setDate(diff));
+  return sunday.toISOString().split('T')[0];
+}
+
 export function AdminDashboard() {
   const location = useLocation();
   useAuth();
   const [stats, setStats] = useState<Stats>({
-    totalWorkers: 0,
-    totalClients: 0,
     totalJobs: 0,
     openJobs: 0,
     pendingVerifications: 0,
@@ -101,19 +118,37 @@ export function AdminDashboard() {
     cancelled: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState(getCurrentWeekStart());
+  const [dateTo, setDateTo] = useState(getCurrentWeekEnd());
 
   useEffect(() => {
     runAutoUpdates().then(() => loadData());
   }, [location.pathname]);
 
+  // Reload stats when date filters change
+  useEffect(() => {
+    if (!loading) {
+      loadData();
+    }
+  }, [dateFrom, dateTo]);
+
   async function loadData() {
     setLoading(true);
     try {
-      // Load stats
-      const [workersRes, clientsRes, allJobsRes, pendingRes] = await Promise.all([
-        supabaseUntyped.from('workers').select('id', { count: 'exact', head: true }),
-        supabaseUntyped.from('clients').select('id', { count: 'exact', head: true }),
-        supabaseUntyped.from('jobs').select('id, status, dates, date, required_workers, job_assignments(id, status)'),
+      // Load stats - filter jobs by date range
+      let jobsQuery = supabaseUntyped
+        .from('jobs')
+        .select('id, status, dates, date, required_workers, job_assignments(id, status)');
+
+      if (dateFrom) {
+        jobsQuery = jobsQuery.gte('date', dateFrom);
+      }
+      if (dateTo) {
+        jobsQuery = jobsQuery.lte('date', dateTo);
+      }
+
+      const [allJobsRes, pendingRes] = await Promise.all([
+        jobsQuery,
         supabaseUntyped.from('workers').select('id', { count: 'exact', head: true }).eq('documents_verified', false),
       ]);
 
@@ -157,8 +192,6 @@ export function AdminDashboard() {
       }
 
       setStats({
-        totalWorkers: workersRes.count || 0,
-        totalClients: clientsRes.count || 0,
         totalJobs: countDiarias(allJobs),
         openJobs: totalOpen,
         pendingVerifications: pendingRes.count || 0,
@@ -278,9 +311,15 @@ export function AdminDashboard() {
           <Skeleton className="h-4 w-48 mt-2" />
         </div>
 
+        {/* Filter Skeleton */}
+        <div className="flex gap-4 mb-6">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-10 w-48" />
+        </div>
+
         {/* Stats Cards Skeleton */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="grid gap-4 sm:grid-cols-3 mb-8">
+          {Array.from({ length: 3 }).map((_, i) => (
             <SkeletonStatsCard key={i} />
           ))}
         </div>
@@ -332,36 +371,78 @@ export function AdminDashboard() {
         <p className="text-muted-foreground">Visão geral da plataforma SAMA</p>
       </div>
 
+      {/* Date Range Filter */}
+      <Card className="border-0 shadow-sm mb-6">
+        <CardContent className="py-4">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+              <Filter className="h-4 w-4" />
+              Período:
+            </div>
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <Label htmlFor="dateFrom" className="text-xs text-muted-foreground">De</Label>
+                <Input
+                  id="dateFrom"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-40 h-9"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dateTo" className="text-xs text-muted-foreground">Até</Label>
+                <Input
+                  id="dateTo"
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-40 h-9"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  onClick={() => {
+                    setDateFrom(getCurrentWeekStart());
+                    setDateTo(getCurrentWeekEnd());
+                  }}
+                >
+                  Semana
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  onClick={() => {
+                    const now = new Date();
+                    setDateFrom(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]);
+                    setDateTo(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]);
+                  }}
+                >
+                  Mês
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  onClick={() => {
+                    setDateFrom('');
+                    setDateTo('');
+                  }}
+                >
+                  Tudo
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
-        <Link to="/admin/workers">
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white hover:shadow-md transition-shadow cursor-pointer">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardDescription className="text-blue-600 font-medium">Prestadores</CardDescription>
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="h-4 w-4 text-blue-600" />
-                </div>
-              </div>
-              <CardTitle className="text-3xl font-bold">{stats.totalWorkers}</CardTitle>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        <Link to="/admin/clients">
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white hover:shadow-md transition-shadow cursor-pointer">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardDescription className="text-blue-600 font-medium">Empresas</CardDescription>
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building2 className="h-4 w-4 text-blue-600" />
-                </div>
-              </div>
-              <CardTitle className="text-3xl font-bold">{stats.totalClients}</CardTitle>
-            </CardHeader>
-          </Card>
-        </Link>
-
+      <div className="grid gap-4 sm:grid-cols-3 mb-8">
         <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-white">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -397,7 +478,6 @@ export function AdminDashboard() {
             <CardTitle className="text-3xl font-bold">{stats.completedJobs}</CardTitle>
           </CardHeader>
         </Card>
-
       </div>
 
       {/* Charts and Recent Activity */}
