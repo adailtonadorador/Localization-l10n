@@ -26,7 +26,10 @@ import {
   FileBarChart,
   Shield,
   Crown,
+  Download,
+  CheckCircle,
 } from "lucide-react";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { useAdminPermissions, type AdminModule } from "@/hooks/useAdminPermissions";
 
 interface DashboardLayoutProps {
@@ -73,6 +76,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [newWithdrawalsCount, setNewWithdrawalsCount] = useState(0);
   const { hasPermission, isSuperAdmin } = useAdminPermissions();
+  const { canInstall, hasNativePrompt, isInstalled, isIOS, install } = usePWAInstall();
+  const [installing, setInstalling] = useState(false);
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
 
   // Buscar contagem de desistências recentes (últimas 24h) para admin
   useEffect(() => {
@@ -192,8 +198,34 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           })}
         </nav>
 
-        {/* Logout button */}
-        <div className="p-4 border-t">
+        {/* Install & Logout */}
+        <div className="p-4 border-t space-y-1">
+          {canInstall && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              disabled={installing}
+              onClick={async () => {
+                if (hasNativePrompt) {
+                  setInstalling(true);
+                  await install();
+                  setInstalling(false);
+                } else {
+                  setShowIOSGuide(true);
+                  setMobileMenuOpen(false);
+                }
+              }}
+            >
+              <Download className="h-5 w-5" />
+              {installing ? 'Instalando...' : 'Instalar Aplicativo'}
+            </Button>
+          )}
+          {isInstalled && (
+            <div className="flex items-center gap-3 px-4 py-2 text-xs text-green-600">
+              <CheckCircle className="h-4 w-4" />
+              Aplicativo instalado
+            </div>
+          )}
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 text-slate-600 hover:text-red-600 hover:bg-red-50"
@@ -216,7 +248,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <img src="/logo.png" alt="Sama Conecta" className="w-8 h-8 object-contain" />
                 <span className="text-lg font-bold text-blue-700">Sama Conecta</span>
               </Link>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                {canInstall && (
+                  <button
+                    className="p-2 hover:bg-blue-50 rounded-lg text-blue-600"
+                    disabled={installing}
+                    onClick={async () => {
+                      if (hasNativePrompt) {
+                        setInstalling(true);
+                        await install();
+                        setInstalling(false);
+                      } else {
+                        setShowIOSGuide(true);
+                      }
+                    }}
+                    aria-label="Instalar aplicativo"
+                  >
+                    <Download className="h-5 w-5" />
+                  </button>
+                )}
                 <NotificationDropdown />
                 <button
                   className="p-2 hover:bg-slate-100 rounded-lg"
@@ -275,6 +325,79 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Bottom Navigation - Mobile only */}
       {isMobile && <BottomNavBar />}
+
+      {/* iOS / Manual Install Guide Modal */}
+      {showIOSGuide && (
+        <>
+          <div className="fixed inset-0 bg-black/50 z-[60]" onClick={() => setShowIOSGuide(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-[61] bg-white rounded-t-2xl p-6 shadow-xl max-h-[80vh] overflow-y-auto animate-in slide-in-from-bottom">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Instalar Sama Conecta</h3>
+              <button onClick={() => setShowIOSGuide(false)} className="p-1 hover:bg-slate-100 rounded-lg">
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </div>
+            <div className="flex items-center gap-3 mb-5 p-3 bg-blue-50 rounded-xl">
+              <img src="/pwa-192x192.png" alt="Sama Conecta" className="w-12 h-12 rounded-xl" />
+              <div>
+                <p className="font-medium text-slate-900">Sama Conecta</p>
+                <p className="text-xs text-slate-500">Acesso rápido pela tela inicial</p>
+              </div>
+            </div>
+            {isIOS ? (
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">1</span>
+                  <p className="text-sm text-slate-700 pt-1">
+                    Toque no ícone <strong>Compartilhar</strong> <span className="inline-block align-middle">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                    </span> na barra do Safari
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">2</span>
+                  <p className="text-sm text-slate-700 pt-1">
+                    Role para baixo e toque em <strong>"Adicionar à Tela de Início"</strong>
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">3</span>
+                  <p className="text-sm text-slate-700 pt-1">
+                    Toque em <strong>"Adicionar"</strong> para confirmar
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">1</span>
+                  <p className="text-sm text-slate-700 pt-1">
+                    Toque no menu <strong>⋮</strong> (três pontos) no canto superior direito do navegador
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">2</span>
+                  <p className="text-sm text-slate-700 pt-1">
+                    Toque em <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">3</span>
+                  <p className="text-sm text-slate-700 pt-1">
+                    Confirme tocando em <strong>"Instalar"</strong>
+                  </p>
+                </div>
+              </div>
+            )}
+            <Button
+              className="w-full mt-6"
+              onClick={() => setShowIOSGuide(false)}
+            >
+              Entendi
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

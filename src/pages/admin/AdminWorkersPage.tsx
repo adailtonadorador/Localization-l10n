@@ -89,6 +89,7 @@ interface Worker {
   approval_notes: string | null;
   rejected_reason: string | null;
   created_at: string;
+  funcao: string | null;
   uf: string | null;
   pix_key: string | null;
   birth_date: string | null;
@@ -321,10 +322,12 @@ export function AdminWorkersPage() {
 
   // Filters
   const filteredWorkers = workers.filter(worker => {
-    const matchesSearch =
-      worker.users?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      worker.users?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      worker.cpf?.includes(searchTerm.replace(/\D/g, ''));
+    const term = searchTerm.trim().toLowerCase();
+    const matchesSearch = !term ||
+      worker.users?.name?.toLowerCase().includes(term) ||
+      worker.users?.email?.toLowerCase().includes(term) ||
+      worker.cpf?.includes(searchTerm.replace(/\D/g, '')) ||
+      worker.funcao?.toLowerCase().includes(term);
 
     const matchesUf = selectedUf === "all" || worker.uf === selectedUf;
 
@@ -688,8 +691,9 @@ export function AdminWorkersPage() {
                             )}
                           </div>
 
-                          {/* Contact info in single line */}
+                          {/* Função + Contact info */}
                           <p className="text-sm text-muted-foreground">
+                            {worker.funcao && <span className="font-medium text-slate-700">{worker.funcao} · </span>}
                             {worker.users?.email} • CPF: {formatCpf(worker.cpf)}
                           </p>
 
@@ -1087,6 +1091,12 @@ export function AdminWorkersPage() {
                       <FileText className="h-3 w-3" /> CPF
                     </p>
                     <p className="font-medium text-sm">{formatCpf(selectedWorker.cpf)}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Briefcase className="h-3 w-3" /> Função
+                    </p>
+                    <p className="font-medium text-sm">{selectedWorker.funcao || 'Não informado'}</p>
                   </div>
                 </div>
 

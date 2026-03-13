@@ -13,7 +13,8 @@ export default defineConfig({
       filename: 'sw.ts',
       registerType: 'autoUpdate',
       devOptions: {
-        enabled: false
+        enabled: true,
+        type: 'module',
       },
       includeAssets: ['favicon.ico', 'logo.png', 'apple-touch-icon-180x180.png'],
       manifest: {
