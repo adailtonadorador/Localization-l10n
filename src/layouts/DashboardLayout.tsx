@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { useAdminPermissions, type AdminModule } from "@/hooks/useAdminPermissions";
+import { useAdminLateAlerts } from "@/hooks/useAdminLateAlerts";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -76,6 +77,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [newWithdrawalsCount, setNewWithdrawalsCount] = useState(0);
   const { hasPermission, isSuperAdmin } = useAdminPermissions();
+  const { count: lateAlertsCount } = useAdminLateAlerts(profile?.role === 'admin');
   const { canInstall, hasNativePrompt, isInstalled, isIOS, install } = usePWAInstall();
   const [installing, setInstalling] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
@@ -173,6 +175,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             const isActive = location.pathname === item.href;
             const Icon = item.icon;
             const showWithdrawalsBadge = item.href === '/admin/withdrawals' && newWithdrawalsCount > 0;
+            const showLateAlertsBadge = item.href === '/admin/monitoring' && lateAlertsCount > 0;
             return (
               <Link
                 key={item.href}
@@ -191,6 +194,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 {showWithdrawalsBadge && (
                   <Badge className="text-xs bg-red-500 text-white hover:bg-red-600">
                     {newWithdrawalsCount}
+                  </Badge>
+                )}
+                {showLateAlertsBadge && (
+                  <Badge className="text-xs bg-orange-500 text-white hover:bg-orange-600">
+                    {lateAlertsCount}
                   </Badge>
                 )}
               </Link>

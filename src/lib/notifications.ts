@@ -137,6 +137,26 @@ export async function notifyWorkerApproved(workerId: string): Promise<void> {
 }
 
 /**
+ * Notifica admins sobre prestador atrasado para check-in ou check-out
+ */
+export async function notifyAdminLateWorker(
+  workerName: string,
+  jobTitle: string,
+  alertType: 'late_checkin' | 'late_checkout',
+  minutesLate: number
+): Promise<void> {
+  const typeLabel = alertType === 'late_checkin' ? 'Check-in' : 'Check-out';
+
+  sendPushNotification({
+    title: `⏰ ${typeLabel} Atrasado`,
+    body: `${workerName} — "${jobTitle}" (${minutesLate}min atrasado)`,
+    url: '/admin/monitoring',
+    targetRole: 'admin',
+    type: 'general',
+  }).catch(err => console.error('[Notifications] Erro ao notificar atraso:', err));
+}
+
+/**
  * Notifica admins sobre saída antecipada de um prestador
  */
 export async function notifyAdminEarlyCheckout(

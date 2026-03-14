@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminLateAlerts } from '@/hooks/useAdminLateAlerts';
 import {
   LayoutDashboard,
   Briefcase,
@@ -102,14 +103,21 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
 export function BottomNavBar() {
   const location = useLocation();
   const { profile } = useAuth();
+  const { count: lateAlertsCount } = useAdminLateAlerts(profile?.role === 'admin');
 
   if (!profile) return null;
+
+  const adminItems = ADMIN_NAV_ITEMS.map(item =>
+    item.href === '/admin/monitoring' && lateAlertsCount > 0
+      ? { ...item, badge: lateAlertsCount }
+      : item
+  );
 
   const navItems = profile.role === 'worker'
     ? WORKER_NAV_ITEMS
     : profile.role === 'client'
       ? CLIENT_NAV_ITEMS
-      : ADMIN_NAV_ITEMS;
+      : adminItems;
 
   return (
     <nav

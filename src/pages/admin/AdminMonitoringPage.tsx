@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
@@ -18,10 +18,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Search, Users, Clock, CheckCircle, AlertCircle, Calendar, CalendarDays, Eye, Mail, Phone, Star, Camera, MapPin, Building, Building2, ClipboardCheck, ZoomIn, RefreshCw } from "lucide-react";
+import { Search, Users, Clock, CheckCircle, AlertCircle, AlertTriangle, Calendar, CalendarDays, Eye, Mail, Phone, Star, Camera, MapPin, Building, Building2, ClipboardCheck, ZoomIn, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { RatingDialog, RatingDisplay } from "@/components/RatingDialog";
 import { getLocalToday } from "@/lib/date-utils";
+import { detectLateWorkers, wasAlertNotified, markAlertNotified, type LateAlert } from "@/lib/late-alerts";
+import { notifyAdminLateWorker } from "@/lib/notifications";
 
 interface WorkRecord {
   id: string;
@@ -131,6 +133,11 @@ export function AdminMonitoringPage() {
   const [clientsList, setClientsList] = useState<{ id: string; company_name: string; fantasia: string | null }[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
 
+  // Late alerts state
+  const [lateAlerts, setLateAlerts] = useState<LateAlert[]>([]);
+  const [lateAlertsExpanded, setLateAlertsExpanded] = useState(true);
+  const lateAlertIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const isDateRangeInvalid = dateFrom && dateTo && dateTo < dateFrom;
 
   function getCurrentWeekStart(): string {
@@ -191,6 +198,29 @@ export function AdminMonitoringPage() {
       loadCompletedAssignments();
     }
   }, [dateFrom, dateTo, location.pathname, activeTab, autoUpdated, selectedClientId]);
+
+  // Re-check late alerts a cada 60 segundos (recalcula com os jobs já carregados)
+  useEffect(() => {
+    if (activeTab !== 'monitoring' || jobs.length === 0) return;
+
+    lateAlertIntervalRef.current = setInterval(() => {
+      const detected = detectLateWorkers(jobs, new Date());
+      setLateAlerts(detected);
+
+      for (const alert of detected) {
+        if (!wasAlertNotified(alert)) {
+          markAlertNotified(alert);
+          notifyAdminLateWorker(alert.workerName, alert.jobTitle, alert.type, alert.minutesLate);
+        }
+      }
+    }, 60_000);
+
+    return () => {
+      if (lateAlertIntervalRef.current) {
+        clearInterval(lateAlertIntervalRef.current);
+      }
+    };
+  }, [activeTab, jobs]);
 
   async function loadJobs() {
     setLoading(true);
@@ -414,6 +444,17 @@ export function AdminMonitoringPage() {
       console.log('[AdminMonitoring] Final jobs with records:', jobsWithRecords.length);
       setJobs(jobsWithRecords);
       setLastUpdated(new Date());
+
+      // Detectar workers atrasados e enviar notificações push
+      const detected = detectLateWorkers(jobsWithRecords, new Date());
+      setLateAlerts(detected);
+
+      for (const alert of detected) {
+        if (!wasAlertNotified(alert)) {
+          markAlertNotified(alert);
+          notifyAdminLateWorker(alert.workerName, alert.jobTitle, alert.type, alert.minutesLate);
+        }
+      }
     } catch (error) {
       console.error('[AdminMonitoring] Error loading jobs:', error);
       setJobs([]);
@@ -495,6 +536,13 @@ export function AdminMonitoringPage() {
   function openWorkRecordRatingDialog(record: CompletedWorkRecord) {
     setSelectedWorkRecord(record);
     setRatingDialogOpen(true);
+  }
+
+  // Set de IDs de work_records que estão atrasados
+  const lateRecordIds = new Set(lateAlerts.map(a => a.workRecordId));
+
+  function isRecordLate(recordId: string): LateAlert | undefined {
+    return lateAlerts.find(a => a.workRecordId === recordId);
   }
 
   function formatTime(timeStr: string | null) {
@@ -650,6 +698,53 @@ export function AdminMonitoringPage() {
         </TabsList>
 
         <TabsContent value="monitoring" className="space-y-5">
+          {/* Late Alerts Banner */}
+          {lateAlerts.length > 0 && (
+            <Card className="border-orange-300 bg-orange-50 shadow-sm">
+              <CardContent className="py-3 px-4">
+                <button
+                  className="flex items-center justify-between w-full"
+                  onClick={() => setLateAlertsExpanded(!lateAlertsExpanded)}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-orange-200 rounded-lg">
+                      <AlertTriangle className="h-4 w-4 text-orange-700" />
+                    </div>
+                    <span className="font-semibold text-orange-800 text-sm">
+                      {lateAlerts.length} prestador{lateAlerts.length > 1 ? 'es' : ''} atrasado{lateAlerts.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {lateAlertsExpanded
+                    ? <ChevronUp className="h-4 w-4 text-orange-600" />
+                    : <ChevronDown className="h-4 w-4 text-orange-600" />
+                  }
+                </button>
+                {lateAlertsExpanded && (
+                  <div className="mt-3 space-y-2">
+                    {lateAlerts.map((alert, i) => (
+                      <div
+                        key={`${alert.workRecordId}-${i}`}
+                        className="flex items-start gap-2 p-2 bg-white rounded-lg border border-orange-200"
+                      >
+                        <Clock className="h-4 w-4 text-orange-500 mt-0.5 shrink-0" />
+                        <div className="text-sm">
+                          <p className="font-medium text-slate-800">{alert.workerName}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {alert.jobTitle} — {alert.type === 'late_checkin' ? 'Check-in' : 'Check-out'} atrasado
+                            <span className="font-semibold text-orange-700 ml-1">
+                              ({alert.minutesLate}min)
+                            </span>
+                            <span className="ml-1">· Previsto: {alert.scheduledTime}</span>
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Filter Card - same style as dashboard */}
           <Card className="border-0 shadow-sm overflow-hidden">
             <div className="border-l-4 border-l-blue-500">
@@ -979,6 +1074,8 @@ export function AdminMonitoringPage() {
                                 ? 'bg-green-50 border-green-200'
                                 : record.status === 'absent' || record.status === 'no_show'
                                 ? 'bg-red-50 border-red-200'
+                                : lateRecordIds.has(record.id)
+                                ? 'bg-orange-50 border-orange-300 ring-1 ring-orange-200'
                                 : record.status === 'checked_in' || record.status === 'in_progress' || record.check_in
                                 ? 'bg-blue-50 border-blue-200'
                                 : 'bg-amber-50 border-amber-200'
@@ -990,6 +1087,8 @@ export function AdminMonitoringPage() {
                                   ? 'bg-green-500 text-white'
                                   : record.status === 'absent' || record.status === 'no_show'
                                   ? 'bg-red-500 text-white'
+                                  : lateRecordIds.has(record.id)
+                                  ? 'bg-orange-500 text-white'
                                   : record.status === 'checked_in' || record.status === 'in_progress' || record.check_in
                                   ? 'bg-blue-500 text-white'
                                   : 'bg-amber-500 text-white'
@@ -1037,25 +1136,42 @@ export function AdminMonitoringPage() {
                                     Falta
                                   </span>
                                 ) : record.status === 'checked_in' || record.status === 'in_progress' || record.check_in ? (
-                                  <span className="text-blue-600 flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    Em andamento {record.check_in && `desde ${formatTime(record.check_in)}`}
-                                    {record.check_in_latitude && record.check_in_longitude && (
-                                      <a
-                                        href={`https://www.google.com/maps?q=${record.check_in_latitude},${record.check_in_longitude}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-500 hover:text-blue-700 ml-1"
-                                        title="Ver localização de entrada"
-                                      >
-                                        <MapPin className="h-3 w-3" />
-                                      </a>
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-blue-600 flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      Em andamento {record.check_in && `desde ${formatTime(record.check_in)}`}
+                                      {record.check_in_latitude && record.check_in_longitude && (
+                                        <a
+                                          href={`https://www.google.com/maps?q=${record.check_in_latitude},${record.check_in_longitude}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-blue-500 hover:text-blue-700 ml-1"
+                                          title="Ver localização de entrada"
+                                        >
+                                          <MapPin className="h-3 w-3" />
+                                        </a>
+                                      )}
+                                    </span>
+                                    {lateRecordIds.has(record.id) && (
+                                      <span className="text-orange-700 flex items-center gap-1 text-[10px] font-semibold">
+                                        <AlertTriangle className="h-3 w-3" />
+                                        Check-out atrasado ({isRecordLate(record.id)?.minutesLate}min)
+                                      </span>
                                     )}
-                                  </span>
+                                  </div>
                                 ) : (
-                                  <span className="text-amber-600 flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    Aguardando check-in
+                                  <span className={`flex items-center gap-1 ${lateRecordIds.has(record.id) ? 'text-orange-700 font-semibold' : 'text-amber-600'}`}>
+                                    {lateRecordIds.has(record.id) ? (
+                                      <>
+                                        <AlertTriangle className="h-3 w-3" />
+                                        Check-in atrasado ({isRecordLate(record.id)?.minutesLate}min)
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Clock className="h-3 w-3" />
+                                        Aguardando check-in
+                                      </>
+                                    )}
                                   </span>
                                 )}
                               </div>
