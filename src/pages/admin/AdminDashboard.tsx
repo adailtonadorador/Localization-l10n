@@ -351,7 +351,7 @@ export function AdminDashboard() {
         </div>
 
         {/* Stats Cards Skeleton */}
-        <div className="grid gap-4 sm:grid-cols-3 mb-8">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 mb-8">
           {Array.from({ length: 3 }).map((_, i) => (
             <SkeletonStatsCard key={i} />
           ))}
@@ -619,14 +619,14 @@ export function AdminDashboard() {
 
         {/* Recent Activity */}
         <Card className="border-0 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
+          <CardHeader className="flex flex-row items-start sm:items-center justify-between gap-2">
+            <div className="min-w-0">
               <CardTitle className="text-lg">Atividade Recente</CardTitle>
               <CardDescription>Últimas diárias cadastradas</CardDescription>
             </div>
-            <Link to="/admin/clients">
+            <Link to="/admin/clients" className="flex-shrink-0">
               <Button variant="ghost" size="sm" className="gap-1">
-                Ver tudo
+                <span className="hidden sm:inline">Ver tudo</span>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -656,9 +656,9 @@ export function AdminDashboard() {
       {/* Withdrawals Alert Card */}
       {recentWithdrawals.length > 0 && (
         <Card className="border-0 shadow-sm border-l-4 border-l-red-500 mb-6">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
+              <div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
               <div>
@@ -667,7 +667,7 @@ export function AdminDashboard() {
               </div>
             </div>
             <Link to="/admin/withdrawals">
-              <Button variant="outline" size="sm" className="gap-1 text-red-600 border-red-200 hover:bg-red-50">
+              <Button variant="outline" size="sm" className="gap-1 text-red-600 border-red-200 hover:bg-red-50 flex-shrink-0">
                 Ver Todas
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -676,25 +676,27 @@ export function AdminDashboard() {
           <CardContent>
             <div className="space-y-3">
               {recentWithdrawals.map((withdrawal) => (
-                <div key={withdrawal.id} className="flex items-start gap-3 p-3 bg-red-50/50 rounded-lg">
-                  <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-slate-900">
-                      {withdrawal.workers?.users?.name || 'Trabalhador'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {withdrawal.jobs?.title} - {withdrawal.jobs?.clients?.fantasia || withdrawal.jobs?.clients?.company_name}
-                    </p>
-                    <div className="mt-2 p-2 bg-white rounded border border-red-100">
-                      <p className="text-xs text-red-700 flex items-start gap-1">
-                        <FileText className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                        <span className="line-clamp-2">{withdrawal.withdrawal_reason}</span>
+                <div key={withdrawal.id} className="flex flex-col sm:flex-row items-start gap-3 p-3 bg-red-50/50 rounded-lg">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-slate-900">
+                        {withdrawal.workers?.users?.name || 'Trabalhador'}
                       </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {withdrawal.jobs?.title} - {withdrawal.jobs?.clients?.fantasia || withdrawal.jobs?.clients?.company_name}
+                      </p>
+                      <div className="mt-2 p-2 bg-white rounded border border-red-100">
+                        <p className="text-xs text-red-700 flex items-start gap-1">
+                          <FileText className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                          <span className="line-clamp-2">{withdrawal.withdrawal_reason}</span>
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
+                  <div className="flex-shrink-0 self-start sm:self-auto">
                     <Badge variant="outline" className="text-xs bg-red-50 border-red-200 text-red-700">
                       <Clock className="h-3 w-3 mr-1" />
                       {formatDateTime(withdrawal.withdrawn_at)}
@@ -711,17 +713,17 @@ export function AdminDashboard() {
       <div className="grid gap-6 md:grid-cols-2">
         {/* Recent Clients */}
         <Card className="border-0 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
+          <CardHeader className="flex flex-row items-start sm:items-center justify-between gap-2">
+            <div className="min-w-0">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-blue-500" />
+                <Building2 className="h-5 w-5 text-blue-500 flex-shrink-0" />
                 Últimas Empresas
               </CardTitle>
               <CardDescription>Empresas cadastradas recentemente</CardDescription>
             </div>
-            <Link to="/admin/clients">
+            <Link to="/admin/clients" className="flex-shrink-0">
               <Button variant="outline" size="sm" className="gap-1">
-                Gerenciar
+                <span className="hidden sm:inline">Gerenciar</span>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -731,22 +733,22 @@ export function AdminDashboard() {
               <div className="space-y-3">
                 {recentClients.map((client) => (
                   <Link key={client.id} to={`/admin/clients/${client.id}`}>
-                    <div className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <div className="flex items-center justify-between gap-2 p-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
                           <Building2 className="h-5 w-5 text-blue-600" />
                         </div>
-                        <div>
-                          <p className="font-medium text-sm">{client.fantasia || client.company_name}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{client.fantasia || client.company_name}</p>
                           {client.cidade && client.uf && (
                             <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
+                              <MapPin className="h-3 w-3 flex-shrink-0" />
                               {client.cidade} - {client.uf}
                             </p>
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <CalendarIcon className="h-3 w-3" />
                           {formatDate(client.created_at)}
@@ -793,7 +795,7 @@ export function AdminDashboard() {
                   <div>
                     <p className="font-medium">Gerenciar Prestadores</p>
                     <p className="text-sm text-muted-foreground">
-                      Verificar documentos e perfis
+                      Ver lista e perfis dos prestadores
                       {stats.pendingVerifications > 0 && (
                         <Badge className="ml-2 bg-amber-500">{stats.pendingVerifications} pendentes</Badge>
                       )}

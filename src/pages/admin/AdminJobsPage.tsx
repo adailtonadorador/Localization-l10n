@@ -526,7 +526,7 @@ export function AdminJobsPage() {
                     </div>
 
                     {/* Stats */}
-                    <div className="flex items-center gap-4 lg:gap-6">
+                    <div className="flex items-center gap-3 lg:gap-6 flex-wrap">
                       <div className="flex items-center gap-3">
                         <div className="text-center px-3 py-2 bg-slate-50 rounded-lg">
                           <p className="text-xl font-bold text-slate-900">{stats.active}/{job.required_workers}</p>
@@ -538,14 +538,14 @@ export function AdminJobsPage() {
                         </div>
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-shrink-0">
                         <Button variant="outline" size="sm" onClick={() => openDetails(job)}>
-                          <Eye className="h-4 w-4 mr-1" />
-                          Detalhes
+                          <Eye className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Detalhes</span>
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => navigate(`/admin/jobs/${job.id}/edit`)}>
-                          <Pencil className="h-4 w-4 mr-1" />
-                          Editar
+                          <Pencil className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Editar</span>
                         </Button>
                       </div>
                     </div>
@@ -583,8 +583,8 @@ export function AdminJobsPage() {
                   <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
                     <Briefcase className="h-7 w-7 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <DialogTitle className="text-xl">{selectedJob.title}</DialogTitle>
+                  <div className="flex-1 min-w-0">
+                    <DialogTitle className="text-xl truncate">{selectedJob.title}</DialogTitle>
                     <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                       <Building2 className="h-3.5 w-3.5" />
                       {selectedJob.clients?.fantasia || selectedJob.clients?.company_name}
@@ -593,13 +593,14 @@ export function AdminJobsPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="flex-shrink-0"
                     onClick={() => {
                       setDetailsOpen(false);
                       navigate(`/admin/jobs/${selectedJob.id}/edit`);
                     }}
                   >
-                    <Pencil className="h-4 w-4 mr-1" />
-                    Editar
+                    <Pencil className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Editar</span>
                   </Button>
                 </div>
               </DialogHeader>

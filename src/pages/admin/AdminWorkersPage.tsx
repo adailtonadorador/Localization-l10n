@@ -453,7 +453,7 @@ export function AdminWorkersPage() {
       </div>
 
       {/* Stats Cards - Consolidated (4 cards) */}
-      <div className="grid gap-4 sm:grid-cols-4 mb-6">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-6">
         {/* Pendentes de Aprovação */}
         <Card
           className={`border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] ${
@@ -676,18 +676,18 @@ export function AdminWorkersPage() {
                         : 'bg-slate-50 hover:bg-slate-100'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       <div
-                        className="flex items-center gap-4 cursor-pointer group/worker"
+                        className="flex items-start gap-3 cursor-pointer group/worker min-w-0 flex-1"
                         onClick={() => openDetailsDialog(worker)}
                       >
-                        <Avatar className={`h-12 w-12 ring-2 ring-white shadow ${worker.is_active === false ? 'opacity-60' : ''} group-hover/worker:ring-blue-300 transition-all`}>
+                        <Avatar className={`h-10 w-10 sm:h-12 sm:w-12 ring-2 ring-white shadow flex-shrink-0 ${worker.is_active === false ? 'opacity-60' : ''} group-hover/worker:ring-blue-300 transition-all`}>
                           <AvatarImage src={worker.users?.avatar_url || ''} />
                           <AvatarFallback className={`${worker.is_active === false ? 'bg-slate-400' : 'bg-blue-500'} text-white font-medium`}>
                             {worker.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
+                        <div className="min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h4 className={`font-semibold ${worker.is_active === false ? 'text-slate-500' : 'text-slate-900'} group-hover/worker:text-blue-600 transition-colors`}>
                               {worker.users?.name}
@@ -723,21 +723,21 @@ export function AdminWorkersPage() {
                           </div>
 
                           {/* Função + Contact info */}
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-muted-foreground truncate">
                             {worker.funcao && <span className="font-medium text-slate-700">{worker.funcao} · </span>}
-                            {worker.users?.email} • CPF: {formatCpf(worker.cpf)}
+                            <span className="hidden sm:inline">{worker.users?.email} • </span>CPF: {formatCpf(worker.cpf)}
                           </p>
 
                           {/* Rating and jobs as inline text */}
-                          <p className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                          <p className="text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                             <span className="flex items-center gap-1">
                               <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
                               {worker.rating?.toFixed(1) || '0.0'}
                             </span>
                             <span>•</span>
                             <span>{worker.total_jobs} trabalhos</span>
-                            <span>•</span>
-                            <span>{formatDateTime(worker.created_at)}</span>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="hidden sm:inline">{formatDateTime(worker.created_at)}</span>
                             {worker.documents_verified && worker.approval_status === 'approved' && worker.is_active !== false && (
                               <>
                                 <span>•</span>
@@ -751,18 +751,18 @@ export function AdminWorkersPage() {
 
                           {/* Rejection/Block reason as tooltip-like compact display */}
                           {worker.is_active === false && worker.deactivation_reason && (
-                            <p className="text-xs text-slate-500 mt-1 italic truncate max-w-md" title={worker.deactivation_reason}>
+                            <p className="text-xs text-slate-500 mt-1 italic truncate max-w-full" title={worker.deactivation_reason}>
                               Bloqueio: {worker.deactivation_reason}
                             </p>
                           )}
                           {worker.approval_status === 'rejected' && worker.rejected_reason && (
-                            <p className="text-xs text-red-500 mt-1 italic truncate max-w-md" title={worker.rejected_reason}>
+                            <p className="text-xs text-red-500 mt-1 italic truncate max-w-full" title={worker.rejected_reason}>
                               Rejeição: {worker.rejected_reason}
                             </p>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-start gap-2 flex-shrink-0">
                         <div className="flex flex-col gap-2">
                           {/* Approval Actions */}
                           {worker.approval_status === 'pending' && worker.is_active !== false && (
@@ -774,7 +774,7 @@ export function AdminWorkersPage() {
                                 disabled={actionLoading}
                               >
                                 <ThumbsUp className="h-4 w-4" />
-                                Aprovar
+                                <span className="hidden sm:inline">Aprovar</span>
                               </Button>
                               <Button
                                 size="sm"
@@ -784,7 +784,7 @@ export function AdminWorkersPage() {
                                 disabled={actionLoading}
                               >
                                 <ThumbsDown className="h-4 w-4" />
-                                Rejeitar
+                                <span className="hidden sm:inline">Rejeitar</span>
                               </Button>
                             </>
                           )}
@@ -799,7 +799,7 @@ export function AdminWorkersPage() {
                               disabled={actionLoading}
                             >
                               <UserCheck className="h-4 w-4" />
-                              Habilitar
+                              <span className="hidden sm:inline">Habilitar</span>
                             </Button>
                           ) : worker.approval_status !== 'pending' && (
                             <Button
@@ -809,7 +809,7 @@ export function AdminWorkersPage() {
                               onClick={() => openDisableWorkerDialog(worker)}
                             >
                               <Ban className="h-4 w-4" />
-                              Bloquear
+                              <span className="hidden sm:inline">Bloquear</span>
                             </Button>
                           )}
                         </div>
@@ -827,7 +827,7 @@ export function AdminWorkersPage() {
                           {activeJobs.map((assignment) => (
                             <div
                               key={assignment.id}
-                              className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border"
+                              className="flex flex-col gap-2 bg-white rounded-lg px-3 py-2 border sm:flex-row sm:items-center sm:justify-between"
                             >
                               <div className="flex items-center gap-3 min-w-0">
                                 <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -842,7 +842,7 @@ export function AdminWorkersPage() {
                                   </p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                                 <span className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
                                   {new Date(assignment.jobs?.date + 'T00:00:00').toLocaleDateString('pt-BR', {
@@ -1046,7 +1046,7 @@ export function AdminWorkersPage() {
                       </div>
                     )}
                   </button>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <DialogTitle className="text-xl">{selectedWorker.users?.name}</DialogTitle>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {/* Status badges */}
@@ -1268,7 +1268,7 @@ export function AdminWorkersPage() {
                               <p className="text-xs text-muted-foreground truncate">
                                 {assignment.jobs?.clients?.fantasia || assignment.jobs?.clients?.company_name}
                               </p>
-                              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                              <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                 <span className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
                                   {new Date(assignment.jobs?.date + 'T00:00:00').toLocaleDateString('pt-BR')}

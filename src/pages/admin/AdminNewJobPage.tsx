@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
@@ -31,7 +31,6 @@ import {
   Search,
   Star,
   UserPlus,
-  AlertTriangle,
 } from "lucide-react";
 
 
@@ -90,7 +89,11 @@ export function AdminNewJobPage() {
   const [endTime, setEndTime] = useState("");
   const dailyRate = "110";
   const [requiredWorkers, setRequiredWorkers] = useState("1");
-  const [duplicateDates, setDuplicateDates] = useState<string[]>([]);
+
+  // Client search state
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
+  const clientDropdownRef = useRef<HTMLDivElement>(null);
 
   // Worker assignment state
   const [availableWorkers, setAvailableWorkers] = useState<AvailableWorker[]>([]);
@@ -136,55 +139,25 @@ export function AdminNewJobPage() {
     }
   }
 
-  // Check for duplicate jobs when client, title, dates, or times change
+
+  // Close client dropdown on click outside
   useEffect(() => {
-    async function checkDuplicates() {
-      if (!clientId || !title || selectedDates.length === 0) {
-        setDuplicateDates([]);
-        return;
+    function handleClickOutside(e: MouseEvent) {
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(e.target as Node)) {
+        setClientDropdownOpen(false);
       }
-
-      const { data } = await supabaseUntyped
-        .from('jobs')
-        .select('dates, date, start_time, end_time')
-        .eq('client_id', clientId)
-        .eq('title', title.trim());
-
-      if (!data || data.length === 0) {
-        setDuplicateDates([]);
-        return;
-      }
-
-      // Collect existing dates with their time ranges for this client+title
-      const existingSlots: { date: string; start: string; end: string }[] = [];
-      for (const job of data) {
-        const jobDates: string[] = [];
-        if (job.dates && Array.isArray(job.dates)) {
-          jobDates.push(...job.dates);
-        } else if (job.date) {
-          jobDates.push(job.date);
-        }
-        for (const d of jobDates) {
-          existingSlots.push({ date: d, start: job.start_time, end: job.end_time });
-        }
-      }
-
-      // Only flag dates where times overlap
-      const overlapping = selectedDates.filter(d => {
-        const slotsOnDate = existingSlots.filter(s => s.date === d);
-        if (slotsOnDate.length === 0) return false;
-        // If no times set yet, flag as potential conflict
-        if (!startTime || !endTime) return true;
-        // Check if any existing slot overlaps with the new time range
-        return slotsOnDate.some(slot =>
-          startTime < slot.end && endTime > slot.start
-        );
-      });
-      setDuplicateDates(overlapping);
     }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    checkDuplicates();
-  }, [clientId, title, selectedDates, startTime, endTime]);
+  const filteredClients = clients.filter(c => {
+    if (!clientSearch.trim()) return true;
+    const term = clientSearch.toLowerCase();
+    const displayName = (c.fantasia || c.company_name).toLowerCase();
+    const cnpj = c.cnpj || '';
+    return displayName.includes(term) || cnpj.includes(term);
+  });
 
   // Load workers when title or client changes
   useEffect(() => {
@@ -309,7 +282,6 @@ export function AdminNewJobPage() {
     for (let day = 1; day <= daysInMonth; day++) {
       const dateKey = formatDateKey(day, currentMonth, currentYear);
       const isSelected = selectedDates.includes(dateKey);
-      const isDuplicate = isSelected && duplicateDates.includes(dateKey);
       const isSelectable = isDateSelectable(day, currentMonth, currentYear);
 
       days.push(
@@ -320,16 +292,13 @@ export function AdminNewJobPage() {
           disabled={!isSelectable}
           className={`
             h-10 w-10 rounded-full text-sm font-medium transition-all
-            ${isDuplicate
-              ? 'bg-red-500 text-white shadow-md ring-2 ring-red-300'
-              : isSelected
-                ? 'bg-primary text-primary-foreground shadow-md'
-                : isSelectable
-                  ? 'hover:bg-slate-100 text-slate-700'
-                  : 'text-slate-300 cursor-not-allowed'
+            ${isSelected
+              ? 'bg-primary text-primary-foreground shadow-md'
+              : isSelectable
+                ? 'hover:bg-slate-100 text-slate-700'
+                : 'text-slate-300 cursor-not-allowed'
             }
           `}
-          title={isDuplicate ? 'Conflito de horário com diária existente' : undefined}
         >
           {day}
         </button>
@@ -366,10 +335,6 @@ export function AdminNewJobPage() {
     }
     if (!dailyRate || parseFloat(dailyRate) <= 0) {
       setError("Valor por dia deve ser maior que zero");
-      return;
-    }
-    if (duplicateDates.length > 0) {
-      setError("Existem datas com horários conflitantes para esta empresa e vaga. Remova as datas destacadas ou ajuste o horário.");
       return;
     }
 
@@ -504,26 +469,71 @@ export function AdminNewJobPage() {
                   ) : clients.length === 0 ? (
                     <p className="text-sm text-red-500">Nenhuma empresa cadastrada.</p>
                   ) : (
-                    <Select value={clientId} onValueChange={setClientId}>
-                      <SelectTrigger className="bg-white">
-                        {selectedClient ? (
-                          <span>
-                            {selectedClient.fantasia || selectedClient.company_name}
-                            {selectedClient.filial != null && ` · Filial ${selectedClient.filial}`}
-                          </span>
-                        ) : (
-                          <SelectValue placeholder="Selecione uma empresa" />
-                        )}
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.fantasia || client.company_name}
-                            {client.filial != null && ` · Filial ${client.filial}`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="relative" ref={clientDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => { setClientDropdownOpen(!clientDropdownOpen); setClientSearch(""); }}
+                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      >
+                        <span className={selectedClient ? 'text-foreground' : 'text-muted-foreground'}>
+                          {selectedClient
+                            ? `${selectedClient.fantasia || selectedClient.company_name}${selectedClient.filial != null ? ` · Filial ${selectedClient.filial}` : ''}`
+                            : 'Selecione uma empresa'}
+                        </span>
+                        <Search className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                      {clientDropdownOpen && (
+                        <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg">
+                          <div className="p-2 border-b">
+                            <div className="relative">
+                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <input
+                                type="text"
+                                placeholder="Buscar empresa..."
+                                value={clientSearch}
+                                onChange={(e) => setClientSearch(e.target.value)}
+                                className="w-full pl-8 pr-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                                autoFocus
+                              />
+                            </div>
+                          </div>
+                          <div className="max-h-60 overflow-y-auto p-1">
+                            {filteredClients.length > 0 ? (
+                              filteredClients.map((client) => (
+                                <button
+                                  key={client.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setClientId(client.id);
+                                    setClientDropdownOpen(false);
+                                    setClientSearch("");
+                                  }}
+                                  className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+                                    client.id === clientId
+                                      ? 'bg-primary text-primary-foreground'
+                                      : 'hover:bg-slate-100'
+                                  }`}
+                                >
+                                  <span className="font-medium">
+                                    {client.fantasia || client.company_name}
+                                    {client.filial != null && ` · Filial ${client.filial}`}
+                                  </span>
+                                  {client.cnpj && (
+                                    <span className={`block text-xs ${client.id === clientId ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                                      CNPJ: {client.cnpj}
+                                    </span>
+                                  )}
+                                </button>
+                              ))
+                            ) : (
+                              <p className="px-3 py-4 text-sm text-muted-foreground text-center">
+                                Nenhuma empresa encontrada
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                   {selectedClient && (
                     <p className="text-xs text-muted-foreground">
@@ -662,46 +672,26 @@ export function AdminNewJobPage() {
                       {selectedDates.length} data(s) selecionada(s):
                     </Label>
                     <div className="flex flex-wrap gap-2">
-                      {selectedDates.map((dateKey) => {
-                        const isDup = duplicateDates.includes(dateKey);
-                        return (
+                      {selectedDates.map((dateKey) => (
                           <Badge
                             key={dateKey}
-                            variant={isDup ? "destructive" : "secondary"}
-                            className={`pl-3 pr-1 py-1 flex items-center gap-1 ${isDup ? 'animate-pulse' : ''}`}
+                            variant="secondary"
+                            className="pl-3 pr-1 py-1 flex items-center gap-1"
                           >
-                            {isDup && <AlertTriangle className="h-3 w-3 mr-1" />}
                             {formatDisplayDate(dateKey)}
                             <button
                               type="button"
                               onClick={() => removeDate(dateKey)}
-                              className={`ml-1 p-0.5 rounded ${isDup ? 'hover:bg-red-700' : 'hover:bg-slate-300'}`}
+                              className="ml-1 p-0.5 rounded hover:bg-slate-300"
                             >
                               <X className="h-3 w-3" />
                             </button>
                           </Badge>
-                        );
-                      })}
+                      ))}
                     </div>
                   </div>
                 )}
 
-                {/* Duplicate warning */}
-                {duplicateDates.length > 0 && (
-                  <div className="mt-4 p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold text-amber-800">
-                        Conflito de horário detectado
-                      </p>
-                      <p className="text-sm text-amber-700 mt-1">
-                        Já existe uma diária cadastrada para a empresa <strong>{selectedClient?.fantasia || selectedClient?.company_name}</strong> com
-                        a vaga <strong>{title}</strong> na(s) data(s) destacada(s) em vermelho com horário conflitante.
-                        Remova essas datas, escolha datas diferentes ou ajuste o horário para não haver sobreposição.
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 {/* Time Range */}
                 <div className="grid grid-cols-2 gap-4 mt-6">

@@ -132,21 +132,22 @@ export function AdminClientsPage() {
   return (
     <DashboardLayout>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Clientes</h2>
           <p className="text-muted-foreground">Gerencie empresas e suas diárias</p>
         </div>
         <Link to="/admin/clients/new">
           <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-600/25">
-            <Plus className="h-4 w-4 mr-2" />
-            Cadastrar Cliente
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Cadastrar Cliente</span>
+            <span className="sm:hidden">Novo Cliente</span>
           </Button>
         </Link>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-3 mb-6">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 mb-6">
         <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-white">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -232,8 +233,8 @@ export function AdminClientsPage() {
               <Link key={client.id} to={`/admin/clients/${client.id}`}>
                 <Card className="border-0 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                   <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-4 flex-1 min-w-0">
                         <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
                           <Building2 className="h-7 w-7 text-white" />
                         </div>
@@ -263,7 +264,7 @@ export function AdminClientsPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-6 flex-shrink-0">
                         {/* Job Stats */}
                         <div className="hidden md:flex items-center gap-4">
                           <div className="text-center px-3">

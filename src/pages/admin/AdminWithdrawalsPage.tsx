@@ -227,7 +227,7 @@ export function AdminWithdrawalsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3 mb-6">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 mb-6">
         <Card className="border-0 shadow-sm bg-gradient-to-br from-red-50 to-white">
           <CardHeader className="pb-2">
             <CardDescription className="text-red-600 font-medium">Total de Desistências</CardDescription>
@@ -309,7 +309,7 @@ export function AdminWithdrawalsPage() {
                         <p className="font-semibold text-slate-900">
                           {withdrawal.workers?.users?.name || 'Trabalhador'}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground truncate">
                           {withdrawal.workers?.users?.email}
                         </p>
                       </div>
@@ -329,9 +329,9 @@ export function AdminWithdrawalsPage() {
                           <Calendar className="h-3.5 w-3.5" />
                           {formatDate(withdrawal.jobs?.date)}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5" />
-                          {withdrawal.jobs?.location}
+                        <span className="flex items-center gap-1 min-w-0">
+                          <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">{withdrawal.jobs?.location}</span>
                         </span>
                       </div>
                     </div>
@@ -348,7 +348,7 @@ export function AdminWithdrawalsPage() {
                   </div>
 
                   {/* Right side */}
-                  <div className="flex flex-col items-end gap-3">
+                  <div className="flex flex-row lg:flex-col items-center lg:items-end gap-3 flex-shrink-0">
                     <Badge variant="destructive" className="gap-1">
                       <Clock className="h-3 w-3" />
                       {formatDateTime(withdrawal.withdrawn_at)}
@@ -360,7 +360,7 @@ export function AdminWithdrawalsPage() {
                       className="gap-2"
                     >
                       <Eye className="h-4 w-4" />
-                      Ver Detalhes
+                      <span className="hidden sm:inline">Ver Detalhes</span>
                     </Button>
                   </div>
                 </div>
