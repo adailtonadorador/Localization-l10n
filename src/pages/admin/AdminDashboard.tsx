@@ -396,7 +396,7 @@ export function AdminDashboard() {
   return (
     <DashboardLayout>
       {/* Notification Prompt */}
-      <NotificationPrompt variant="banner" />
+      <NotificationPrompt variant="banner" description="Ative as notificações para receber alertas de novas candidaturas e atualizações das diárias." />
 
       {/* Header */}
       <div className="mb-6">
