@@ -446,7 +446,13 @@ export function AdminMonitoringPage() {
       setLastUpdated(new Date());
 
       // Detectar workers atrasados e enviar notificações push
-      const detected = detectLateWorkers(jobsWithRecords, new Date());
+      const now = new Date();
+      console.log('[LateAlerts] Now:', now.toISOString(), 'Jobs:', jobsWithRecords.map((j: JobWithRecords) => ({
+        date: j.date, start: j.start_time, end: j.end_time,
+        records: j.work_records.map((r: WorkRecord) => ({ name: r.workers?.users?.name, status: r.status, ci: r.check_in, co: r.check_out }))
+      })));
+      const detected = detectLateWorkers(jobsWithRecords, now);
+      console.log('[LateAlerts] Detected:', detected.length, detected);
       setLateAlerts(detected);
 
       for (const alert of detected) {
