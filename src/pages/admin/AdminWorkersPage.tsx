@@ -170,7 +170,12 @@ export function AdminWorkersPage() {
         `)
         .order('created_at', { ascending: false });
 
-      setWorkers(data || []);
+      const sorted = (data || []).sort((a: Worker, b: Worker) => {
+        const nameA = (a.users?.name || '').toLowerCase();
+        const nameB = (b.users?.name || '').toLowerCase();
+        return nameA.localeCompare(nameB, 'pt-BR');
+      });
+      setWorkers(sorted);
     } catch (error) {
       console.error('Error loading workers:', error);
     } finally {
