@@ -227,17 +227,17 @@ export function AdminWithdrawalsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 mb-6">
+      <div className="grid gap-3 grid-cols-3 mb-6">
         <Card className="border-0 shadow-sm bg-gradient-to-br from-red-50 to-white">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-red-600 font-medium">Total de Desistências</CardDescription>
-            <CardTitle className="text-3xl font-bold">{withdrawals.length}</CardTitle>
+          <CardHeader className="pb-2 p-3 sm:p-6">
+            <CardDescription className="text-red-600 font-medium text-xs sm:text-sm leading-tight">Total</CardDescription>
+            <CardTitle className="text-2xl sm:text-3xl font-bold">{withdrawals.length}</CardTitle>
           </CardHeader>
         </Card>
         <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-white">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-amber-600 font-medium">Esta Semana</CardDescription>
-            <CardTitle className="text-3xl font-bold">
+          <CardHeader className="pb-2 p-3 sm:p-6">
+            <CardDescription className="text-amber-600 font-medium text-xs sm:text-sm leading-tight">Esta Semana</CardDescription>
+            <CardTitle className="text-2xl sm:text-3xl font-bold">
               {withdrawals.filter(w => {
                 const weekAgo = new Date();
                 weekAgo.setDate(weekAgo.getDate() - 7);
@@ -247,9 +247,9 @@ export function AdminWithdrawalsPage() {
           </CardHeader>
         </Card>
         <Card className="border-0 shadow-sm bg-gradient-to-br from-orange-50 to-white">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-orange-600 font-medium">Hoje</CardDescription>
-            <CardTitle className="text-3xl font-bold">
+          <CardHeader className="pb-2 p-3 sm:p-6">
+            <CardDescription className="text-orange-600 font-medium text-xs sm:text-sm leading-tight">Hoje</CardDescription>
+            <CardTitle className="text-2xl sm:text-3xl font-bold">
               {withdrawals.filter(w => {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -261,20 +261,20 @@ export function AdminWithdrawalsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="flex-1 relative min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Buscar por trabalhador, vaga ou empresa..."
+            placeholder="Buscar trabalhador, vaga ou empresa..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-11"
           />
         </div>
         <Select value={filterPeriod} onValueChange={setFilterPeriod}>
-          <SelectTrigger className="w-full sm:w-48 bg-white">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+          <SelectTrigger className="w-full sm:w-44 bg-white h-11 flex-shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <SelectValue placeholder="Período" />
             </div>
           </SelectTrigger>
@@ -298,15 +298,15 @@ export function AdminWithdrawalsPage() {
           {filteredWithdrawals.map((withdrawal) => (
             <Card key={withdrawal.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-4">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  <div className="flex-1 space-y-3">
-                    {/* Worker info */}
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <div className="flex flex-col gap-3">
+                  {/* Top row: worker avatar + name + timestamp badge */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
                         <User className="h-5 w-5 text-red-600" />
                       </div>
-                      <div>
-                        <p className="font-semibold text-slate-900">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-900 truncate">
                           {withdrawal.workers?.users?.name || 'Trabalhador'}
                         </p>
                         <p className="text-sm text-muted-foreground truncate">
@@ -314,50 +314,47 @@ export function AdminWithdrawalsPage() {
                         </p>
                       </div>
                     </div>
+                    <Badge variant="destructive" className="gap-1 flex-shrink-0 text-xs whitespace-nowrap">
+                      <Clock className="h-3 w-3" />
+                      <span className="hidden sm:inline">{formatDateTime(withdrawal.withdrawn_at)}</span>
+                      <span className="sm:hidden">{formatDate(withdrawal.withdrawn_at)}</span>
+                    </Badge>
+                  </div>
 
-                    {/* Job info */}
-                    <div className="pl-13 space-y-1">
-                      <p className="font-medium text-slate-700">
-                        {withdrawal.jobs?.title}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Building className="h-3.5 w-3.5" />
-                          {withdrawal.jobs?.clients?.fantasia || withdrawal.jobs?.clients?.company_name}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5" />
-                          {formatDate(withdrawal.jobs?.date)}
-                        </span>
-                        <span className="flex items-center gap-1 min-w-0">
-                          <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                          <span className="truncate">{withdrawal.jobs?.location}</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Reason preview */}
-                    <div className="pl-13">
-                      <div className="bg-red-50 border border-red-100 rounded-lg p-3">
-                        <p className="text-sm text-red-800 flex items-start gap-2">
-                          <FileText className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                          <span className="line-clamp-2">{withdrawal.withdrawal_reason}</span>
-                        </p>
-                      </div>
+                  {/* Job info */}
+                  <div className="pl-[52px] space-y-1">
+                    <p className="font-medium text-slate-700 truncate">
+                      {withdrawal.jobs?.title}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1 min-w-0">
+                        <Building className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="truncate">{withdrawal.jobs?.clients?.fantasia || withdrawal.jobs?.clients?.company_name}</span>
+                      </span>
+                      <span className="flex items-center gap-1 flex-shrink-0">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {formatDate(withdrawal.jobs?.date)}
+                      </span>
+                      <span className="flex items-center gap-1 min-w-0 w-full sm:w-auto">
+                        <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="truncate">{withdrawal.jobs?.location}</span>
+                      </span>
                     </div>
                   </div>
 
-                  {/* Right side */}
-                  <div className="flex flex-row lg:flex-col items-center lg:items-end gap-3 flex-shrink-0">
-                    <Badge variant="destructive" className="gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatDateTime(withdrawal.withdrawn_at)}
-                    </Badge>
+                  {/* Reason preview + action button */}
+                  <div className="pl-[52px] flex items-end gap-3">
+                    <div className="flex-1 bg-red-50 border border-red-100 rounded-lg p-3 min-w-0">
+                      <p className="text-sm text-red-800 flex items-start gap-2">
+                        <FileText className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-2">{withdrawal.withdrawal_reason}</span>
+                      </p>
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => openDetails(withdrawal)}
-                      className="gap-2"
+                      className="gap-2 flex-shrink-0 h-10 px-3"
                     >
                       <Eye className="h-4 w-4" />
                       <span className="hidden sm:inline">Ver Detalhes</span>
@@ -386,22 +383,22 @@ export function AdminWithdrawalsPage() {
 
       {/* Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg w-[calc(100vw-2rem)] sm:w-full max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
               Detalhes da Desistência
             </DialogTitle>
           </DialogHeader>
 
           {selectedWithdrawal && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Worker */}
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Trabalhador</h4>
-                <div className="bg-slate-50 rounded-lg p-4">
-                  <p className="font-semibold">{selectedWithdrawal.workers?.users?.name}</p>
-                  <p className="text-sm text-muted-foreground">{selectedWithdrawal.workers?.users?.email}</p>
+                <div className="bg-slate-50 rounded-lg p-3 sm:p-4">
+                  <p className="font-semibold truncate">{selectedWithdrawal.workers?.users?.name}</p>
+                  <p className="text-sm text-muted-foreground truncate">{selectedWithdrawal.workers?.users?.email}</p>
                   {selectedWithdrawal.workers?.users?.phone && (
                     <p className="text-sm text-muted-foreground">{selectedWithdrawal.workers?.users?.phone}</p>
                   )}
@@ -411,23 +408,23 @@ export function AdminWithdrawalsPage() {
               {/* Job */}
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Vaga</h4>
-                <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                <div className="bg-slate-50 rounded-lg p-3 sm:p-4 space-y-2">
                   <p className="font-semibold">{selectedWithdrawal.jobs?.title}</p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Building className="h-4 w-4" />
-                    {selectedWithdrawal.jobs?.clients?.fantasia || selectedWithdrawal.jobs?.clients?.company_name}
+                  <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <Building className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <span>{selectedWithdrawal.jobs?.clients?.fantasia || selectedWithdrawal.jobs?.clients?.company_name}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
+                    <Calendar className="h-4 w-4 flex-shrink-0" />
                     {formatDate(selectedWithdrawal.jobs?.date)}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
+                    <Clock className="h-4 w-4 flex-shrink-0" />
                     {formatTime(selectedWithdrawal.jobs?.start_time)} - {formatTime(selectedWithdrawal.jobs?.end_time)}
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    {selectedWithdrawal.jobs?.location}
+                  <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <span className="break-words">{selectedWithdrawal.jobs?.location}</span>
                   </div>
                 </div>
               </div>
@@ -435,8 +432,8 @@ export function AdminWithdrawalsPage() {
               {/* Withdrawal info */}
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Justificativa</h4>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-sm text-red-800">{selectedWithdrawal.withdrawal_reason}</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+                  <p className="text-sm text-red-800 break-words">{selectedWithdrawal.withdrawal_reason}</p>
                   <p className="text-xs text-red-600 mt-3 pt-3 border-t border-red-200">
                     Registrado em {formatDateTime(selectedWithdrawal.withdrawn_at)}
                   </p>
@@ -444,8 +441,8 @@ export function AdminWithdrawalsPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex justify-end">
-                <Button variant="outline" onClick={() => setDetailsOpen(false)}>
+              <div className="flex justify-end pt-1">
+                <Button variant="outline" onClick={() => setDetailsOpen(false)} className="h-11 px-6">
                   Fechar
                 </Button>
               </div>
