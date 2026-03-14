@@ -262,17 +262,8 @@ export function WorkerMyJobsPage() {
       const assignment = assignments[0];
       const withdrawnAt = new Date().toISOString();
 
-      await supabaseUntyped
-        .from('withdrawal_history')
-        .insert({
-          job_assignment_id: assignment.id,
-          job_id: selectedJobForWithdrawal.job_id,
-          worker_id: profile.id,
-          withdrawal_reason: reason,
-          withdrawn_at: withdrawnAt
-        });
-
-      const { error: assignmentError } = await supabaseUntyped
+      // 1. Primeiro atualizar o status do assignment (operação crítica)
+      const { data: updatedRows, error: assignmentError } = await supabaseUntyped
         .from('job_assignments')
         .update({
           status: 'withdrawn',
@@ -290,6 +281,25 @@ export function WorkerMyJobsPage() {
           return;
         }
         throw assignmentError;
+      }
+
+      if (!updatedRows || updatedRows.length === 0) {
+        throw new Error('Não foi possível atualizar o status da atribuição.');
+      }
+
+      // 2. Só registrar no histórico após o assignment ser atualizado com sucesso
+      const { error: historyError } = await supabaseUntyped
+        .from('withdrawal_history')
+        .insert({
+          job_assignment_id: assignment.id,
+          job_id: selectedJobForWithdrawal.job_id,
+          worker_id: profile.id,
+          withdrawal_reason: reason,
+          withdrawn_at: withdrawnAt
+        });
+
+      if (historyError) {
+        console.error('Erro ao inserir withdrawal_history:', historyError);
       }
 
       const { error: deleteError } = await supabaseUntyped

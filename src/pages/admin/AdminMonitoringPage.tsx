@@ -297,8 +297,8 @@ export function AdminMonitoringPage() {
 
       console.log('[AdminMonitoring] Jobs found:', jobsData?.length || 0, jobsData);
 
-      // 5. Buscar job_assignments para obter ratings e workers atribuídos
-      const { data: assignmentsData, error: assignmentsError } = await supabaseUntyped
+      // 5. Buscar TODOS os job_assignments (sem filtro de status) para poder filtrar corretamente
+      const { data: allAssignmentsData, error: assignmentsError } = await supabaseUntyped
         .from('job_assignments')
         .select(`
           id,
@@ -314,22 +314,37 @@ export function AdminMonitoringPage() {
             users (name, email, phone)
           )
         `)
-        .in('job_id', allJobIds)
-        .in('status', ['pending', 'confirmed', 'completed']);
+        .in('job_id', allJobIds);
 
       if (assignmentsError) {
         console.error('[AdminMonitoring] Error loading assignments:', assignmentsError);
       }
 
-      console.log('[AdminMonitoring] Assignments found:', assignmentsData?.length || 0, assignmentsData);
+      // Filtrar apenas confirmados/completados (exclui withdrawn, pending, etc.)
+      const assignmentsData = (allAssignmentsData || []).filter(
+        (a: { status: string }) => a.status === 'confirmed' || a.status === 'completed'
+      );
+
+      // Criar um Set de worker_ids confirmados/completados por job para filtragem rápida
+      const confirmedWorkersByJob = new Map<string, Set<string>>();
+      assignmentsData.forEach((a: { job_id: string; worker_id: string }) => {
+        if (!confirmedWorkersByJob.has(a.job_id)) {
+          confirmedWorkersByJob.set(a.job_id, new Set());
+        }
+        confirmedWorkersByJob.get(a.job_id)!.add(a.worker_id);
+      });
 
       // 6. Mapear work_records para cada job
       const jobsWithRecords = (jobsData || []).map((job: JobWithRecords) => {
         // Work records do dia para este job
+        const confirmedSet = confirmedWorkersByJob.get(job.id) || new Set();
         const jobWorkRecords = (workRecordsData || [])
-          .filter((wr: { job_id: string }) => wr.job_id === job.id)
+          .filter((wr: { job_id: string; worker_id: string }) => {
+            if (wr.job_id !== job.id) return false;
+            // Exibir somente workers com assignment confirmado/completado
+            return confirmedSet.has(wr.worker_id);
+          })
           .map((wr: WorkRecord & { worker_id: string }) => {
-            // Encontrar o assignment correspondente
             const assignment = (assignmentsData || []).find(
               (a: { job_id: string; worker_id: string }) =>
                 a.job_id === job.id && a.worker_id === wr.worker_id
