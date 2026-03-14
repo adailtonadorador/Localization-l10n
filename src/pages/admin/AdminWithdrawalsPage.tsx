@@ -57,6 +57,7 @@ interface Withdrawal {
     location: string;
     clients: {
       company_name: string;
+      fantasia: string | null;
     };
   };
 }
@@ -100,7 +101,8 @@ export function AdminWithdrawalsPage() {
             end_time,
             location,
             clients (
-              company_name
+              company_name,
+              fantasia
             )
           )
         `)
@@ -168,7 +170,7 @@ export function AdminWithdrawalsPage() {
       filtered = filtered.filter(w =>
         w.workers?.users?.name?.toLowerCase().includes(search) ||
         w.jobs?.title?.toLowerCase().includes(search) ||
-        w.jobs?.clients?.company_name?.toLowerCase().includes(search) ||
+        (w.jobs?.clients?.fantasia || w.jobs?.clients?.company_name)?.toLowerCase().includes(search) ||
         w.withdrawal_reason?.toLowerCase().includes(search)
       );
     }
@@ -321,7 +323,7 @@ export function AdminWithdrawalsPage() {
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Building className="h-3.5 w-3.5" />
-                          {withdrawal.jobs?.clients?.company_name}
+                          {withdrawal.jobs?.clients?.fantasia || withdrawal.jobs?.clients?.company_name}
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3.5 w-3.5" />
@@ -413,7 +415,7 @@ export function AdminWithdrawalsPage() {
                   <p className="font-semibold">{selectedWithdrawal.jobs?.title}</p>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Building className="h-4 w-4" />
-                    {selectedWithdrawal.jobs?.clients?.company_name}
+                    {selectedWithdrawal.jobs?.clients?.fantasia || selectedWithdrawal.jobs?.clients?.company_name}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
