@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { supabaseUntyped } from "@/lib/supabase";
